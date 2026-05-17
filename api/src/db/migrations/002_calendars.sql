@@ -1,0 +1,6 @@
+CREATE TABLE IF NOT EXISTS calendars (
+  id    TEXT PRIMARY KEY,
+  name  TEXT NOT NULL,
+  url   TEXT NOT NULL,
+  color TEXT NOT NULL DEFAULT '#C17A4A'
+);

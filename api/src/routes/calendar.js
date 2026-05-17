@@ -1,0 +1,264 @@
+import { Router } from 'express'
+import { db } from '../db/client.js'
+import { requireParent } from '../middleware/requireParent.js'
+
+const router = Router()
+
+// In-memory cache — { data, expiresAt }
+let cache = null
+const CACHE_TTL_MS = 15 * 60 * 1000
+
+// ── iCal parser ───────────────────────────────────────────────────────────────
+
+function parseIcalDate(str) {
+  if (!str) return null
+  if (/^\d{8}$/.test(str)) {
+    const y = +str.slice(0,4), m = +str.slice(4,6) - 1, d = +str.slice(6,8)
+    return { jsDate: new Date(y, m, d, 0, 0, 0), allDay: true }
+  }
+  if (/^\d{8}T\d{6}Z$/.test(str)) {
+    const iso = `${str.slice(0,4)}-${str.slice(4,6)}-${str.slice(6,8)}T${str.slice(9,11)}:${str.slice(11,13)}:${str.slice(13,15)}Z`
+    return { jsDate: new Date(iso), allDay: false }
+  }
+  if (/^\d{8}T\d{6}$/.test(str)) {
+    const y = +str.slice(0,4), mo = +str.slice(4,6) - 1, d = +str.slice(6,8)
+    const h = +str.slice(9,11), mi = +str.slice(11,13)
+    return { jsDate: new Date(y, mo, d, h, mi, 0), allDay: false }
+  }
+  return null
+}
+
+function dayStart(d) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0)
+}
+
+function fmtDate(d) {
+  const y  = d.getFullYear()
+  const m  = String(d.getMonth() + 1).padStart(2, '0')
+  const dy = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${dy}`
+}
+
+function fmtTimeShort(d) {
+  let h    = d.getHours()
+  const mi = d.getMinutes()
+  const ap = h >= 12 ? 'pm' : 'am'
+  h = h % 12 || 12
+  return mi === 0 ? `${h}${ap}` : `${h}:${String(mi).padStart(2, '0')}${ap}`
+}
+
+function advanceByFreq(d, freq, interval, byDay, originalStart) {
+  const next = new Date(d)
+
+  if (freq === 'DAILY') {
+    next.setDate(next.getDate() + interval)
+    return next
+  }
+
+  if (freq === 'WEEKLY') {
+    if (byDay && byDay.length > 1) {
+      const dayMap = { SU:0, MO:1, TU:2, WE:3, TH:4, FR:5, SA:6 }
+      const targetDays = byDay.map(d => dayMap[d.slice(-2)]).sort((a,b) => a - b)
+      const cur     = next.getDay()
+      const nextDay = targetDays.find(td => td > cur)
+      if (nextDay !== undefined) {
+        next.setDate(next.getDate() + (nextDay - cur))
+      } else {
+        next.setDate(next.getDate() + (7 * interval - cur + targetDays[0]))
+      }
+      return next
+    }
+    next.setDate(next.getDate() + 7 * interval)
+    return next
+  }
+
+  if (freq === 'MONTHLY') {
+    next.setMonth(next.getMonth() + interval)
+    return next
+  }
+
+  if (freq === 'YEARLY') {
+    next.setFullYear(next.getFullYear() + interval)
+    return next
+  }
+
+  return null
+}
+
+function expandRRule(dtstart, rruleStr, now, cutoff) {
+  const parts = {}
+  rruleStr.split(';').forEach(p => {
+    const [k, v] = p.split('=')
+    parts[k] = v
+  })
+
+  const freq     = parts['FREQ']
+  const interval = parseInt(parts['INTERVAL'] || '1', 10)
+  const count    = parts['COUNT'] ? parseInt(parts['COUNT'], 10) : Infinity
+  const until    = parts['UNTIL'] ? (parseIcalDate(parts['UNTIL'].replace('Z', '')) || {}).jsDate : null
+  const byDay    = parts['BYDAY'] ? parts['BYDAY'].split(',') : null
+
+  const windowEnd    = until && until < cutoff ? until : cutoff
+  const occurrences  = []
+  let current        = new Date(dtstart.jsDate)
+  let n              = 0
+
+  while (current < dayStart(now)) {
+    current = advanceByFreq(current, freq, interval, byDay, dtstart.jsDate)
+    if (!current) return occurrences
+  }
+
+  while (current < windowEnd && n < count) {
+    occurrences.push(new Date(current))
+    current = advanceByFreq(current, freq, interval, byDay, dtstart.jsDate)
+    if (!current) break
+    n++
+    if (n > 500) break
+  }
+
+  return occurrences
+}
+
+function expandEvent(props, color, now, cutoff) {
+  const summary    = props['SUMMARY'] || '(No title)'
+  const dtstart    = parseIcalDate(props['DTSTART'])
+  const dtend      = parseIcalDate(props['DTEND'])
+  if (!dtstart) return []
+
+  const durationMs = (dtend && !dtstart.allDay)
+    ? dtend.jsDate.getTime() - dtstart.jsDate.getTime()
+    : 0
+
+  const results = []
+
+  if (props['RRULE']) {
+    const occurrences = expandRRule(dtstart, props['RRULE'], now, cutoff)
+    for (const d of occurrences) {
+      const endDate = durationMs > 0 ? new Date(d.getTime() + durationMs) : null
+      results.push({
+        date:    fmtDate(d),
+        title:   summary,
+        time:    dtstart.allDay ? '' : fmtTimeShort(d),
+        endTime: endDate ? fmtTimeShort(endDate) : '',
+        color,
+      })
+    }
+  } else {
+    const d = dtstart.jsDate
+    if (d >= dayStart(now) && d < cutoff) {
+      const endDate = (dtend && !dtstart.allDay) ? dtend.jsDate : null
+      results.push({
+        date:    fmtDate(d),
+        title:   summary,
+        time:    dtstart.allDay ? '' : fmtTimeShort(d),
+        endTime: endDate ? fmtTimeShort(endDate) : '',
+        color,
+      })
+    }
+  }
+
+  return results
+}
+
+function parseIcal(text, color, now, cutoff) {
+  const unfolded = text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '')
+  const lines    = unfolded.split(/\r\n|\n/)
+  const events   = []
+  let inEvent    = false
+  let props      = {}
+
+  for (const line of lines) {
+    if (line === 'BEGIN:VEVENT') {
+      inEvent = true
+      props   = {}
+    } else if (line === 'END:VEVENT') {
+      inEvent = false
+      events.push(...expandEvent(props, color, now, cutoff))
+    } else if (inEvent) {
+      const colon = line.indexOf(':')
+      if (colon === -1) continue
+      const keyFull = line.slice(0, colon)
+      const val     = line.slice(colon + 1)
+        .replace(/\\,/g, ',')
+        .replace(/\\n/g, ' ')
+        .replace(/\\;/g, ';')
+        .replace(/\\\\/g, '\\')
+      const key  = keyFull.split(';')[0].toUpperCase()
+      props[key] = val
+    }
+  }
+
+  return events
+}
+
+async function fetchAndParseCalendars() {
+  const { rows } = await db.query(`SELECT * FROM calendars`)
+  const now    = new Date()
+  const cutoff = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
+  const all    = []
+
+  await Promise.all(rows.map(async cal => {
+    try {
+      const url = cal.url.replace(/^webcal:\/\//i, 'https://')
+      const res = await fetch(url)
+      if (!res.ok) return
+      const text   = await res.text()
+      const events = parseIcal(text, cal.color, now, cutoff)
+      all.push(...events)
+    } catch {
+      // skip calendars that fail to fetch
+    }
+  }))
+
+  all.sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))
+  return all
+}
+
+// ── Routes ────────────────────────────────────────────────────────────────────
+
+// GET /calendar/events
+router.get('/events', async (_req, res) => {
+  if (cache && cache.expiresAt > Date.now()) {
+    return res.json(cache.data)
+  }
+  const data = await fetchAndParseCalendars()
+  cache = { data, expiresAt: Date.now() + CACHE_TTL_MS }
+  res.json(data)
+})
+
+// ── Calendar URL management (parent only) ─────────────────────────────────────
+
+router.get('/', requireParent, async (_req, res) => {
+  const { rows } = await db.query(`SELECT * FROM calendars ORDER BY name`)
+  res.json(rows)
+})
+
+router.post('/', requireParent, async (req, res) => {
+  const { name, url, color } = req.body
+  if (!name || !url) return res.status(400).json({ error: 'Missing params' })
+  const id = Date.now().toString(36)
+  await db.query(
+    `INSERT INTO calendars (id, name, url, color) VALUES ($1,$2,$3,$4)`,
+    [id, name, url, color ?? '#C17A4A']
+  )
+  cache = null // invalidate cache
+  res.json({ success: true, id })
+})
+
+router.put('/:id', requireParent, async (req, res) => {
+  const { name, url, color } = req.body
+  await db.query(
+    `UPDATE calendars SET name=$1, url=$2, color=$3 WHERE id=$4`,
+    [name, url, color, req.params.id]
+  )
+  cache = null
+  res.json({ success: true })
+})
+
+router.delete('/:id', requireParent, async (req, res) => {
+  await db.query(`DELETE FROM calendars WHERE id=$1`, [req.params.id])
+  cache = null
+  res.json({ success: true })
+})
+
+export default router

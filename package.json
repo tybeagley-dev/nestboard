@@ -1,0 +1,7 @@
+{
+  "name": "hearthboard",
+  "private": true,
+  "workspaces": [
+    "api"
+  ]
+}
