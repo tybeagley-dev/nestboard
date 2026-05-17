@@ -180,7 +180,18 @@ router.delete('/:id', requireParent, async (req, res) => {
   res.json({ success: true })
 })
 
-// ── History editing (parent only) ─────────────────────────────────────────────
+// ── History viewing + editing (parent only) ───────────────────────────────────
+
+router.get('/events', requireParent, async (req, res) => {
+  const { child, date } = req.query
+  let query = `SELECT * FROM chore_events WHERE 1=1`
+  const params = []
+  if (child) { params.push(child); query += ` AND child = $${params.length}` }
+  if (date)  { params.push(date);  query += ` AND created_at::date = $${params.length}::date` }
+  query += ` ORDER BY created_at DESC LIMIT 100`
+  const { rows } = await db.query(query, params)
+  res.json(rows)
+})
 
 router.patch('/events/:eventId', requireParent, async (req, res) => {
   const { status } = req.body
