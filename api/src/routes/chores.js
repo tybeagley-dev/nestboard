@@ -36,11 +36,17 @@ router.get('/state', async (req, res) => {
   const today = {}
   const weekCompleted = {}
 
+  // nextDayKey covers clients behind UTC (e.g. Mountain Time) where a late-night
+  // event has a UTC date of "tomorrow" from the client's local perspective
+  const nextDay = new Date(date)
+  nextDay.setDate(nextDay.getDate() + 1)
+  const nextDayKey = nextDay.toISOString().slice(0, 10)
+
   for (const row of rows) {
     const rowDate = row.created_at.toISOString().slice(0, 10)
     const { child, chore_id, chore_label, bucks, status, accepted_at } = row
 
-    if (rowDate === date) {
+    if (rowDate === date || rowDate === nextDayKey) {
       if (!today[child]) today[child] = {}
       const existing = today[child][chore_id]
       const existingPri = existing ? (PRIORITY[existing.status] ?? -1) : -1
@@ -76,16 +82,19 @@ router.delete('/:id/assignment', requireParent, async (req, res) => {
   const { child } = req.query
   const choreId = req.params.id
   if (!child) return res.status(400).json({ error: 'child required' })
-  const today = new Date().toISOString().slice(0, 10)
 
   try {
     const { rowCount } = await db.query(
       `DELETE FROM chore_events
-       WHERE child = $1 AND chore_id = $2 AND created_at::date = $3
-         AND status IN ('accepted', 'pending_approval')`,
-      [child, choreId, today]
+       WHERE id = (
+         SELECT id FROM chore_events
+         WHERE child = $1 AND chore_id = $2 AND status IN ('accepted', 'pending_approval')
+         ORDER BY created_at DESC
+         LIMIT 1
+       )`,
+      [child, choreId]
     )
-    if (!rowCount) return res.status(404).json({ error: 'No active assignment found for today' })
+    if (!rowCount) return res.status(404).json({ error: 'No active assignment found' })
     broadcast('chore_state', { child })
     res.json({ success: true })
   } catch (err) {
