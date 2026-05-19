@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Family Dashboard Receiver</title>
+  <script src="//www.gstatic.com/cast/sdk/libs/caf_receiver/v3/cast_receiver_framework.js"></script>
+  <style>
+    body {
+      margin: 0;
+      background: #1a1506;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: sans-serif;
+      color: rgba(255,255,255,0.5);
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <p>🧹 Tidy time — music playing…</p>
+  <div id="yt"></div>
+
+  <script>
+    const context = cast.framework.CastReceiverContext.getInstance()
+
+    context.addCustomMessageListener('urn:x-cast:com.familydash.tidy', (event) => {
+      const { playlistUrl } = event.data || {}
+      if (!playlistUrl) return
+
+      // Build an embed URL from any youtube.com/playlist?list= URL
+      let embedSrc = playlistUrl
+      try {
+        const u = new URL(playlistUrl)
+        const listId = u.searchParams.get('list')
+        if (listId) {
+          embedSrc = `https://www.youtube-nocookie.com/embed/videoseries?list=${listId}&autoplay=1&controls=0`
+        }
+      } catch { /* use URL as-is */ }
+
+      const existing = document.getElementById('yt-frame')
+      if (existing) existing.remove()
+
+      const iframe = document.createElement('iframe')
+      iframe.id = 'yt-frame'
+      iframe.width = '1'
+      iframe.height = '1'
+      iframe.allow = 'autoplay'
+      iframe.src = embedSrc
+      document.getElementById('yt').appendChild(iframe)
+    })
+
+    context.start()
+  </script>
+</body>
+</html>
