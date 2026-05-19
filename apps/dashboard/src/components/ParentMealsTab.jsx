@@ -1,22 +1,27 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMeals } from '../hooks/useMeals'
 import { useAnnouncements } from '../hooks/useAnnouncements'
 
 const DAY_SHORT = { Sunday: 'Sun', Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat' }
 
 export default function ParentMealsTab() {
-  const { meals, updateMeal, DAY_ORDER } = useMeals()
+  const { meals, updateMeal, DAY_ORDER, loaded } = useMeals()
   const { announcements, addAnnouncement, removeAnnouncement } = useAnnouncements()
 
   const [draft, setDraft] = useState(() =>
-    DAY_ORDER.map(day => {
-      const m = meals.find(m => m.day === day) ?? { day, main: '', note: '', lunch: '' }
-      return { day, main: m.main, note: m.note, lunch: m.lunch ?? '' }
-    })
+    DAY_ORDER.map(day => ({ day, main: '', note: '', lunch: '' }))
   )
   const [saved,    setSaved]    = useState(false)
   const [newNote,  setNewNote]  = useState('')
   const [adding,   setAdding]   = useState(false)
+
+  useEffect(() => {
+    if (!loaded) return
+    setDraft(DAY_ORDER.map(day => {
+      const m = meals.find(m => m.day === day) ?? { day, main: '', note: '', lunch: '' }
+      return { day, main: m.main ?? '', note: m.note ?? '', lunch: m.lunch ?? '' }
+    }))
+  }, [loaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleChange(day, field, value) {
     setDraft(prev => prev.map(m => m.day === day ? { ...m, [field]: value } : m))

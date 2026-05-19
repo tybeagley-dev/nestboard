@@ -14,7 +14,8 @@ function configMealsToArray() {
 }
 
 export function useMeals() {
-  const [meals, setMeals] = useState(configMealsToArray)
+  const [meals,  setMeals]  = useState(configMealsToArray)
+  const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     apiGet('/meals').then(data => {
@@ -27,6 +28,7 @@ export function useMeals() {
           apiPost(`/meals/${day}`, { main, note, lunch })
         )
       }
+      setLoaded(true)
     })
   }, [])
 
@@ -39,5 +41,5 @@ export function useMeals() {
     return meals.find(m => m.day === dayName) ?? { day: dayName, main: '', note: '', lunch: '' }
   }, [meals])
 
-  return { meals, updateMeal, getMealForDay, DAY_ORDER }
+  return { meals, updateMeal, getMealForDay, DAY_ORDER, loaded }
 }

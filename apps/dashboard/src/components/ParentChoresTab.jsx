@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminGetAllChores, adminAddChore, adminEditChore, adminDeleteChore } from '../hooks/useChores'
-import { apiPost, apiDelete } from '../utils/api'
-import { unassignChore } from '../hooks/useAssignedChores'
+import { apiGet, apiPost, apiDelete } from '../utils/api'
+import { unassignChore, triggerChoreRefetch } from '../hooks/useAssignedChores'
+import { getTodayKey } from '../utils/dateUtils'
 import { CONFIG } from '../config/config'
 import BuckBadge from './BuckBadge'
 
@@ -15,9 +16,8 @@ function emptyChore() {
 // ── Chore row in list view ────────────────────────────────────────────────────
 
 function ChoreRow({ chore, onEdit, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
-  const [assigning,   setAssigning]   = useState(false)
-  const [assigned,    setAssigned]    = useState(null) // { name, childObj }
-  const [unassigning, setUnassigning] = useState(false)
+  const [assigning, setAssigning] = useState(false)
+  const [assigned,  setAssigned]  = useState('')
 
   async function handleAssign(child) {
     await apiPost(`/chores/${chore.id}/accept`, {
@@ -25,19 +25,10 @@ function ChoreRow({ chore, onEdit, confirmDelete, onDeleteRequest, onConfirmDele
       choreLabel: chore.label,
       bucks:      chore.bucks,
     })
-    setAssigned(child)
+    setAssigned(child.name)
     setAssigning(false)
-    window.dispatchEvent(new Event('fam_refetch_chores'))
-  }
-
-  async function handleUnassign() {
-    if (!assigned) return
-    setUnassigning(true)
-    await apiDelete(`/chores/${chore.id}/assignment?child=${encodeURIComponent(assigned.name)}`, CONFIG.parentPin)
-    unassignChore(assigned.name, chore.id)
-    setAssigned(null)
-    setUnassigning(false)
-    window.dispatchEvent(new Event('fam_refetch_chores'))
+    setTimeout(() => setAssigned(''), 2000)
+    triggerChoreRefetch()
   }
 
   if (confirmDelete) {
@@ -73,18 +64,7 @@ function ChoreRow({ chore, onEdit, confirmDelete, onDeleteRequest, onConfirmDele
             <button className="chore-assign-cancel" onClick={() => setAssigning(false)}>Cancel</button>
           </div>
         )}
-        {assigned && (
-          <div className="chore-assign-confirm-row">
-            <span className="chore-assign-confirm">Assigned to {assigned.name} ✓</span>
-            <button
-              className="chore-unassign-btn"
-              onClick={handleUnassign}
-              disabled={unassigning}
-            >
-              {unassigning ? '…' : 'Unassign'}
-            </button>
-          </div>
-        )}
+        {assigned && <span className="chore-assign-confirm">Assigned to {assigned} ✓</span>}
       </div>
       <BuckBadge amount={chore.bucks} />
       {!assigning && !assigned && (
@@ -237,6 +217,82 @@ function ChoreForm({ chore, onSave, onCancel, saving }) {
   )
 }
 
+// ── Today's Assignments ───────────────────────────────────────────────────────
+
+function TodayAssignments() {
+  const [assignments, setAssignments] = useState([])
+  const [acting,      setActing]      = useState(null)
+
+  const load = useCallback(async () => {
+    const today = getTodayKey(new Date())
+    const data  = await apiGet(`/chores/state?date=${today}`)
+    if (!data?.today) return
+    const flat = []
+    for (const [childName, chores] of Object.entries(data.today)) {
+      const childObj = CONFIG.children.find(c => c.name === childName)
+      for (const [choreId, entry] of Object.entries(chores)) {
+        if (entry.status === 'accepted') {
+          flat.push({ child: childName, childObj, choreId, choreLabel: entry.choreLabel, bucks: entry.bucks })
+        }
+      }
+    }
+    setAssignments(flat)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  useEffect(() => {
+    window.addEventListener('fam_refetch_chores', load)
+    return () => window.removeEventListener('fam_refetch_chores', load)
+  }, [load])
+
+  async function handleUnassign(item) {
+    setActing(`${item.child}-${item.choreId}`)
+    await apiDelete(`/chores/${item.choreId}/assignment?child=${encodeURIComponent(item.child)}`, CONFIG.parentPin)
+    unassignChore(item.child, item.choreId)
+    triggerChoreRefetch()
+    await load()
+    setActing(null)
+  }
+
+  if (assignments.length === 0) return null
+
+  return (
+    <div className="today-assignments">
+      <p className="chore-inactive-heading">Assigned Today</p>
+      {assignments.map(item => {
+        const key  = `${item.child}-${item.choreId}`
+        const busy = acting === key
+        return (
+          <div key={key} className="approval-row">
+            <div className="approval-info">
+              {item.childObj && (
+                <span className="approval-avatar" style={{ background: item.childObj.color }}>
+                  {item.childObj.emoji}
+                </span>
+              )}
+              <div className="approval-meta">
+                <span className="approval-child">{item.child}</span>
+                <span className="approval-label">{item.choreLabel}</span>
+              </div>
+              <BuckBadge amount={item.bucks} />
+            </div>
+            <div className="approval-actions">
+              <button
+                className="approval-btn reject"
+                onClick={() => handleUnassign(item)}
+                disabled={busy}
+              >
+                {busy ? '…' : 'Unassign'}
+              </button>
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
 // ── Tab root ──────────────────────────────────────────────────────────────────
 
 export default function ParentChoresTab() {
@@ -286,6 +342,8 @@ export default function ParentChoresTab() {
 
   return (
     <div className="parent-chores-tab">
+      <TodayAssignments />
+
       <button className="parent-add-chore-btn" onClick={() => setForm(emptyChore())}>
         + Add Chore
       </button>

@@ -159,11 +159,17 @@ export function useAssignedChores(childName, chores = []) {
       const localChores  = all[childName] ?? []
       const localPending = new Set(localChores.filter(c => c.pending && !c.completed).map(c => c.id))
       const localMap     = Object.fromEntries(localChores.map(c => [c.id, c]))
-      all[childName] = built.map(c => ({
-        ...c,
-        pending:    c.pending || (localPending.has(c.id) && !c.completed),
-        acceptedAt: c.acceptedAt ?? localMap[c.id]?.acceptedAt ?? null,
-      }))
+      const builtIds     = new Set(built.map(c => c.id))
+      // Preserve locally-assigned non-required chores not yet confirmed by the API
+      const inFlight     = localChores.filter(c => !c.required && !builtIds.has(c.id))
+      all[childName] = [
+        ...built.map(c => ({
+          ...c,
+          pending:    c.pending || (localPending.has(c.id) && !c.completed),
+          acceptedAt: c.acceptedAt ?? localMap[c.id]?.acceptedAt ?? null,
+        })),
+        ...inFlight,
+      ]
       saveAssignments(all)
       setLoading(false)
     }
