@@ -29,20 +29,21 @@ export default function MealPlan({ now }) {
 
   return (
     <>
-      <section className="card meal-card">
-        <div className="meal-card-header">
-          <h2 className="section-label">{cardTitle}</h2>
-          <button className="card-edit-btn" onClick={() => setShowPin(true)} aria-label="Edit meal plan">✏️</button>
-        </div>
+      <div className="info-card meal-card">
+        <span className="info-card-label">{cardTitle}</span>
         {displayMain ? (
-          <div className="meal-content">
-            <span className="meal-main">{displayMain}</span>
-            {displayNote && <span className="meal-note">{displayNote}</span>}
+          <div className="meal-card-content">
+            <div className="meal-card-icon">🍽</div>
+            <div>
+              <span className="meal-card-main">{displayMain}</span>
+              {displayNote && <span className="meal-card-note">{displayNote}</span>}
+            </div>
           </div>
         ) : (
-          <p className="meal-empty">No plan yet — check the fridge!</p>
+          <span className="info-card-empty">Check the fridge!</span>
         )}
-      </section>
+        <button className="info-card-edit" onClick={() => setShowPin(true)} aria-label="Edit meal plan">✏️</button>
+      </div>
 
       {showPin && (
         <PinModal

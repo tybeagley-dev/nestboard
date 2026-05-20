@@ -1,72 +1,39 @@
-import { useState } from 'react'
-import { getWeekDays, getDayShort, isSameDay, getTodayKey, formatEventDate } from '../utils/dateUtils'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
+import { isSameDay, formatDate } from '../utils/dateUtils'
 
-export default function Calendar({ now }) {
-  const events      = useCalendarEvents()
-  const weekDays    = getWeekDays(now)
-  const [selected, setSelected] = useState(() => now)
+export default function CalendarCard({ now, onExpand }) {
+  const events = useCalendarEvents()
 
-  function handleDayClick(day) {
-    setSelected(day)
-  }
-
-  const displayed = events.filter(e => {
+  const todaysEvents = events.filter(e => {
     const [y, m, d] = e.date.split('-').map(Number)
-    return isSameDay(new Date(y, m - 1, d), selected)
+    return isSameDay(new Date(y, m - 1, d), now)
   })
 
-  const emptyMsg = `Nothing on ${getDayShort(selected)} the ${selected.getDate()}`
-
   return (
-    <section className="card calendar-card">
-      <div className="calendar-header-row">
-        <h2 className="section-label">Calendar</h2>
-      </div>
+    <button className="info-card calendar-card" onClick={onExpand}>
+      <span className="info-card-label">Today's Events</span>
+      <span className="calendar-card-date">{formatDate(now)}</span>
 
-      <div className="week-strip">
-        {weekDays.map((day, i) => {
-          const isToday    = isSameDay(day, now)
-          const isSelected = selected && isSameDay(selected, day)
-          const hasEvent   = events.some(e => {
-            const [y, m, d] = e.date.split('-').map(Number)
-            return isSameDay(new Date(y, m - 1, d), day)
-          })
-          return (
-            <button
-              key={i}
-              className={`week-day ${isToday ? 'today' : ''} ${isSelected ? 'selected' : ''}`}
-              onClick={() => handleDayClick(day)}
-            >
-              <span className="week-day-name">{getDayShort(day)}</span>
-              <span className="week-day-num">{day.getDate()}</span>
-              {hasEvent && <span className="event-dot" />}
-            </button>
-          )
-        })}
-      </div>
-
-      <div className="upcoming-events">
-        {displayed.length === 0 ? (
-          <p className="no-events">{emptyMsg}</p>
+      <div className="calendar-card-events">
+        {todaysEvents.length === 0 ? (
+          <span className="info-card-empty">Nothing scheduled today</span>
         ) : (
-          displayed.map((evt, i) => (
-            <div key={i} className="event-row">
+          todaysEvents.map((evt, i) => (
+            <div key={i} className="calendar-card-event">
               <span
-                className="event-color-bar"
-                style={{ background: evt.color ?? 'var(--accent-warm)' }}
+                className="calendar-card-event-dot"
+                style={{ background: evt.color ?? 'rgba(255,255,255,0.6)' }}
               />
-              <div className="event-info">
-                <span className="event-title">{evt.title}</span>
-                <span className="event-meta">
-                  {formatEventDate(evt.date, now)}
-                  {evt.time ? ` · ${evt.time}${evt.endTime && evt.endTime !== evt.time ? `–${evt.endTime}` : ''}` : ''}
-                </span>
+              <div className="calendar-card-event-info">
+                <span className="calendar-card-event-title">{evt.title}</span>
+                {evt.time && <span className="calendar-card-event-time">{evt.time}</span>}
               </div>
             </div>
           ))
         )}
       </div>
-    </section>
+
+      <span className="info-card-popout" aria-hidden>↗</span>
+    </button>
   )
 }

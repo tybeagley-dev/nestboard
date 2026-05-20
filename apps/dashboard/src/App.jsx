@@ -1,22 +1,25 @@
 import { useState, useEffect } from 'react'
-import Header from './components/Header'
-import Calendar from './components/Calendar'
+import FloatingControls from './components/FloatingControls'
+import GreetingSection from './components/GreetingSection'
+import WeatherCard from './components/WeatherCard'
 import MealPlan from './components/MealPlan'
-import NotesAndGrocery from './components/NotesAndGrocery'
+import Calendar from './components/Calendar'
+import CalendarModal from './components/CalendarModal'
 import Routines from './components/Routines'
 import ChoreModal from './components/ChoreModal'
 import ScreenTimeModal from './components/ScreenTimeModal'
 import BucksModal from './components/BucksModal'
 import ParentPanel from './components/ParentPanel'
+import NotesAndGrocery from './components/NotesAndGrocery'
+import UpcomingModal from './components/UpcomingModal'
 import { useClock } from './hooks/useClock'
 import { useWeather } from './hooks/useWeather'
 import { unlockAudio } from './utils/chime'
 
 export default function App() {
-  const now = useClock()
+  const now     = useClock()
   const weather = useWeather()
 
-  // ?clearcache in the URL wipes localStorage and reloads cleanly
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has('clearcache')) {
       localStorage.clear()
@@ -24,21 +27,16 @@ export default function App() {
     }
   }, [])
 
-  // Reload after 30+ minutes in the background so the iPad always runs current code
   useEffect(() => {
     let hiddenAt = null
     function onVisibilityChange() {
-      if (document.visibilityState === 'hidden') {
-        hiddenAt = Date.now()
-      } else if (hiddenAt !== null && Date.now() - hiddenAt >= 30 * 60 * 1000) {
-        location.reload()
-      }
+      if (document.visibilityState === 'hidden') hiddenAt = Date.now()
+      else if (hiddenAt !== null && Date.now() - hiddenAt >= 30 * 60 * 1000) location.reload()
     }
     document.addEventListener('visibilitychange', onVisibilityChange)
     return () => document.removeEventListener('visibilitychange', onVisibilityChange)
   }, [])
 
-  // Unlock Web Audio on first user gesture so chimes work on iOS Safari
   useEffect(() => {
     const unlock = () => unlockAudio()
     document.addEventListener('touchstart', unlock, { once: true })
@@ -48,31 +46,40 @@ export default function App() {
       document.removeEventListener('click',      unlock)
     }
   }, [])
-  const [showParentPanel, setShowParentPanel] = useState(false)
-  const [activeChoreChild, setActiveChoreChild] = useState(null)  // { child, chores }
 
-  const [activeScreenChild, setActiveScreenChild] = useState(null)
-  const [activeBucksChild, setActiveBucksChild] = useState(null)
+  const [showParentPanel,   setShowParentPanel]   = useState(false)
+  const [showCalendar,      setShowCalendar]       = useState(false)
+  const [showGrocery,       setShowGrocery]        = useState(false)
+  const [activeChoreChild,  setActiveChoreChild]   = useState(null)
+  const [activeScreenChild, setActiveScreenChild]  = useState(null)
+  const [activeBucksChild,  setActiveBucksChild]   = useState(null)
+  const [upcomingChild,     setUpcomingChild]      = useState(null)
 
   return (
     <div className="dashboard">
-      <Header now={now} weather={weather} onParentOpen={() => setShowParentPanel(true)} />
+      <FloatingControls weather={weather} onParentOpen={() => setShowParentPanel(true)} />
 
-      <div className="dashboard-body">
-        <div className="panel-left">
-          <Calendar now={now} />
+      <div className="dashboard-top">
+        <GreetingSection
+          now={now}
+          onGrocery={() => setShowGrocery(true)}
+          onParentOpen={() => setShowParentPanel(true)}
+        />
+        <div className="center-stack">
+          <WeatherCard weather={weather} />
           <MealPlan now={now} />
-          <NotesAndGrocery />
         </div>
+        <Calendar now={now} onExpand={() => setShowCalendar(true)} />
+      </div>
 
-        <div className="panel-right">
-          <Routines
-            now={now}
-            onSpinChore={(child, chores, isExtra) => setActiveChoreChild({ child, chores, isExtra: !!isExtra })}
-            onScreenTime={setActiveScreenChild}
-            onBucks={setActiveBucksChild}
-          />
-        </div>
+      <div className="dashboard-children">
+        <Routines
+          now={now}
+          onSpinChore={(child, chores, isExtra) => setActiveChoreChild({ child, chores, isExtra: !!isExtra })}
+          onScreenTime={setActiveScreenChild}
+          onBucks={setActiveBucksChild}
+          onUpcoming={setUpcomingChild}
+        />
       </div>
 
       {activeChoreChild && (
@@ -83,21 +90,26 @@ export default function App() {
           onClose={() => setActiveChoreChild(null)}
         />
       )}
-
       {activeScreenChild && (
-        <ScreenTimeModal
-          child={activeScreenChild}
-          onClose={() => setActiveScreenChild(null)}
-        />
+        <ScreenTimeModal child={activeScreenChild} onClose={() => setActiveScreenChild(null)} />
       )}
-
       {activeBucksChild && (
-        <BucksModal
-          child={activeBucksChild}
-          onClose={() => setActiveBucksChild(null)}
-        />
+        <BucksModal child={activeBucksChild} onClose={() => setActiveBucksChild(null)} />
       )}
-
+      {upcomingChild && (
+        <UpcomingModal child={upcomingChild} onClose={() => setUpcomingChild(null)} />
+      )}
+      {showCalendar && (
+        <CalendarModal onClose={() => setShowCalendar(false)} />
+      )}
+      {showGrocery && (
+        <div className="modal-backdrop" onClick={() => setShowGrocery(false)}>
+          <div className="grocery-modal-card" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setShowGrocery(false)}>×</button>
+            <NotesAndGrocery />
+          </div>
+        </div>
+      )}
       {showParentPanel && (
         <ParentPanel onClose={() => setShowParentPanel(false)} />
       )}

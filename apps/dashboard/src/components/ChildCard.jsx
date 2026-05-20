@@ -8,6 +8,7 @@ import { useAssignedChores, markChoreAsPending, submitApprovalRequest, triggerCh
 import { recordChoreCompletion } from '../hooks/useChoreFrequency'
 import { startChimeLoop, stopChimeLoop } from '../utils/chime'
 import { CONFIG } from '../config/config'
+
 function isChoreDay() {
   return new Date().getDay() !== 0
 }
@@ -22,11 +23,10 @@ function SkeletonList() {
   )
 }
 
-export default function ChildCard({ child, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onBucks, timer }) {
+export default function ChildCard({ child, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onBucks, onUpcoming, timer }) {
   const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child.name, chores)
-  const { balance, addMinutes } = useScreenBalance(child.name)
-  const { bucks, recordCompletion } = useChorePoints(child.name)
-  const minutesPerBuck = Math.round((CONFIG.screenTime?.minutesPerChore ?? 30) / 2)
+  const { balance } = useScreenBalance(child.name)
+  const { bucks }   = useChorePoints(child.name)
 
   const isLoading = routinesLoading || choresLoading || assignedLoading
 
@@ -46,7 +46,6 @@ export default function ChildCard({ child, routines, routinesLoading, chores, ch
   const allDone  = total > 0 && done === total
   const progress = total > 0 ? (done / total) * 100 : 0
 
-  // Confetti when allDone transitions false → true
   const prevAllDone = useRef(allDone)
   const [confettiKey, setConfettiKey] = useState(0)
   useEffect(() => {
@@ -54,7 +53,6 @@ export default function ChildCard({ child, routines, routinesLoading, chores, ch
     prevAllDone.current = allDone
   }, [allDone])
 
-  // Chime when this child's timer expires
   useEffect(() => {
     if (timer?.expired) startChimeLoop()
     else stopChimeLoop()
@@ -81,57 +79,76 @@ export default function ChildCard({ child, routines, routinesLoading, chores, ch
   function handleChoreTap(chore) {
     if (chore.completed || chore.pending || submitting.has(chore.id)) return
     if (cooldownMinsRemaining(chore) > 0) return
-    if (chore.instructions?.length) {
-      setInstructionsChore(chore)
-    } else {
-      handleChoreRequest(chore)
-    }
+    if (chore.instructions?.length) setInstructionsChore(chore)
+    else handleChoreRequest(chore)
   }
 
   return (
-    <div className={`child-card ${allDone ? 'all-done' : ''}`} style={{ position: 'relative' }}>
+    <div
+      className={`child-card ${allDone ? 'all-done' : ''}`}
+      style={{ '--child-color': child.color, background: `color-mix(in srgb, ${child.color} 15%, white)`, position: 'relative' }}
+    >
       <Confetti triggerKey={confettiKey} />
 
+      {/* Header */}
       <div className="child-header">
-        <div className="child-avatar" style={{ background: child.color }}>
-          {child.emoji}
-        </div>
         <div className="child-meta">
           <h3 className="child-name">{child.name}</h3>
           <span className="child-progress-text">
             {isLoading ? 'Syncing…' : allDone ? 'All done! ✓' : `${done} of ${total}`}
           </span>
         </div>
-        {timer && (
-          <div
-            className={`child-timer-pill ${timer.expired ? 'expired' : ''}`}
-            style={{ '--child-color': child.color }}
+
+        <div className="child-header-right">
+          {timer && (
+            <div className={`child-timer-pill ${timer.expired ? 'expired' : ''}`}>
+              {timer.expired ? (
+                <span className="child-timer-label">Time's up!</span>
+              ) : (
+                <>
+                  <span className="child-timer-dot" />
+                  <span className="child-timer-label">
+                    {timer.minutes}:{String(timer.seconds).padStart(2, '0')}
+                  </span>
+                </>
+              )}
+              <button
+                className="child-timer-stop"
+                onClick={() => { stopChimeLoop(); stopChildTimer(child.name) }}
+                aria-label="Stop timer"
+              >×</button>
+            </div>
+          )}
+
+          <button
+            className={`child-icon-btn ${balance > 0 ? 'has-balance' : ''}`}
+            onClick={onScreenTime}
+            title={balance > 0 ? `${balance} min screen time` : 'Screen Time'}
           >
-            {timer.expired ? (
-              <span className="child-timer-label">Time's up!</span>
-            ) : (
-              <>
-                <span className="child-timer-dot" />
-                <span className="child-timer-label">
-                  {timer.minutes}:{String(timer.seconds).padStart(2, '0')}
-                </span>
-              </>
-            )}
-            <button
-              className="child-timer-stop"
-              onClick={() => { stopChimeLoop(); stopChildTimer(child.name) }}
-              aria-label="Stop timer"
-            >
-              ×
-            </button>
+            <span>⏱</span>
+            {balance > 0 && <span className="child-icon-badge">{balance}m</span>}
+          </button>
+
+          <button
+            className="child-icon-btn bucks-icon-btn"
+            onClick={onBucks}
+            title={`${bucks} Beagley Bucks`}
+          >
+            <span>🪙</span>
+            {bucks > 0 && <span className="child-icon-badge">{bucks}</span>}
+          </button>
+
+          <div className="child-avatar" style={{ background: child.color }}>
+            {child.emoji}
           </div>
-        )}
+        </div>
       </div>
 
       <div className="progress-track">
         <div className="progress-fill" style={{ width: `${progress}%`, background: child.color }} />
       </div>
 
+      {/* Routine list */}
       <div className="routine-list">
         {isLoading ? (
           <SkeletonList />
@@ -140,7 +157,6 @@ export default function ChildCard({ child, routines, routinesLoading, chores, ch
             {routines.map(r => (
               <RoutineItem key={r.id} routine={r} onToggle={() => onToggle(child.name, r.id)} />
             ))}
-
             {requiredChores.map(chore => (
               <RoutineItem
                 key={chore.id}
@@ -148,63 +164,36 @@ export default function ChildCard({ child, routines, routinesLoading, chores, ch
                 onToggle={() => handleChoreTap(chore)}
               />
             ))}
-
-            {isChoreDay() && (spinChores.length > 0 ? (
-              <>
-                {spinChores.map(chore => (
-                  <RoutineItem
-                    key={chore.id}
-                    routine={{ ...chore, cooldownMins: cooldownMinsRemaining(chore) }}
-                    onToggle={() => handleChoreTap(chore)}
-                  />
-                ))}
-                {spinChores.every(c => c.completed) && (
-                  <button
-                    className="spin-row-btn extra-spin-btn"
-                    onClick={onExtraSpin}
-                    style={{ '--child-color': child.color }}
-                  >
-                    <span className="spin-row-icon">⭐</span>
-                    <span className="spin-row-label">Bonus Chore</span>
-                    <span className="spin-row-sub">Earns Beagley Bucks</span>
-                  </button>
-                )}
-              </>
-            ) : (
-              <button
-                className="spin-row-btn"
-                onClick={onSpin}
-                style={{ '--child-color': child.color }}
-              >
-                <span className="spin-row-icon">🎡</span>
-                <span className="spin-row-label">Spin a Chore</span>
-              </button>
+            {isChoreDay() && spinChores.map(chore => (
+              <RoutineItem
+                key={chore.id}
+                routine={{ ...chore, cooldownMins: cooldownMinsRemaining(chore) }}
+                onToggle={() => handleChoreTap(chore)}
+              />
             ))}
           </>
         )}
       </div>
 
-      <div className="child-card-actions">
-        <button className="bucks-btn" onClick={onBucks} style={{ '--child-color': child.color }}>
-          <span className="bucks-btn-count">{bucks}</span>
-          Beagley Bucks
-        </button>
+      {/* Bottom pills */}
+      <div className="child-card-pills">
         <button
-          className={`screentime-btn ${balance > 0 ? 'has-balance' : ''}`}
-          onClick={onScreenTime}
+          className="child-pill chore-pill"
+          onClick={isChoreDay() ? (spinChores.length === 0 ? onSpin : (spinChores.every(c => c.completed) ? onExtraSpin : onSpin)) : undefined}
+          disabled={!isChoreDay()}
+          style={{ '--child-color': child.color }}
         >
-          <span className="spin-btn-icon">⏱</span>
-          {balance > 0 ? `${balance} min` : 'Screen Time'}
+          🎡 chore spinner
+        </button>
+        <button className="child-pill upcoming-pill" onClick={onUpcoming}>
+          upcoming
         </button>
       </div>
 
       {instructionsChore && (
         <ChoreInstructionsModal
           chore={instructionsChore}
-          onComplete={() => {
-            handleChoreRequest(instructionsChore)
-            setInstructionsChore(null)
-          }}
+          onComplete={() => { handleChoreRequest(instructionsChore); setInstructionsChore(null) }}
           onClose={() => setInstructionsChore(null)}
         />
       )}

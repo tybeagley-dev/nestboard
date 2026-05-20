@@ -119,7 +119,7 @@ function expandRRule(dtstart, rruleStr, now, cutoff) {
   return occurrences
 }
 
-function expandEvent(props, color, now, cutoff) {
+function expandEvent(props, color, calName, calChild, now, cutoff) {
   const summary    = props['SUMMARY'] || '(No title)'
   const dtstart    = parseIcalDate(props['DTSTART'])
   const dtend      = parseIcalDate(props['DTEND'])
@@ -129,6 +129,7 @@ function expandEvent(props, color, now, cutoff) {
     ? dtend.jsDate.getTime() - dtstart.jsDate.getTime()
     : 0
 
+  const base = { color, calendarName: calName, child: calChild ?? null }
   const results = []
 
   if (props['RRULE']) {
@@ -136,11 +137,11 @@ function expandEvent(props, color, now, cutoff) {
     for (const d of occurrences) {
       const endDate = durationMs > 0 ? new Date(d.getTime() + durationMs) : null
       results.push({
+        ...base,
         date:    fmtDate(d),
         title:   summary,
         time:    dtstart.allDay ? '' : fmtTimeShort(d),
         endTime: endDate ? fmtTimeShort(endDate) : '',
-        color,
       })
     }
   } else {
@@ -148,11 +149,11 @@ function expandEvent(props, color, now, cutoff) {
     if (d >= dayStart(now) && d < cutoff) {
       const endDate = (dtend && !dtstart.allDay) ? dtend.jsDate : null
       results.push({
+        ...base,
         date:    fmtDate(d),
         title:   summary,
         time:    dtstart.allDay ? '' : fmtTimeShort(d),
         endTime: endDate ? fmtTimeShort(endDate) : '',
-        color,
       })
     }
   }
@@ -160,7 +161,7 @@ function expandEvent(props, color, now, cutoff) {
   return results
 }
 
-function parseIcal(text, color, now, cutoff) {
+function parseIcal(text, color, calName, calChild, now, cutoff) {
   const unfolded = text.replace(/\r\n[ \t]/g, '').replace(/\n[ \t]/g, '')
   const lines    = unfolded.split(/\r\n|\n/)
   const events   = []
@@ -173,7 +174,7 @@ function parseIcal(text, color, now, cutoff) {
       props   = {}
     } else if (line === 'END:VEVENT') {
       inEvent = false
-      events.push(...expandEvent(props, color, now, cutoff))
+      events.push(...expandEvent(props, color, calName, calChild, now, cutoff))
     } else if (inEvent) {
       const colon = line.indexOf(':')
       if (colon === -1) continue
@@ -203,7 +204,7 @@ async function fetchAndParseCalendars() {
       const res = await fetch(url)
       if (!res.ok) return
       const text   = await res.text()
-      const events = parseIcal(text, cal.color, now, cutoff)
+      const events = parseIcal(text, cal.color, cal.name, cal.child ?? null, now, cutoff)
       all.push(...events)
     } catch {
       // skip calendars that fail to fetch
@@ -216,13 +217,16 @@ async function fetchAndParseCalendars() {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
-// GET /calendar/events
-router.get('/events', async (_req, res) => {
-  if (cache && cache.expiresAt > Date.now()) {
-    return res.json(cache.data)
+// GET /calendar/events?child=Paige
+router.get('/events', async (req, res) => {
+  if (!cache || cache.expiresAt <= Date.now()) {
+    const data = await fetchAndParseCalendars()
+    cache = { data, expiresAt: Date.now() + CACHE_TTL_MS }
   }
-  const data = await fetchAndParseCalendars()
-  cache = { data, expiresAt: Date.now() + CACHE_TTL_MS }
+  const { child } = req.query
+  const data = child
+    ? cache.data.filter(e => e.child === child)
+    : cache.data
   res.json(data)
 })
 
@@ -234,22 +238,22 @@ router.get('/', requireParent, async (_req, res) => {
 })
 
 router.post('/', requireParent, async (req, res) => {
-  const { name, url, color } = req.body
+  const { name, url, color, child } = req.body
   if (!name || !url) return res.status(400).json({ error: 'Missing params' })
   const id = Date.now().toString(36)
   await db.query(
-    `INSERT INTO calendars (id, name, url, color) VALUES ($1,$2,$3,$4)`,
-    [id, name, url, color ?? '#C17A4A']
+    `INSERT INTO calendars (id, name, url, color, child) VALUES ($1,$2,$3,$4,$5)`,
+    [id, name, url, color ?? '#C17A4A', child ?? null]
   )
-  cache = null // invalidate cache
+  cache = null
   res.json({ success: true, id })
 })
 
 router.put('/:id', requireParent, async (req, res) => {
-  const { name, url, color } = req.body
+  const { name, url, color, child } = req.body
   await db.query(
-    `UPDATE calendars SET name=$1, url=$2, color=$3 WHERE id=$4`,
-    [name, url, color, req.params.id]
+    `UPDATE calendars SET name=$1, url=$2, color=$3, child=$4 WHERE id=$5`,
+    [name, url, color, child ?? null, req.params.id]
   )
   cache = null
   res.json({ success: true })
