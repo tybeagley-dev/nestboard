@@ -93,8 +93,8 @@ CREATE TABLE IF NOT EXISTS routine_log (
 CREATE TABLE IF NOT EXISTS timers (
   child            TEXT PRIMARY KEY,
   end_time         BIGINT NOT NULL,
-  deducted_minutes INTEGER NOT NULL DEFAULT 0,
-  total_ms         BIGINT NOT NULL,
+  duration_minutes INTEGER NOT NULL DEFAULT 0,
+  buffer_minutes   INTEGER NOT NULL DEFAULT 5,
   started_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

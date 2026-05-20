@@ -48,22 +48,11 @@ export function useScreenBalance(childName) {
 // ── Timer ─────────────────────────────────────────────────────────────────────
 
 export async function startChildTimer(childName) {
-  const minutesPerChore = CONFIG.screenTime?.minutesPerChore ?? 30
-  const bufferMin       = CONFIG.screenTime?.timerBufferMinutes ?? 35
+  const durationMinutes = CONFIG.screenTime?.minutesPerChore ?? 30
+  const bufferMinutes   = (CONFIG.screenTime?.timerBufferMinutes ?? 35) - durationMinutes
 
-  // Deduct from balance
-  const stData = await apiGet('/screen-time')
-  const row    = Array.isArray(stData) ? stData.find(d => d.child === childName) : null
-  const current    = row ? Number(row.balance) : 0
-  const deducted   = Math.min(current, minutesPerChore)
-
-  await apiPost(`/screen-time/${childName}/adjust`, { delta: -deducted })
+  await apiPost(`/timers/${childName}/start`, { durationMinutes, bufferMinutes })
   dispatchBalanceUpdate()
-
-  const totalMs = bufferMin * 60 * 1000
-  const endTime = Date.now() + totalMs
-
-  await apiPost(`/timers/${childName}/start`, { endTime, deductedMinutes: deducted, totalMs })
   dispatchTimerUpdate()
 }
 
