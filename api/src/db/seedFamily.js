@@ -51,6 +51,22 @@ for (const t of tables) {
   if (rowCount > 0) console.log(`  backfilled ${rowCount} rows in ${t}`)
 }
 
+// Seed initial balances for each child (if not already present)
+for (const c of children) {
+  await db.query(
+    `INSERT INTO bucks_balance (family_id, child, balance)
+     VALUES ($1, $2, 0)
+     ON CONFLICT (family_id, child) DO NOTHING`,
+    [FAMILY_ID, c.name]
+  )
+  await db.query(
+    `INSERT INTO screen_time_balance (family_id, child, balance)
+     VALUES ($1, $2, 0)
+     ON CONFLICT (family_id, child) DO NOTHING`,
+    [FAMILY_ID, c.name]
+  )
+}
+
 // Enforce NOT NULL now that all rows are backfilled
 const alterTables = [
   'chores', 'routine_defs', 'mom_store', 'chore_events', 'spend_events',
