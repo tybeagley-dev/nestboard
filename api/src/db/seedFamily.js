@@ -16,19 +16,6 @@ if (!pin) { console.error('PARENT_PIN env var required'); process.exit(1) }
 
 const hash = await bcrypt.hash(pin, 12)
 
-// Validate NOT VALID constraints first (safe to run multiple times)
-const validateTables = [
-  'bucks_balance', 'screen_time_balance', 'timers', 'meals', 'routine_log',
-]
-for (const t of validateTables) {
-  try {
-    await db.query(`ALTER TABLE ${t} VALIDATE CONSTRAINT ${t}_pkey`)
-    console.log(`  ${t}_pkey constraint validated`)
-  } catch (e) {
-    // Already validated or constraint doesn't exist yet — safe to ignore
-  }
-}
-
 // Insert family (skip if already exists)
 await db.query(`
   INSERT INTO families (id, name, slug, parent_pin_hash)
