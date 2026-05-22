@@ -1,11 +1,14 @@
 import { Router } from 'express'
 import { db } from '../db/client.js'
+import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 
 const router = Router()
 
-// In-memory cache — { data, expiresAt }
-let cache = null
+router.use(requireFamily)
+
+// Per-family in-memory cache — Map<familyId, { data, expiresAt }>
+const cacheMap = new Map()
 const CACHE_TTL_MS = 15 * 60 * 1000
 
 // ── iCal parser ───────────────────────────────────────────────────────────────
@@ -192,8 +195,8 @@ function parseIcal(text, color, calName, calChild, now, cutoff) {
   return events
 }
 
-async function fetchAndParseCalendars() {
-  const { rows } = await db.query(`SELECT * FROM calendars`)
+async function fetchAndParseCalendars(familyId) {
+  const { rows } = await db.query(`SELECT * FROM calendars WHERE family_id = $1`, [familyId])
   const now    = new Date()
   const cutoff = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
   const all    = []
@@ -219,21 +222,27 @@ async function fetchAndParseCalendars() {
 
 // GET /calendar/events?child=Paige
 router.get('/events', async (req, res) => {
-  if (!cache || cache.expiresAt <= Date.now()) {
-    const data = await fetchAndParseCalendars()
-    cache = { data, expiresAt: Date.now() + CACHE_TTL_MS }
+  const familyId = req.familyId
+  let entry = cacheMap.get(familyId)
+  if (!entry || entry.expiresAt <= Date.now()) {
+    const data = await fetchAndParseCalendars(familyId)
+    entry = { data, expiresAt: Date.now() + CACHE_TTL_MS }
+    cacheMap.set(familyId, entry)
   }
   const { child } = req.query
   const data = child
-    ? cache.data.filter(e => e.child === child)
-    : cache.data
+    ? entry.data.filter(e => e.child === child)
+    : entry.data
   res.json(data)
 })
 
 // ── Calendar URL management (parent only) ─────────────────────────────────────
 
-router.get('/', requireParent, async (_req, res) => {
-  const { rows } = await db.query(`SELECT * FROM calendars ORDER BY name`)
+router.get('/', requireParent, async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT * FROM calendars WHERE family_id = $1 ORDER BY name`,
+    [req.familyId]
+  )
   res.json(rows)
 })
 
@@ -242,26 +251,29 @@ router.post('/', requireParent, async (req, res) => {
   if (!name || !url) return res.status(400).json({ error: 'Missing params' })
   const id = Date.now().toString(36)
   await db.query(
-    `INSERT INTO calendars (id, name, url, color, child) VALUES ($1,$2,$3,$4,$5)`,
-    [id, name, url, color ?? '#C17A4A', child ?? null]
+    `INSERT INTO calendars (id, family_id, name, url, color, child) VALUES ($1,$2,$3,$4,$5,$6)`,
+    [id, req.familyId, name, url, color ?? '#C17A4A', child ?? null]
   )
-  cache = null
+  cacheMap.delete(req.familyId)
   res.json({ success: true, id })
 })
 
 router.put('/:id', requireParent, async (req, res) => {
   const { name, url, color, child } = req.body
   await db.query(
-    `UPDATE calendars SET name=$1, url=$2, color=$3, child=$4 WHERE id=$5`,
-    [name, url, color, child ?? null, req.params.id]
+    `UPDATE calendars SET name=$1, url=$2, color=$3, child=$4 WHERE id=$5 AND family_id=$6`,
+    [name, url, color, child ?? null, req.params.id, req.familyId]
   )
-  cache = null
+  cacheMap.delete(req.familyId)
   res.json({ success: true })
 })
 
 router.delete('/:id', requireParent, async (req, res) => {
-  await db.query(`DELETE FROM calendars WHERE id=$1`, [req.params.id])
-  cache = null
+  await db.query(
+    `DELETE FROM calendars WHERE id=$1 AND family_id=$2`,
+    [req.params.id, req.familyId]
+  )
+  cacheMap.delete(req.familyId)
   res.json({ success: true })
 })
 

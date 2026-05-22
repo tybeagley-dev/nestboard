@@ -2,8 +2,32 @@
 -- Used by docker-compose to initialize a fresh database.
 -- schema.sql is the canonical base; incremental migrations are folded in here.
 
+-- ── Multi-tenant root tables (005) ────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS families (
+  id               TEXT PRIMARY KEY,
+  name             TEXT NOT NULL,
+  slug             TEXT NOT NULL UNIQUE,
+  parent_pin_hash  TEXT NOT NULL,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS children (
+  id         TEXT PRIMARY KEY,
+  family_id  TEXT NOT NULL REFERENCES families(id),
+  name       TEXT NOT NULL,
+  color      TEXT NOT NULL DEFAULT '#888888',
+  emoji      TEXT NOT NULL DEFAULT '👤',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (family_id, name)
+);
+
+-- ── Chore definitions ─────────────────────────────────────────────────────────
+
 CREATE TABLE IF NOT EXISTS chores (
   id           TEXT PRIMARY KEY,
+  family_id    TEXT NOT NULL REFERENCES families(id),
   label        TEXT NOT NULL,
   bucks        INTEGER NOT NULL DEFAULT 0,
   icon         TEXT NOT NULL DEFAULT '',
@@ -17,6 +41,7 @@ CREATE TABLE IF NOT EXISTS chores (
 
 CREATE TABLE IF NOT EXISTS routine_defs (
   id         TEXT PRIMARY KEY,
+  family_id  TEXT NOT NULL REFERENCES families(id),
   child      TEXT NOT NULL,
   label      TEXT NOT NULL,
   icon       TEXT NOT NULL DEFAULT '',
@@ -28,6 +53,7 @@ CREATE TABLE IF NOT EXISTS routine_defs (
 
 CREATE TABLE IF NOT EXISTS mom_store (
   id                TEXT PRIMARY KEY,
+  family_id         TEXT NOT NULL REFERENCES families(id),
   label             TEXT NOT NULL,
   icon              TEXT NOT NULL DEFAULT '',
   cost              INTEGER NOT NULL DEFAULT 0,
@@ -36,20 +62,29 @@ CREATE TABLE IF NOT EXISTS mom_store (
   created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- ── Per-child balance tables ───────────────────────────────────────────────────
+
 CREATE TABLE IF NOT EXISTS bucks_balance (
-  child      TEXT PRIMARY KEY,
+  family_id  TEXT NOT NULL REFERENCES families(id),
+  child      TEXT NOT NULL,
   balance    INTEGER NOT NULL DEFAULT 0,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (family_id, child)
 );
 
 CREATE TABLE IF NOT EXISTS screen_time_balance (
-  child      TEXT PRIMARY KEY,
+  family_id  TEXT NOT NULL REFERENCES families(id),
+  child      TEXT NOT NULL,
   balance    INTEGER NOT NULL DEFAULT 0,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (family_id, child)
 );
+
+-- ── Event logs ────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS chore_events (
   id          SERIAL PRIMARY KEY,
+  family_id   TEXT NOT NULL REFERENCES families(id),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   child       TEXT NOT NULL,
   chore_id    TEXT NOT NULL,
@@ -59,62 +94,77 @@ CREATE TABLE IF NOT EXISTS chore_events (
   accepted_at TIMESTAMPTZ
 );
 
-CREATE INDEX IF NOT EXISTS chore_events_child_date ON chore_events (child, created_at);
-CREATE INDEX IF NOT EXISTS chore_events_status ON chore_events (status);
+CREATE INDEX IF NOT EXISTS chore_events_child_date ON chore_events (family_id, child, created_at);
+CREATE INDEX IF NOT EXISTS chore_events_status ON chore_events (family_id, status);
 
 CREATE TABLE IF NOT EXISTS spend_events (
   id         SERIAL PRIMARY KEY,
+  family_id  TEXT NOT NULL REFERENCES families(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   child      TEXT NOT NULL,
   amount     INTEGER NOT NULL,
   type       TEXT
 );
 
+-- ── Routine log ───────────────────────────────────────────────────────────────
+
 CREATE TABLE IF NOT EXISTS routine_log (
+  family_id  TEXT NOT NULL REFERENCES families(id),
   date       DATE NOT NULL,
   child      TEXT NOT NULL,
   routine_id TEXT NOT NULL,
   completed  BOOLEAN NOT NULL DEFAULT false,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (date, child, routine_id)
+  PRIMARY KEY (family_id, date, child, routine_id)
 );
 
--- duration_minutes / buffer_minutes already reflect the 003 migration rename
+-- ── Timers ────────────────────────────────────────────────────────────────────
+
 CREATE TABLE IF NOT EXISTS timers (
-  child            TEXT PRIMARY KEY,
+  family_id        TEXT NOT NULL REFERENCES families(id),
+  child            TEXT NOT NULL,
   end_time         BIGINT NOT NULL,
   duration_minutes INTEGER NOT NULL DEFAULT 0,
   buffer_minutes   INTEGER NOT NULL DEFAULT 5,
-  started_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  started_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (family_id, child)
 );
 
+-- ── Family-shared tables ──────────────────────────────────────────────────────
+
 CREATE TABLE IF NOT EXISTS grocery (
-  id       TEXT PRIMARY KEY,
-  item     TEXT NOT NULL,
-  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id        TEXT PRIMARY KEY,
+  family_id TEXT NOT NULL REFERENCES families(id),
+  item      TEXT NOT NULL,
+  added_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS meals (
-  day   TEXT PRIMARY KEY,
-  main  TEXT NOT NULL DEFAULT '',
-  note  TEXT NOT NULL DEFAULT '',
-  lunch TEXT NOT NULL DEFAULT ''
+  family_id TEXT NOT NULL REFERENCES families(id),
+  day       TEXT NOT NULL,
+  main      TEXT NOT NULL DEFAULT '',
+  note      TEXT NOT NULL DEFAULT '',
+  lunch     TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY (family_id, day)
 );
 
 CREATE TABLE IF NOT EXISTS notes (
-  id       TEXT PRIMARY KEY,
-  text     TEXT NOT NULL,
-  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id        TEXT PRIMARY KEY,
+  family_id TEXT NOT NULL REFERENCES families(id),
+  text      TEXT NOT NULL,
+  added_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS announcements (
-  id       TEXT PRIMARY KEY,
-  text     TEXT NOT NULL,
-  added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  id        TEXT PRIMARY KEY,
+  family_id TEXT NOT NULL REFERENCES families(id),
+  text      TEXT NOT NULL,
+  added_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 CREATE TABLE IF NOT EXISTS purchases (
   id          TEXT PRIMARY KEY,
+  family_id   TEXT NOT NULL REFERENCES families(id),
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   child       TEXT NOT NULL,
   item_id     TEXT NOT NULL,
@@ -124,11 +174,13 @@ CREATE TABLE IF NOT EXISTS purchases (
   redeemed_at TIMESTAMPTZ
 );
 
--- 002_calendars
+-- ── Calendars ─────────────────────────────────────────────────────────────────
+
 CREATE TABLE IF NOT EXISTS calendars (
-  id    TEXT PRIMARY KEY,
-  name  TEXT NOT NULL,
-  url   TEXT NOT NULL,
-  color TEXT NOT NULL DEFAULT '#C17A4A',
-  child TEXT  -- 004_calendar_child: nullable = family-wide
+  id        TEXT PRIMARY KEY,
+  family_id TEXT NOT NULL REFERENCES families(id),
+  name      TEXT NOT NULL,
+  url       TEXT NOT NULL,
+  color     TEXT NOT NULL DEFAULT '#C17A4A',
+  child     TEXT
 );

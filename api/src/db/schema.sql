@@ -1,7 +1,28 @@
 -- Hearthboard schema
 -- Run via: npm run migrate
 
--- Chore definitions (replaces Chores sheet)
+-- ── Multi-tenant root tables ───────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS families (
+  id               TEXT PRIMARY KEY,
+  name             TEXT NOT NULL,
+  slug             TEXT NOT NULL UNIQUE,  -- opaque nanoid used in URLs
+  parent_pin_hash  TEXT NOT NULL,         -- bcrypt hash of parent PIN
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS children (
+  id         TEXT PRIMARY KEY,
+  family_id  TEXT NOT NULL REFERENCES families(id),
+  name       TEXT NOT NULL,
+  color      TEXT NOT NULL DEFAULT '#888888',
+  emoji      TEXT NOT NULL DEFAULT '👤',
+  sort_order INTEGER NOT NULL DEFAULT 0,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (family_id, name)
+);
+
+-- ── Chore definitions (replaces Chores sheet)
 CREATE TABLE IF NOT EXISTS chores (
   id          TEXT PRIMARY KEY,
   label       TEXT NOT NULL,
