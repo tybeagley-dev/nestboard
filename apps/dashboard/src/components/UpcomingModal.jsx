@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { useCalendarEvents, useCalendars } from '../hooks/useCalendarEvents'
+import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { isSameDay } from '../utils/dateUtils'
 
 function addDays(d, n) {
@@ -15,19 +15,8 @@ function fmtDayLabel(d, today) {
 }
 
 export default function UpcomingModal({ child, onClose }) {
-  const allEvents = useCalendarEvents()
-  const calendars = useCalendars()
-  const today     = new Date()
-
-  const childCalNames = useMemo(
-    () => new Set(calendars.filter(c => c.child === child.name).map(c => c.name)),
-    [calendars, child.name]
-  )
-
-  const events = useMemo(
-    () => allEvents.filter(e => childCalNames.has(e.calendarName)),
-    [allEvents, childCalNames]
-  )
+  const events = useCalendarEvents(child.name)
+  const today  = new Date()
 
   const days = useMemo(() => {
     const result = []
