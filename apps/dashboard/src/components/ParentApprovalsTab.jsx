@@ -4,7 +4,7 @@ import { CONFIG } from '../config/config'
 import BuckBadge from './BuckBadge'
 import { apiGet, apiPost } from '../utils/api'
 
-export default function ParentApprovalsTab() {
+export default function ParentApprovalsTab({ children = [] }) {
   const [pending, setPending] = useState([])
   const [loading, setLoading] = useState(true)
   const [acting,  setActing]  = useState(null)
@@ -48,7 +48,7 @@ export default function ParentApprovalsTab() {
   return (
     <div className="parent-approvals-tab">
       {pending.map(item => {
-        const child = CONFIG.children.find(c => c.name === item.child)
+        const child = children.find(c => c.name === item.child)
         const busy  = acting === item.chore_id
         return (
           <div key={`${item.child}-${item.chore_id}`} className="approval-row">

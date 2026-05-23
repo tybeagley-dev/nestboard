@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminGetAllMomStoreItems, adminAddMomStoreItem, adminEditMomStoreItem, adminDeleteMomStoreItem, usePurchases, redeemPurchase, buyMomStoreItem } from '../hooks/useMomStore'
 import BuckBadge from './BuckBadge'
-import { CONFIG } from '../config/config'
 
 function emptyItem() {
   return { id: '', label: '', icon: '', cost: 5, requiresApproval: false, active: true }
@@ -139,8 +138,8 @@ function StoreForm({ item, onSave, onCancel, saving }) {
 
 // ── Award an item ─────────────────────────────────────────────────────────────
 
-function AwardItem({ items, onAwarded }) {
-  const [child,    setChild]    = useState(CONFIG.children[0]?.name ?? '')
+function AwardItem({ items, children, onAwarded }) {
+  const [child,    setChild]    = useState(children[0]?.name ?? '')
   const [itemId,   setItemId]   = useState('')
   const [awarding, setAwarding] = useState(false)
   const [flash,    setFlash]    = useState(false)
@@ -171,7 +170,7 @@ function AwardItem({ items, onAwarded }) {
           value={child}
           onChange={e => setChild(e.target.value)}
         >
-          {CONFIG.children.map(c => (
+          {children.map(c => (
             <option key={c.name} value={c.name}>{c.name}</option>
           ))}
         </select>
@@ -208,7 +207,7 @@ function AwardItem({ items, onAwarded }) {
 
 // ── Pending Redemptions ───────────────────────────────────────────────────────
 
-function PendingRedemptions({ items }) {
+function PendingRedemptions({ items, children }) {
   const { purchases, loading, reload } = usePurchases()
   const [redeeming, setRedeeming] = useState(null)
 
@@ -221,7 +220,7 @@ function PendingRedemptions({ items }) {
 
   return (
     <>
-      <AwardItem items={items} onAwarded={reload} />
+      <AwardItem items={items} children={children} onAwarded={reload} />
 
       <p className="chore-inactive-heading" style={{ marginTop: 20 }}>Pending Redemptions</p>
 
@@ -233,7 +232,7 @@ function PendingRedemptions({ items }) {
 
       {!loading && (() => {
         const byChild = {}
-        CONFIG.children.forEach(c => { byChild[c.name] = [] })
+        children.forEach(c => { byChild[c.name] = [] })
         purchases.forEach(p => {
           if (!byChild[p.child]) byChild[p.child] = []
           byChild[p.child].push(p)
@@ -264,7 +263,7 @@ function PendingRedemptions({ items }) {
 
 // ── Tab root ──────────────────────────────────────────────────────────────────
 
-export default function ParentMomStoreTab() {
+export default function ParentMomStoreTab({ children = [] }) {
   const [items,         setItems]         = useState([])
   const [loading,       setLoading]       = useState(true)
   const [form,          setForm]          = useState(null)
@@ -370,7 +369,7 @@ export default function ParentMomStoreTab() {
         </>
       )}
 
-      {section === 'redeem' && <PendingRedemptions items={items} />}
+      {section === 'redeem' && <PendingRedemptions items={items} children={children} />}
     </div>
   )
 }

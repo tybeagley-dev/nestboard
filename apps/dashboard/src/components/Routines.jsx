@@ -2,16 +2,15 @@ import ChildCard from './ChildCard'
 import { useRoutines } from '../hooks/useRoutines'
 import { useChores } from '../hooks/useChores'
 import { useActiveChildTimers } from '../hooks/useScreenTime'
-import { CONFIG } from '../config/config'
 
-export default function Routines({ now, onSpinChore, onScreenTime, onBucks, onUpcoming }) {
-  const { routinesByChild, toggleRoutine, loading: routinesLoading } = useRoutines(now)
+export default function Routines({ now, children, onSpinChore, onScreenTime, onBucks, onUpcoming }) {
+  const { routinesByChild, toggleRoutine, loading: routinesLoading } = useRoutines(now, children)
   const { chores, loading } = useChores()
   const activeTimers = useActiveChildTimers()
 
   return (
     <>
-      {CONFIG.children.map(child => (
+      {children.map(child => (
         <ChildCard
           key={child.name}
           child={child}

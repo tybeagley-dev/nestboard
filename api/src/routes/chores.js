@@ -3,6 +3,7 @@ import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 import { broadcast } from './events.js'
+import { resolveChildId } from '../db/resolveChild.js'
 
 const router = Router()
 
@@ -29,9 +30,12 @@ router.get('/state', async (req, res) => {
   weekStart.setDate(ref.getDate() - dow)
 
   const { rows } = await db.query(
-    `SELECT * FROM chore_events
-     WHERE family_id = $1 AND created_at >= $2
-     ORDER BY created_at ASC`,
+    `SELECT ce.chore_id, ce.chore_label, ce.bucks, ce.status, ce.accepted_at, ce.created_at,
+            ch.name AS child
+     FROM chore_events ce
+     JOIN children ch ON ch.id = ce.child_id
+     WHERE ce.family_id = $1 AND ce.created_at >= $2
+     ORDER BY ce.created_at ASC`,
     [req.familyId, weekStart.toISOString()]
   )
 
@@ -73,9 +77,12 @@ router.get('/state', async (req, res) => {
 // GET /chores/pending-approvals
 router.get('/pending-approvals', async (req, res) => {
   const { rows } = await db.query(
-    `SELECT * FROM chore_events
-     WHERE family_id = $1 AND status = 'pending_approval'
-     ORDER BY created_at ASC`,
+    `SELECT ce.id, ce.family_id, ce.child_id, ce.chore_id, ce.chore_label,
+            ce.bucks, ce.status, ce.accepted_at, ce.created_at, ch.name AS child
+     FROM chore_events ce
+     JOIN children ch ON ch.id = ce.child_id
+     WHERE ce.family_id = $1 AND ce.status = 'pending_approval'
+     ORDER BY ce.created_at ASC`,
     [req.familyId]
   )
   res.json(rows)
@@ -83,24 +90,27 @@ router.get('/pending-approvals', async (req, res) => {
 
 // DELETE /chores/:id/assignment?child=Name
 router.delete('/:id/assignment', requireParent, async (req, res) => {
-  const { child } = req.query
+  const childName = req.query.child
   const choreId = req.params.id
-  if (!child) return res.status(400).json({ error: 'child required' })
+  if (!childName) return res.status(400).json({ error: 'child required' })
+
+  const childId = await resolveChildId(req.familyId, childName)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
   try {
     const { rowCount } = await db.query(
       `DELETE FROM chore_events
        WHERE id = (
          SELECT id FROM chore_events
-         WHERE family_id = $1 AND child = $2 AND chore_id = $3
+         WHERE family_id = $1 AND child_id = $2 AND chore_id = $3
            AND status IN ('accepted', 'pending_approval')
          ORDER BY created_at DESC
          LIMIT 1
        )`,
-      [req.familyId, child, choreId]
+      [req.familyId, childId, choreId]
     )
     if (!rowCount) return res.status(404).json({ error: 'No active assignment found' })
-    broadcast('chore_state', { child })
+    broadcast('chore_state', { child: childName })
     res.json({ success: true })
   } catch (err) {
     console.error('unassign error', err)
@@ -114,11 +124,14 @@ router.post('/:id/accept', async (req, res) => {
   const choreId = req.params.id
   if (!child || !choreId || !choreLabel) return res.status(400).json({ error: 'Missing params' })
 
+  const childId = await resolveChildId(req.familyId, child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
   try {
     await db.query(
-      `INSERT INTO chore_events (family_id, child, chore_id, chore_label, bucks, status, accepted_at)
+      `INSERT INTO chore_events (family_id, child_id, chore_id, chore_label, bucks, status, accepted_at)
        VALUES ($1, $2, $3, $4, $5, 'accepted', NOW())`,
-      [req.familyId, child, choreId, choreLabel, bucks]
+      [req.familyId, childId, choreId, choreLabel, bucks]
     )
     broadcast('chore_state', { child })
     res.json({ success: true })
@@ -134,22 +147,25 @@ router.post('/:id/request-approval', async (req, res) => {
   const choreId = req.params.id
   if (!child || !choreId) return res.status(400).json({ error: 'Missing params' })
 
+  const childId = await resolveChildId(req.familyId, child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
   const today = new Date().toISOString().slice(0, 10)
 
   const { rows } = await db.query(
     `SELECT id FROM chore_events
-     WHERE family_id = $1 AND child = $2 AND chore_id = $3
+     WHERE family_id = $1 AND child_id = $2 AND chore_id = $3
        AND created_at::date = $4
        AND status IN ('pending_approval', 'completed')
      LIMIT 1`,
-    [req.familyId, child, choreId, today]
+    [req.familyId, childId, choreId, today]
   )
   if (rows.length) return res.json({ success: true, skipped: true })
 
   await db.query(
-    `INSERT INTO chore_events (family_id, child, chore_id, chore_label, bucks, status)
+    `INSERT INTO chore_events (family_id, child_id, chore_id, chore_label, bucks, status)
      VALUES ($1, $2, $3, $4, $5, 'pending_approval')`,
-    [req.familyId, child, choreId, choreLabel, bucks]
+    [req.familyId, childId, choreId, choreLabel, bucks]
   )
   broadcast('chore_state', { child })
   res.json({ success: true })
@@ -160,19 +176,22 @@ router.post('/:id/approve', requireParent, async (req, res) => {
   const { child } = req.body
   const choreId = req.params.id
 
+  const childId = await resolveChildId(req.familyId, child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
   const { rows } = await db.query(
     `UPDATE chore_events SET status = 'completed'
-     WHERE family_id = $1 AND child = $2 AND chore_id = $3 AND status = 'pending_approval'
+     WHERE family_id = $1 AND child_id = $2 AND chore_id = $3 AND status = 'pending_approval'
      RETURNING bucks`,
-    [req.familyId, child, choreId]
+    [req.familyId, childId, choreId]
   )
   if (!rows.length) return res.status(404).json({ error: 'No pending approval found' })
 
   const bucksEarned = rows[0].bucks
   await db.query(
     `UPDATE bucks_balance SET balance = balance + $1, updated_at = NOW()
-     WHERE family_id = $2 AND child = $3`,
-    [bucksEarned, req.familyId, child]
+     WHERE family_id = $2 AND child_id = $3`,
+    [bucksEarned, req.familyId, childId]
   )
   broadcast('chore_state', { child })
   broadcast('bucks', { child })
@@ -184,10 +203,13 @@ router.post('/:id/reject', requireParent, async (req, res) => {
   const { child } = req.body
   const choreId = req.params.id
 
+  const childId = await resolveChildId(req.familyId, child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
   const { rowCount } = await db.query(
     `DELETE FROM chore_events
-     WHERE family_id = $1 AND child = $2 AND chore_id = $3 AND status = 'pending_approval'`,
-    [req.familyId, child, choreId]
+     WHERE family_id = $1 AND child_id = $2 AND chore_id = $3 AND status = 'pending_approval'`,
+    [req.familyId, childId, choreId]
   )
   if (!rowCount) return res.status(404).json({ error: 'No pending approval found' })
 
@@ -227,11 +249,20 @@ router.delete('/:id', requireParent, async (req, res) => {
 
 router.get('/events', requireParent, async (req, res) => {
   const { child, date } = req.query
-  let query = `SELECT * FROM chore_events WHERE family_id = $1`
+  let query = `SELECT ce.id, ce.family_id, ce.child_id, ce.chore_id, ce.chore_label,
+                      ce.bucks, ce.status, ce.accepted_at, ce.created_at, ch.name AS child
+               FROM chore_events ce
+               JOIN children ch ON ch.id = ce.child_id
+               WHERE ce.family_id = $1`
   const params = [req.familyId]
-  if (child) { params.push(child); query += ` AND child = $${params.length}` }
-  if (date)  { params.push(date);  query += ` AND created_at::date = $${params.length}::date` }
-  query += ` ORDER BY created_at DESC LIMIT 100`
+  if (child) {
+    const childId = await resolveChildId(req.familyId, child)
+    if (!childId) return res.status(400).json({ error: 'Unknown child' })
+    params.push(childId)
+    query += ` AND ce.child_id = $${params.length}`
+  }
+  if (date) { params.push(date); query += ` AND ce.created_at::date = $${params.length}::date` }
+  query += ` ORDER BY ce.created_at DESC LIMIT 100`
   const { rows } = await db.query(query, params)
   res.json(rows)
 })
@@ -242,7 +273,12 @@ router.patch('/events/:eventId', requireParent, async (req, res) => {
   if (!validStatuses.includes(status)) return res.status(400).json({ error: 'Invalid status' })
 
   const { rows } = await db.query(
-    `UPDATE chore_events SET status = $1 WHERE id = $2 AND family_id = $3 RETURNING child`,
+    `WITH updated AS (
+       UPDATE chore_events SET status = $1
+       WHERE id = $2 AND family_id = $3
+       RETURNING child_id
+     )
+     SELECT ch.name AS child FROM updated u JOIN children ch ON ch.id = u.child_id`,
     [status, req.params.eventId, req.familyId]
   )
   if (!rows.length) return res.status(404).json({ error: 'Event not found' })
@@ -252,7 +288,10 @@ router.patch('/events/:eventId', requireParent, async (req, res) => {
 
 router.delete('/events/:eventId', requireParent, async (req, res) => {
   const { rows } = await db.query(
-    `DELETE FROM chore_events WHERE id = $1 AND family_id = $2 RETURNING child`,
+    `WITH deleted AS (
+       DELETE FROM chore_events WHERE id = $1 AND family_id = $2 RETURNING child_id
+     )
+     SELECT ch.name AS child FROM deleted d JOIN children ch ON ch.id = d.child_id`,
     [req.params.eventId, req.familyId]
   )
   if (!rows.length) return res.status(404).json({ error: 'Event not found' })

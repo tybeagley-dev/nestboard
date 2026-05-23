@@ -3,6 +3,7 @@ import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 import { broadcast } from './events.js'
+import { resolveChildId } from '../db/resolveChild.js'
 
 const router = Router()
 
@@ -14,8 +15,10 @@ router.get('/', async (req, res) => {
   if (!date) return res.status(400).json({ error: 'date required' })
 
   const { rows } = await db.query(
-    `SELECT child, routine_id, completed FROM routine_log
-     WHERE family_id = $1 AND date = $2`,
+    `SELECT ch.name AS child, rl.routine_id, rl.completed
+     FROM routine_log rl
+     JOIN children ch ON ch.id = rl.child_id
+     WHERE rl.family_id = $1 AND rl.date = $2`,
     [req.familyId, date]
   )
   const completed = {}
@@ -30,17 +33,22 @@ router.post('/toggle', async (req, res) => {
   const { date, child, routineId } = req.body
   if (!date || !child || !routineId) return res.status(400).json({ error: 'Missing params' })
 
+  const childId = await resolveChildId(req.familyId, child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
   await db.query(
-    `INSERT INTO routine_log (family_id, date, child, routine_id, completed, updated_at)
+    `INSERT INTO routine_log (family_id, date, child_id, routine_id, completed, updated_at)
      VALUES ($1, $2, $3, $4, true, NOW())
-     ON CONFLICT (family_id, date, child, routine_id)
+     ON CONFLICT (family_id, date, child_id, routine_id)
      DO UPDATE SET completed = NOT routine_log.completed, updated_at = NOW()`,
-    [req.familyId, date, child, routineId]
+    [req.familyId, date, childId, routineId]
   )
 
   const state = await db.query(
-    `SELECT child, routine_id, completed FROM routine_log
-     WHERE family_id = $1 AND date = $2`,
+    `SELECT ch.name AS child, rl.routine_id, rl.completed
+     FROM routine_log rl
+     JOIN children ch ON ch.id = rl.child_id
+     WHERE rl.family_id = $1 AND rl.date = $2`,
     [req.familyId, date]
   )
   const completed = {}
@@ -56,7 +64,12 @@ router.post('/toggle', async (req, res) => {
 
 router.get('/defs', async (req, res) => {
   const { rows } = await db.query(
-    `SELECT * FROM routine_defs WHERE family_id = $1 ORDER BY child, sort_order, label`,
+    `SELECT rd.id, rd.family_id, rd.child_id, rd.label, rd.icon, rd.schedules,
+            rd.time, rd.sort_order, rd.created_at, ch.name AS child
+     FROM routine_defs rd
+     JOIN children ch ON ch.id = rd.child_id
+     WHERE rd.family_id = $1
+     ORDER BY ch.sort_order, rd.sort_order, rd.label`,
     [req.familyId]
   )
   res.json(rows)
@@ -64,20 +77,26 @@ router.get('/defs', async (req, res) => {
 
 router.post('/defs', requireParent, async (req, res) => {
   const { id, child, label, icon, schedules, time, sort_order } = req.body
+  const childId = await resolveChildId(req.familyId, child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
   await db.query(
-    `INSERT INTO routine_defs (id, family_id, child, label, icon, schedules, time, sort_order)
+    `INSERT INTO routine_defs (id, family_id, child_id, label, icon, schedules, time, sort_order)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-    [id, req.familyId, child, label, icon, schedules ?? [], time ?? null, sort_order ?? 0]
+    [id, req.familyId, childId, label, icon, schedules ?? [], time ?? null, sort_order ?? 0]
   )
   res.json({ success: true })
 })
 
 router.put('/defs/:id', requireParent, async (req, res) => {
   const { child, label, icon, schedules, time, sort_order } = req.body
+  const childId = await resolveChildId(req.familyId, child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
   await db.query(
-    `UPDATE routine_defs SET child=$1, label=$2, icon=$3, schedules=$4, time=$5, sort_order=$6
+    `UPDATE routine_defs SET child_id=$1, label=$2, icon=$3, schedules=$4, time=$5, sort_order=$6
      WHERE id=$7 AND family_id=$8`,
-    [child, label, icon, schedules, time ?? null, sort_order, req.params.id, req.familyId]
+    [childId, label, icon, schedules, time ?? null, sort_order, req.params.id, req.familyId]
   )
   res.json({ success: true })
 })

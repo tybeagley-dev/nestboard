@@ -7,7 +7,7 @@ import ParentRoutinesTab from './ParentRoutinesTab'
 import ParentMomStoreTab from './ParentMomStoreTab'
 import ParentApprovalsTab from './ParentApprovalsTab'
 import ParentGroceryTab from './ParentGroceryTab'
-import { CONFIG } from '../config/config'
+import ParentChildrenTab from './ParentChildrenTab'
 
 async function fetchPendingCount() {
   try {
@@ -17,7 +17,7 @@ async function fetchPendingCount() {
   } catch { return 0 }
 }
 
-export default function ParentPanel({ onClose }) {
+export default function ParentPanel({ onClose, children, reloadChildren }) {
   const [unlocked,      setUnlocked]      = useState(false)
   const [tab,           setTab]           = useState('approvals')
   const [pendingCount,  setPendingCount]  = useState(0)
@@ -54,6 +54,7 @@ export default function ParentPanel({ onClose }) {
     { id: 'meals',     label: 'Meals'        },
     { id: 'store',     label: 'Mom Store'    },
     { id: 'grocery',   label: 'Grocery'      },
+    { id: 'children',  label: 'Children'     },
   ]
 
   return (
@@ -78,13 +79,14 @@ export default function ParentPanel({ onClose }) {
         </div>
 
         <div className="parent-panel-body">
-          {tab === 'approvals' && <ParentApprovalsTab />}
-          {tab === 'bucks'     && <ParentBucksTab />}
-          {tab === 'chores'    && <ParentChoresTab />}
-          {tab === 'routines'  && <ParentRoutinesTab />}
+          {tab === 'approvals' && <ParentApprovalsTab children={children} />}
+          {tab === 'bucks'     && <ParentBucksTab children={children} />}
+          {tab === 'chores'    && <ParentChoresTab children={children} />}
+          {tab === 'routines'  && <ParentRoutinesTab children={children} />}
           {tab === 'meals'     && <ParentMealsTab />}
-          {tab === 'store'     && <ParentMomStoreTab />}
+          {tab === 'store'     && <ParentMomStoreTab children={children} />}
           {tab === 'grocery'   && <ParentGroceryTab />}
+          {tab === 'children'  && <ParentChildrenTab children={children} onReload={reloadChildren} />}
         </div>
       </div>
     </div>

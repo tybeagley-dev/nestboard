@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
+import { resolveChildId } from '../db/resolveChild.js'
 
 const router = Router()
 
@@ -196,7 +197,13 @@ function parseIcal(text, color, calName, calChild, now, cutoff) {
 }
 
 async function fetchAndParseCalendars(familyId) {
-  const { rows } = await db.query(`SELECT * FROM calendars WHERE family_id = $1`, [familyId])
+  const { rows } = await db.query(
+    `SELECT c.id, c.name, c.url, c.color, ch.name AS child_name
+     FROM calendars c
+     LEFT JOIN children ch ON ch.id = c.child_id
+     WHERE c.family_id = $1`,
+    [familyId]
+  )
   const now    = new Date()
   const cutoff = new Date(now.getTime() + 60 * 24 * 60 * 60 * 1000)
   const all    = []
@@ -207,7 +214,7 @@ async function fetchAndParseCalendars(familyId) {
       const res = await fetch(url)
       if (!res.ok) return
       const text   = await res.text()
-      const events = parseIcal(text, cal.color, cal.name, cal.child ?? null, now, cutoff)
+      const events = parseIcal(text, cal.color, cal.name, cal.child_name ?? null, now, cutoff)
       all.push(...events)
     } catch {
       // skip calendars that fail to fetch
@@ -240,7 +247,11 @@ router.get('/events', async (req, res) => {
 
 router.get('/', requireParent, async (req, res) => {
   const { rows } = await db.query(
-    `SELECT * FROM calendars WHERE family_id = $1 ORDER BY name`,
+    `SELECT c.id, c.family_id, c.name, c.url, c.color, c.child_id, ch.name AS child
+     FROM calendars c
+     LEFT JOIN children ch ON ch.id = c.child_id
+     WHERE c.family_id = $1
+     ORDER BY c.name`,
     [req.familyId]
   )
   res.json(rows)
@@ -249,10 +260,12 @@ router.get('/', requireParent, async (req, res) => {
 router.post('/', requireParent, async (req, res) => {
   const { name, url, color, child } = req.body
   if (!name || !url) return res.status(400).json({ error: 'Missing params' })
+  const childId = child ? await resolveChildId(req.familyId, child) : null
+  if (child && !childId) return res.status(400).json({ error: 'Unknown child' })
   const id = Date.now().toString(36)
   await db.query(
-    `INSERT INTO calendars (id, family_id, name, url, color, child) VALUES ($1,$2,$3,$4,$5,$6)`,
-    [id, req.familyId, name, url, color ?? '#C17A4A', child ?? null]
+    `INSERT INTO calendars (id, family_id, name, url, color, child_id) VALUES ($1,$2,$3,$4,$5,$6)`,
+    [id, req.familyId, name, url, color ?? '#C17A4A', childId]
   )
   cacheMap.delete(req.familyId)
   res.json({ success: true, id })
@@ -260,9 +273,11 @@ router.post('/', requireParent, async (req, res) => {
 
 router.put('/:id', requireParent, async (req, res) => {
   const { name, url, color, child } = req.body
+  const childId = child ? await resolveChildId(req.familyId, child) : null
+  if (child && !childId) return res.status(400).json({ error: 'Unknown child' })
   await db.query(
-    `UPDATE calendars SET name=$1, url=$2, color=$3, child=$4 WHERE id=$5 AND family_id=$6`,
-    [name, url, color, child ?? null, req.params.id, req.familyId]
+    `UPDATE calendars SET name=$1, url=$2, color=$3, child_id=$4 WHERE id=$5 AND family_id=$6`,
+    [name, url, color, childId, req.params.id, req.familyId]
   )
   cacheMap.delete(req.familyId)
   res.json({ success: true })

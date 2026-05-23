@@ -3,6 +3,7 @@ import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 import { broadcast } from './events.js'
+import { resolveChildId } from '../db/resolveChild.js'
 
 const router = Router()
 
@@ -22,6 +23,9 @@ router.post('/:id/buy', async (req, res) => {
   const { id }    = req.params
   if (!child) return res.status(400).json({ error: 'Missing child' })
 
+  const childId = await resolveChildId(req.familyId, child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
   const { rows } = await db.query(
     `SELECT * FROM mom_store WHERE id = $1 AND family_id = $2 AND active = true`,
     [id, req.familyId]
@@ -32,17 +36,17 @@ router.post('/:id/buy', async (req, res) => {
 
   await db.query(
     `UPDATE bucks_balance SET balance = GREATEST(0, balance - $1), updated_at = NOW()
-     WHERE family_id = $2 AND child = $3`,
-    [item.cost, req.familyId, child]
+     WHERE family_id = $2 AND child_id = $3`,
+    [item.cost, req.familyId, childId]
   )
   await db.query(
-    `INSERT INTO purchases (id, family_id, child, item_id, item_label, cost)
+    `INSERT INTO purchases (id, family_id, child_id, item_id, item_label, cost)
      VALUES ($1,$2,$3,$4,$5,$6)`,
-    [`${Date.now()}-${child}`, req.familyId, child, id, item.label, item.cost]
+    [`${Date.now()}-${childId}`, req.familyId, childId, id, item.label, item.cost]
   )
   await db.query(
-    `INSERT INTO spend_events (family_id, child, amount, type) VALUES ($1, $2, $3, 'mom_store')`,
-    [req.familyId, child, -item.cost]
+    `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, 'mom_store')`,
+    [req.familyId, childId, -item.cost]
   )
 
   broadcast('bucks', { child })
@@ -51,11 +55,20 @@ router.post('/:id/buy', async (req, res) => {
 
 router.get('/purchases', async (req, res) => {
   const { child, includeRedeemed } = req.query
-  let query = `SELECT * FROM purchases WHERE family_id = $1`
+  let query = `SELECT p.id, p.family_id, p.child_id, p.item_id, p.item_label, p.cost,
+                      p.redeemed, p.redeemed_at, p.created_at, ch.name AS child
+               FROM purchases p
+               JOIN children ch ON ch.id = p.child_id
+               WHERE p.family_id = $1`
   const params = [req.familyId]
-  if (child) { params.push(child); query += ` AND child = $${params.length}` }
-  if (includeRedeemed !== 'true') { query += ` AND redeemed = false` }
-  query += ` ORDER BY created_at DESC`
+  if (child) {
+    const childId = await resolveChildId(req.familyId, child)
+    if (!childId) return res.status(400).json({ error: 'Unknown child' })
+    params.push(childId)
+    query += ` AND p.child_id = $${params.length}`
+  }
+  if (includeRedeemed !== 'true') { query += ` AND p.redeemed = false` }
+  query += ` ORDER BY p.created_at DESC`
   const { rows } = await db.query(query, params)
   res.json(rows)
 })

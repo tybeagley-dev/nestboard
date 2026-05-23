@@ -14,11 +14,13 @@ import NotesAndGrocery from './components/NotesAndGrocery'
 import UpcomingModal from './components/UpcomingModal'
 import { useClock } from './hooks/useClock'
 import { useWeather } from './hooks/useWeather'
+import { useChildren } from './hooks/useChildren'
 import { unlockAudio } from './utils/chime'
 
 export default function App() {
   const now     = useClock()
   const weather = useWeather()
+  const { children, reload: reloadChildren } = useChildren()
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has('clearcache')) {
@@ -74,6 +76,7 @@ export default function App() {
       <div className="dashboard-children">
         <Routines
           now={now}
+          children={children}
           onSpinChore={(child, chores, isExtra) => setActiveChoreChild({ child, chores, isExtra: !!isExtra })}
           onScreenTime={setActiveScreenChild}
           onBucks={setActiveBucksChild}
@@ -110,7 +113,7 @@ export default function App() {
         </div>
       )}
       {showParentPanel && (
-        <ParentPanel onClose={() => setShowParentPanel(false)} />
+        <ParentPanel onClose={() => setShowParentPanel(false)} children={children} reloadChildren={reloadChildren} />
       )}
     </div>
   )

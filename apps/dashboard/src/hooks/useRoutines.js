@@ -7,16 +7,10 @@ import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
 const POLL_MS = 20 * 1000
 
 function configDefs() {
-  const all = []
-  CONFIG.children.forEach(child => {
-    (CONFIG.routines[child.name] ?? []).forEach(r => {
-      all.push({ ...r, child: child.name })
-    })
-  })
-  return all
+  return []
 }
 
-export function useRoutines(now) {
+export function useRoutines(now, children = []) {
   const [completed,   setCompleted]   = useState({})
   const [routineDefs, setRoutineDefs] = useState(configDefs)
   const [loading,     setLoading]     = useState(true)
@@ -60,7 +54,7 @@ export function useRoutines(now) {
   const mode = getCurrentScheduleMode(now, CONFIG)
 
   const routinesByChild = {}
-  CONFIG.children.forEach(child => {
+  children.forEach(child => {
     const childDefs = routineDefs.filter(r => r.child === child.name)
     routinesByChild[child.name] = childDefs
       .filter(r => {

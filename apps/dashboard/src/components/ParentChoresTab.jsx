@@ -15,7 +15,7 @@ function emptyChore() {
 
 // ── Chore row in list view ────────────────────────────────────────────────────
 
-function ChoreRow({ chore, onEdit, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
+function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
   const [assigning, setAssigning] = useState(false)
   const [assigned,  setAssigned]  = useState('')
 
@@ -56,7 +56,7 @@ function ChoreRow({ chore, onEdit, confirmDelete, onDeleteRequest, onConfirmDele
         </span>
         {assigning && (
           <div className="chore-assign-picker">
-            {CONFIG.children.map(child => (
+            {children.map(child => (
               <button key={child.name} className="chore-assign-child-btn" onClick={() => handleAssign(child)}>
                 {child.emoji} {child.name}
               </button>
@@ -219,7 +219,7 @@ function ChoreForm({ chore, onSave, onCancel, saving }) {
 
 // ── Today's Assignments ───────────────────────────────────────────────────────
 
-function TodayAssignments() {
+function TodayAssignments({ children }) {
   const [assignments, setAssignments] = useState([])
   const [acting,      setActing]      = useState(null)
 
@@ -229,7 +229,7 @@ function TodayAssignments() {
     if (!data?.today) return
     const flat = []
     for (const [childName, chores] of Object.entries(data.today)) {
-      const childObj = CONFIG.children.find(c => c.name === childName)
+      const childObj = children.find(c => c.name === childName)
       for (const [choreId, entry] of Object.entries(chores)) {
         if (entry.status === 'accepted') {
           flat.push({ child: childName, childObj, choreId, choreLabel: entry.choreLabel, bucks: entry.bucks })
@@ -295,7 +295,7 @@ function TodayAssignments() {
 
 // ── Tab root ──────────────────────────────────────────────────────────────────
 
-export default function ParentChoresTab() {
+export default function ParentChoresTab({ children = [] }) {
   const [chores,        setChores]        = useState([])
   const [loading,       setLoading]       = useState(true)
   const [form,          setForm]          = useState(null)
@@ -342,7 +342,7 @@ export default function ParentChoresTab() {
 
   return (
     <div className="parent-chores-tab">
-      <TodayAssignments />
+      <TodayAssignments children={children} />
 
       <button className="parent-add-chore-btn" onClick={() => setForm(emptyChore())}>
         + Add Chore
@@ -358,6 +358,7 @@ export default function ParentChoresTab() {
         <ChoreRow
           key={chore.id}
           chore={chore}
+          children={children}
           confirmDelete={deleteConfirm === chore.id}
           onEdit={() => setForm({ ...chore, instructions: chore.instructions ?? [] })}
           onDeleteRequest={() => setDeleteConfirm(chore.id)}
@@ -373,6 +374,7 @@ export default function ParentChoresTab() {
             <ChoreRow
               key={chore.id}
               chore={chore}
+              children={children}
               confirmDelete={deleteConfirm === chore.id}
               onEdit={() => setForm({ ...chore, instructions: chore.instructions ?? [] })}
               onDeleteRequest={() => setDeleteConfirm(chore.id)}

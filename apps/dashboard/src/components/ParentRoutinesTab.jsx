@@ -1,13 +1,11 @@
 import { useState } from 'react'
-import { CONFIG } from '../config/config'
 import { useRoutineDefs, adminAddRoutineDef, adminEditRoutineDef, adminDeleteRoutineDef } from '../hooks/useRoutines'
 
 const SCHEDULES     = ['school', 'weekend', 'summer', 'holiday']
 const SCHED_LABEL   = { school: 'School', weekend: 'Weekend', summer: 'Summer', holiday: 'Holiday' }
-const CHILDREN      = CONFIG.children.map(c => c.name)
 
-function emptyDef(child) {
-  return { id: '', child: child || CHILDREN[0], label: '', icon: '', schedules: ['school', 'weekend', 'summer', 'holiday'], time: '', sortOrder: 0 }
+function emptyDef(child, childNames) {
+  return { id: '', child: child || childNames[0] || '', label: '', icon: '', schedules: ['school', 'weekend', 'summer', 'holiday'], time: '', sortOrder: 0 }
 }
 
 // ── Routine row ───────────────────────────────────────────────────────────────
@@ -43,8 +41,8 @@ function RoutineRow({ def, onEdit, confirmDelete, onDeleteRequest, onConfirmDele
 
 // ── Routine form ──────────────────────────────────────────────────────────────
 
-function RoutineForm({ def, onSave, onCancel, saving }) {
-  const [child,     setChild]     = useState(def.child || CHILDREN[0])
+function RoutineForm({ def, childNames, onSave, onCancel, saving }) {
+  const [child,     setChild]     = useState(def.child || childNames[0] || '')
   const [label,     setLabel]     = useState(def.label || '')
   const [icon,      setIcon]      = useState(def.icon || '')
   const [schedules, setSchedules] = useState(def.schedules?.length ? def.schedules : ['school', 'weekend', 'summer', 'holiday'])
@@ -65,7 +63,7 @@ function RoutineForm({ def, onSave, onCancel, saving }) {
         <div className="chore-form-field">
           <label className="chore-form-label">Child</label>
           <div className="chore-form-toggle">
-            {CHILDREN.map(c => (
+            {childNames.map(c => (
               <button key={c} className={child === c ? 'active' : ''} onClick={() => setChild(c)}>{c}</button>
             ))}
           </div>
@@ -113,9 +111,10 @@ function RoutineForm({ def, onSave, onCancel, saving }) {
 
 // ── Tab root ──────────────────────────────────────────────────────────────────
 
-export default function ParentRoutinesTab() {
+export default function ParentRoutinesTab({ children }) {
+  const childNames = children.map(c => c.name)
   const { defs, loading, reload } = useRoutineDefs()
-  const [activeChild,   setActiveChild]   = useState(CHILDREN[0])
+  const [activeChild,   setActiveChild]   = useState(() => childNames[0] ?? '')
   const [form,          setForm]          = useState(null)
   const [saving,        setSaving]        = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
@@ -142,6 +141,7 @@ export default function ParentRoutinesTab() {
     return (
       <RoutineForm
         def={form}
+        childNames={childNames}
         onSave={handleSave}
         onCancel={() => setForm(null)}
         saving={saving}
@@ -152,14 +152,14 @@ export default function ParentRoutinesTab() {
   return (
     <div className="parent-routines-tab">
       <div className="parent-child-tabs">
-        {CHILDREN.map(c => (
+        {childNames.map(c => (
           <button key={c} className={`parent-child-tab ${activeChild === c ? 'active' : ''}`} onClick={() => setActiveChild(c)}>
             {c}
           </button>
         ))}
       </div>
 
-      <button className="parent-add-chore-btn" onClick={() => setForm(emptyDef(activeChild))}>
+      <button className="parent-add-chore-btn" onClick={() => setForm(emptyDef(activeChild, childNames))}>
         + Add Routine for {activeChild}
       </button>
 
@@ -167,7 +167,7 @@ export default function ParentRoutinesTab() {
 
       {!loading && childDefs.length === 0 && (
         <p className="parent-soon-msg">
-          No Sheets routines for {activeChild} yet — dashboard uses config.js until you add some here.
+          No routines for {activeChild} yet.
         </p>
       )}
 

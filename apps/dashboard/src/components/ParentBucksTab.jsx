@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { CONFIG } from '../config/config'
 import { useChorePoints } from '../hooks/useChores'
 import { useScreenBalance } from '../hooks/useScreenTime'
 import BuckBadge from './BuckBadge'
@@ -92,10 +91,10 @@ function ChildRow({ child }) {
   )
 }
 
-export default function ParentBucksTab() {
+export default function ParentBucksTab({ children = [] }) {
   return (
     <div className="parent-bucks-tab">
-      {CONFIG.children.map(child => (
+      {children.map(child => (
         <ChildRow key={child.name} child={child} />
       ))}
     </div>
