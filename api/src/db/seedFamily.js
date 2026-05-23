@@ -60,16 +60,62 @@ console.log('balances seeded')
 
 // ── Chores ────────────────────────────────────────────────────────────────────
 const chores = [
-  { id: 'mpgfwl2i', label: 'Clean bathroom', bucks: 1, icon: '', required: false, days: [], instructions: [], max_per_week: null },
-  { id: 'mpggizii', label: 'clear table',    bucks: 1, icon: '', required: false, days: [], instructions: [], max_per_week: null },
-  { id: 'mpggj494', label: 'garage',         bucks: 2, icon: '', required: false, days: [], instructions: [], max_per_week: null },
+  { id: 'mpa8kvvz', label: 'Collect dirty clothes',              bucks: 1, icon: '🧺', active: true,  required: true,  days: ['Sunday'],   instructions: [],                                                                       max_per_week: null },
+  { id: 'c1',       label: 'baby sitter',                        bucks: 1, icon: '👶🏼', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c2',       label: 'feed the cats',                      bucks: 2, icon: '😸', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c3',       label: 'treasure hunter',                    bucks: 1, icon: '🛋️', active: true,  required: false, days: [],           instructions: ['Toys out from under couches'],                                          max_per_week: null },
+  { id: 'c4',       label: 'car detailer',                       bucks: 2, icon: '🚙', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c5',       label: 'sandbox supervisor',                  bucks: 1, icon: '🏖️', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c6',       label: 'wipe tables & counters',             bucks: 1, icon: '🧽', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c7',       label: 'unload dishwasher',                  bucks: 1, icon: '🧫', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c8',       label: 'nugget ninja',                       bucks: 1, icon: '🥷🏼', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c9',       label: 'wipe cabinets',                      bucks: 1, icon: '🧽', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c10',      label: 'transporter',                        bucks: 1, icon: '🚛', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c11',      label: 'clean door knobs',                   bucks: 1, icon: '🚪', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c12',      label: 'clean light switches',               bucks: 1, icon: '💡', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c13',      label: 'tidy room',                          bucks: 2, icon: '🛌', active: true,  required: false, days: [],           instructions: ['Toys out of room', 'Garbage cleaned', 'Clothes away', 'Bed made'],      max_per_week: null },
+  { id: 'c14',      label: 'mailman',                            bucks: 1, icon: '📫', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c15',      label: 'wipe chairs',                        bucks: 1, icon: '🪑', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c16',      label: 'wash windows',                       bucks: 1, icon: '🪟', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c17',      label: 'dust the piano',                     bucks: 1, icon: '🎹', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c18',      label: 'collect dirty clothes',              bucks: 1, icon: '🧺', active: true,  required: false, days: ['Sunday'],   instructions: [],                                                                       max_per_week: null },
+  { id: 'c19',      label: 'stepping stone stacker',             bucks: 1, icon: '🪨', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c20',      label: 'toilet team',                        bucks: 3, icon: '🚽', active: false, required: false, days: [],           instructions: ['Clean toilet', 'Scrub sink', 'Toilet paper rolls'],                     max_per_week: null },
+  { id: 'c21',      label: 'lego leader',                        bucks: 1, icon: '🝚', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c22',      label: 'shoe sheriff',                       bucks: 1, icon: '👟', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c23',      label: 'couch blankets & pillows',           bucks: 1, icon: '🛋️', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c24',      label: 'vacuum couch',                       bucks: 1, icon: '🧹', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c25',      label: 'set the table',                      bucks: 1, icon: '🍽️', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c26',      label: 'water the plants',                   bucks: 1, icon: '🪴', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c27',      label: 'vacuum',                             bucks: 1, icon: '🧹', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c28',      label: 'sanitation team—garbage cans emptied', bucks: 2, icon: '🧼', active: false, required: false, days: ['Monday'], instructions: [],                                                                       max_per_week: null },
+  { id: 'c29',      label: 'tech manager',                       bucks: 1, icon: '💻', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c30',      label: 'window opener',                      bucks: 1, icon: '🪟', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c31',      label: 'silk supervisor',                    bucks: 1, icon: '🎗️', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c32',      label: 'laundry aid',                        bucks: 1, icon: '🧺', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c33',      label: 'clear the table',                    bucks: 1, icon: '🍽️', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c34',      label: 'chef',                               bucks: 1, icon: '🧑🏼‍🍳', active: false, required: false, days: [],      instructions: [],                                                                       max_per_week: null },
+  { id: 'c35',      label: 'sanitation worker—garbage pickup',   bucks: 1, icon: '🚮', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c36',      label: 'block boss',                         bucks: 1, icon: '🧱', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c37',      label: 'put clean clothes away',             bucks: 1, icon: '🧦', active: true,  required: false, days: ['Monday'],   instructions: [],                                                                       max_per_week: null },
+  { id: 'c38',      label: 'stairs',                             bucks: 1, icon: '🪜', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c39',      label: 'hydration coordinator',              bucks: 1, icon: '💧', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c40',      label: 'litter box',                         bucks: 3, icon: '🙀', active: false, required: false, days: [],           instructions: ['Dirty litter removed', 'Bags in garbage', 'Filled with clean litter'],  max_per_week: null },
+  { id: 'c41',      label: 'librarian',                          bucks: 1, icon: '📚', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c42',      label: 'mop',                                bucks: 1, icon: '🧹', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c43',      label: 'wipe banisters',                     bucks: 1, icon: '🧽', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c44',      label: 'dust appliances',                    bucks: 1, icon: '🧽', active: false, required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c45',      label: 'pick up toys',                       bucks: 1, icon: '🪀', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c46',      label: 'zookeeper',                          bucks: 1, icon: '🐾', active: true,  required: false, days: [],           instructions: [],                                                                       max_per_week: null },
+  { id: 'c47',      label: 'garbage cans put away',              bucks: 2, icon: '🗑️', active: true,  required: false, days: ['Tuesday'],  instructions: [],                                                                       max_per_week: null },
+  { id: 'c48',      label: 'garage grandmaster',                 bucks: 2, icon: '🚲', active: true,  required: false, days: [],           instructions: ['Bikes', 'Scooters', 'Helmets', 'Garage closed'],                        max_per_week: null },
 ]
 for (const ch of chores) {
   await db.query(
     `INSERT INTO chores (id, family_id, label, bucks, icon, active, required, days, instructions, max_per_week)
-     VALUES ($1, $2, $3, $4, $5, true, $6, $7, $8, $9)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (id) DO NOTHING`,
-    [ch.id, FAMILY_ID, ch.label, ch.bucks, ch.icon, ch.required, ch.days, ch.instructions, ch.max_per_week]
+    [ch.id, FAMILY_ID, ch.label, ch.bucks, ch.icon, ch.active, ch.required, ch.days, ch.instructions, ch.max_per_week]
   )
 }
 console.log('chores seeded')
