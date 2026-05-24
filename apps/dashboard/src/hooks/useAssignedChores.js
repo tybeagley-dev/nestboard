@@ -15,7 +15,11 @@ const DAY_INDEX = { Sunday: 0, Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4,
 
 function choreStartedThisWeek(days) {
   const todayIdx = new Date().getDay()
-  return days.some(d => (DAY_INDEX[d] ?? 7) <= todayIdx)
+  return days.some(d => {
+    const dayIdx = DAY_INDEX[d] ?? 7
+    // Sunday is day 0 — always <= any weekday, so it would appear all week without this guard
+    return dayIdx === 0 ? todayIdx === 0 : dayIdx <= todayIdx
+  })
 }
 
 function loadAssignments() {
