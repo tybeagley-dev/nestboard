@@ -176,6 +176,127 @@ for (const r of routineDefs) {
 }
 console.log('routine_defs seeded')
 
+// ── Zones ─────────────────────────────────────────────────────────────────────
+
+const zones = [
+  {
+    id: 'zone_boys_bedroom',
+    label: 'Boys Bedroom',
+    icon: '🛏️',
+    eligible_child_ids: ['child_nolan', 'child_jonah'],
+    sort_order: 0,
+    items: [
+      { id: 'zi_boys_chest',  label: 'Bed treasure chest reset', active: false, sort_order: 0 },
+      { id: 'zi_boys_trash',  label: 'Trash',                    active: true,  sort_order: 1 },
+      { id: 'zi_boys_toys',   label: 'Toy room toys',            active: true,  sort_order: 2 },
+      { id: 'zi_boys_clothes', label: 'Clothes',                 active: true,  sort_order: 3 },
+    ],
+  },
+  {
+    id: 'zone_paige_bedroom',
+    label: 'Paige\'s Bedroom',
+    icon: '🐱',
+    eligible_child_ids: ['child_paige'],
+    sort_order: 1,
+    items: [
+      { id: 'zi_paige_dressing', label: 'Dressing area',            active: true,  sort_order: 0 },
+      { id: 'zi_paige_chest',    label: 'Bed treasure chest reset', active: false, sort_order: 1 },
+      { id: 'zi_paige_cozy',     label: 'Cozy area',                active: true,  sort_order: 2 },
+      { id: 'zi_paige_creative', label: 'Creative',                 active: true,  sort_order: 3 },
+      { id: 'zi_paige_kittys',   label: 'Kittys',                   active: true,  sort_order: 4 },
+      { id: 'zi_paige_swing',    label: 'Swing',                    active: true,  sort_order: 5 },
+    ],
+  },
+  {
+    id: 'zone_upstairs_bath',
+    label: 'Upstairs Bathroom',
+    icon: '🚿',
+    eligible_child_ids: [],
+    sort_order: 2,
+    items: [
+      { id: 'zi_ubath_counters', label: 'Counters',      active: true, sort_order: 0 },
+      { id: 'zi_ubath_floors',   label: 'Floors',        active: true, sort_order: 1 },
+      { id: 'zi_ubath_tp',       label: 'Toilet paper',  active: true, sort_order: 2 },
+      { id: 'zi_ubath_toys',     label: 'Bathtub toys',  active: true, sort_order: 3 },
+    ],
+  },
+  {
+    id: 'zone_toy_room',
+    label: 'Toy Room',
+    icon: '🧸',
+    eligible_child_ids: [],
+    sort_order: 3,
+    items: [
+      { id: 'zi_toy_garbage', label: 'Garbage', active: true, sort_order: 0 },
+      { id: 'zi_toy_silks',   label: 'Silks',   active: true, sort_order: 1 },
+      { id: 'zi_toy_nuggets', label: 'Nuggets', active: true, sort_order: 2 },
+      { id: 'zi_toy_books',   label: 'Books',   active: true, sort_order: 3 },
+    ],
+  },
+  {
+    id: 'zone_stairs',
+    label: 'Stairs',
+    icon: '🪜',
+    eligible_child_ids: [],
+    sort_order: 4,
+    items: [],
+  },
+  {
+    id: 'zone_tv_room',
+    label: 'TV Room',
+    icon: '📺',
+    eligible_child_ids: [],
+    sort_order: 5,
+    items: [
+      { id: 'zi_tv_garbage', label: 'Garbage', active: true, sort_order: 0 },
+      { id: 'zi_tv_dishes',  label: 'Dishes',  active: true, sort_order: 1 },
+      { id: 'zi_tv_pillows', label: 'Pillows', active: true, sort_order: 2 },
+    ],
+  },
+  {
+    id: 'zone_dining_room',
+    label: 'Dining Room',
+    icon: '🍽️',
+    eligible_child_ids: [],
+    sort_order: 6,
+    items: [
+      { id: 'zi_dining_dishes',  label: 'Dishes',      active: true, sort_order: 0 },
+      { id: 'zi_dining_art',     label: 'Art supplies', active: true, sort_order: 1 },
+      { id: 'zi_dining_toys',    label: 'Toys',        active: true, sort_order: 2 },
+    ],
+  },
+  {
+    id: 'zone_main_bath',
+    label: 'Main Floor Bathroom',
+    icon: '🚽',
+    eligible_child_ids: [],
+    sort_order: 7,
+    items: [
+      { id: 'zi_mbath_counters', label: 'Counters',     active: true, sort_order: 0 },
+      { id: 'zi_mbath_floors',   label: 'Floors',       active: true, sort_order: 1 },
+      { id: 'zi_mbath_tp',       label: 'Toilet paper', active: true, sort_order: 2 },
+    ],
+  },
+]
+
+for (const zone of zones) {
+  await db.query(
+    `INSERT INTO zones (id, family_id, label, icon, eligible_child_ids, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6)
+     ON CONFLICT (id) DO NOTHING`,
+    [zone.id, FAMILY_ID, zone.label, zone.icon, zone.eligible_child_ids, zone.sort_order]
+  )
+  for (const item of zone.items) {
+    await db.query(
+      `INSERT INTO micro_zones (id, zone_id, family_id, label, active, sort_order)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       ON CONFLICT (id) DO NOTHING`,
+      [item.id, zone.id, FAMILY_ID, item.label, item.active, item.sort_order]
+    )
+  }
+}
+console.log('zones seeded')
+
 // ── Calendars ─────────────────────────────────────────────────────────────────
 const calendars = [
   { id: 'cal-nolan',    name: 'Nolan',          url: 'https://p118-caldav.icloud.com/published/2/MTY5MzEyODk0NjE2OTMxMoW06AapHVD6ytlRsuhNuM2QSFSLiAKLLXlokGOQX-9c',                                              color: '#3177e8', childId: 'child_nolan' },

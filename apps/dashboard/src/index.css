@@ -4192,3 +4192,207 @@ button {
 /* ── Routines section compat (no longer a section wrapper) ────────────── */
 .routines-section { display: contents; }
 .routines-header  { display: none; }
+
+/* ── Zone Card ────────────────────────────────────────────────────────────── */
+.zone-card {
+  background: color-mix(in srgb, var(--child-color, #888) 12%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--child-color, #888) 25%, var(--border));
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: 6px;
+  flex-shrink: 0;
+}
+
+.zone-card-header {
+  margin-bottom: 6px;
+}
+
+.zone-card-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.zone-assignment-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.zone-assignment-row + .zone-assignment-row {
+  border-top: 1px solid var(--border-light);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.zone-assignment-icon {
+  font-size: 16px;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.zone-assignment-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.zone-assignment-micro {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zone-assignment-zone {
+  font-size: 11px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.zone-period-checks {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.zone-period-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.zone-period-btn.checked {
+  background: var(--accent-sage);
+  border-color: var(--accent-sage);
+  color: white;
+}
+
+.zone-period-btn.locked {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.zone-period-check {
+  width: 12px;
+  height: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zone-period-label {
+  font-size: 8px;
+  line-height: 1;
+}
+
+/* ── Zone admin ──────────────────────────────────────────────────────────── */
+.zone-admin-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.zone-items-section {
+  display: flex;
+  flex-direction: column;
+  border-left: 2px solid var(--border);
+  margin-left: 12px;
+  margin-top: 2px;
+  padding-bottom: 4px;
+}
+
+/* ── Zone parent panel ───────────────────────────────────────────────────── */
+.zone-week-child {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.zone-week-child:last-child {
+  border-bottom: none;
+}
+
+.zone-week-child-name {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.zone-picker-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.zone-picker-modal {
+  background: var(--surface);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  min-width: 240px;
+  max-width: 320px;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+}
+
+.zone-picker-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+}
+
+.zone-picker-group {
+  margin-bottom: 10px;
+}
+
+.zone-picker-zone-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.zone-picker-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 7px 10px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: var(--surface-2);
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  margin-bottom: 2px;
+}
+
+.zone-picker-item:hover {
+  background: var(--border);
+}

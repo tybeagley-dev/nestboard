@@ -4,6 +4,7 @@ import ParentBucksTab from './ParentBucksTab'
 import ParentChoresTab from './ParentChoresTab'
 import ParentMealsTab    from './ParentMealsTab'
 import ParentRoutinesTab from './ParentRoutinesTab'
+import ParentZonesTab from './ParentZonesTab'
 import ParentMomStoreTab from './ParentMomStoreTab'
 import ParentApprovalsTab from './ParentApprovalsTab'
 import ParentGroceryTab from './ParentGroceryTab'
@@ -51,6 +52,7 @@ export default function ParentPanel({ onClose, children, reloadChildren }) {
     { id: 'bucks',     label: 'Bucks & Time' },
     { id: 'chores',    label: 'Chores'       },
     { id: 'routines',  label: 'Routines'     },
+    { id: 'zones',     label: 'Zones'        },
     { id: 'meals',     label: 'Meals'        },
     { id: 'store',     label: 'Mom Store'    },
     { id: 'grocery',   label: 'Grocery'      },
@@ -83,6 +85,7 @@ export default function ParentPanel({ onClose, children, reloadChildren }) {
           {tab === 'bucks'     && <ParentBucksTab children={children} />}
           {tab === 'chores'    && <ParentChoresTab children={children} />}
           {tab === 'routines'  && <ParentRoutinesTab children={children} />}
+          {tab === 'zones'     && <ParentZonesTab children={children} />}
           {tab === 'meals'     && <ParentMealsTab />}
           {tab === 'store'     && <ParentMomStoreTab children={children} />}
           {tab === 'grocery'   && <ParentGroceryTab />}

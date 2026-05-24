@@ -18,6 +18,7 @@ import authRoutes from './routes/auth.js'
 import eventsRoutes from './routes/events.js'
 import calendarRoutes from './routes/calendar.js'
 import childrenRoutes from './routes/children.js'
+import zoneRoutes from './routes/zones.js'
 
 const app = express()
 
@@ -61,6 +62,7 @@ app.use('/mom-store',     momStoreRoutes)
 app.use('/events',        eventsRoutes)
 app.use('/calendar',      calendarRoutes)
 app.use('/children',      childrenRoutes)
+app.use('/zones',         zoneRoutes)
 
 const PORT = process.env.PORT ?? 3001
 app.listen(PORT, () => console.log(`Hearthboard API running on port ${PORT}`))

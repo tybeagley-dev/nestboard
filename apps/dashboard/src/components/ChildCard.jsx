@@ -9,6 +9,7 @@ import { useAssignedChores, markChoreAsPending, submitApprovalRequest, triggerCh
 import { recordChoreCompletion } from '../hooks/useChoreFrequency'
 import { startChimeLoop, stopChimeLoop } from '../utils/chime'
 import { CONFIG } from '../config/config'
+import ZoneCard from './ZoneCard'
 
 function isChoreDay() {
   return new Date().getDay() !== 0
@@ -24,7 +25,7 @@ function SkeletonList() {
   )
 }
 
-export default function ChildCard({ child, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onBucks, onUpcoming, timer }) {
+export default function ChildCard({ child, now, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onBucks, onUpcoming, timer }) {
   const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child.name, chores)
   const { balance } = useScreenBalance(child.name)
   const { bucks }   = useChorePoints(child.name)
@@ -148,6 +149,8 @@ export default function ChildCard({ child, routines, routinesLoading, chores, ch
       <div className="progress-track">
         <div className="progress-fill" style={{ width: `${progress}%`, background: child.color }} />
       </div>
+
+      <ZoneCard child={child} now={now} />
 
       {/* Routine list */}
       <div className="routine-list">

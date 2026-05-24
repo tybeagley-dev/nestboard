@@ -14,6 +14,7 @@ export default function Routines({ now, children, onSpinChore, onScreenTime, onB
         <ChildCard
           key={child.name}
           child={child}
+          now={now}
           routines={routinesByChild[child.name] ?? []}
           chores={chores}
           choresLoading={loading}
