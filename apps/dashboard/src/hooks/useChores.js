@@ -78,7 +78,7 @@ export function useChorePoints(childName) {
     return { success: true, bucksEarned }
   }, [childName])
 
-  const adjustBucks = useCallback((delta) => {
+  const adjustBucks = useCallback(async (delta) => {
     setBucks(b => {
       const next = Math.max(0, b + delta)
       const local = getLocalBucks()
@@ -86,6 +86,14 @@ export function useChorePoints(childName) {
       saveLocalBucks(local)
       return next
     })
+    const { apiPost } = await import('../utils/api')
+    const result = await apiPost(`/bucks/${childName}/adjust`, { delta, type: 'adjustment' }, CONFIG.parentPin)
+    if (result?.balance !== undefined) {
+      setBucks(Number(result.balance))
+      const local = getLocalBucks()
+      local[childName] = Number(result.balance)
+      saveLocalBucks(local)
+    }
   }, [childName])
 
   const reloadBucks = useCallback(async () => {
