@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useCalendarEvents, useCalendars } from '../hooks/useCalendarEvents'
 import { isSameDay } from '../utils/dateUtils'
 
@@ -28,7 +28,7 @@ function getMonthDays(year, month) {
   const first = new Date(year, month, 1)
   const last  = new Date(year, month + 1, 0)
   const days  = []
-  const startPad = (first.getDay() + 6) % 7 // Mon=0
+  const startPad = first.getDay() // Sun=0
   for (let i = 0; i < startPad; i++) days.push(null)
   for (let d = 1; d <= last.getDate(); d++) days.push(new Date(year, month, d))
   return days
@@ -37,6 +37,12 @@ function getMonthDays(year, month) {
 export default function CalendarModal({ onClose }) {
   const events    = useCalendarEvents()
   const calendars = useCalendars()
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
   const [view, setView]         = useState('week')
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
   const [monthRef, setMonthRef]   = useState(() => new Date())
@@ -148,7 +154,7 @@ export default function CalendarModal({ onClose }) {
         {/* Month view */}
         {view === 'month' && (
           <div className="cal-month-grid">
-            {['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].map(d => (
+            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
               <div key={d} className="cal-month-day-name">{d}</div>
             ))}
             {monthDays.map((day, i) => {

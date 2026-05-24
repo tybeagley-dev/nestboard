@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
 import { isSameDay } from '../utils/dateUtils'
 
@@ -17,6 +17,12 @@ function fmtDayLabel(d, today) {
 export default function UpcomingModal({ child, onClose }) {
   const events = useCalendarEvents(child.name)
   const today  = new Date()
+
+  useEffect(() => {
+    function onKey(e) { if (e.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   const days = useMemo(() => {
     const result = []
