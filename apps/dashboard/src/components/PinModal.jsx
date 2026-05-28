@@ -20,12 +20,13 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
   useEffect(() => {
     function onKey(e) {
       if (e.key === 'Escape') { onCancel(); return }
+      if (touch) return // hidden input handles digit/backspace on touch devices
       if (e.key === 'Backspace') { handleBackspace(); return }
       if (/^\d$/.test(e.key)) { handleDigit(e.key) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [pin, onCancel]) // pin in deps so handleDigit/handleBackspace close over current value
+  }, [pin, onCancel, touch])
 
   function handleDigit(d) {
     if (pin.length >= PIN_LENGTH) return

@@ -43,8 +43,8 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
   const spinChores     = assignedChores.filter(c => !c.required)
 
   const canInitialSpin = spinChores.length === 0
-  const canExtraSpin   = spinChores.length > 0 && spinChores.every(c => c.pending)
-  const spinBlocked    = spinChores.length > 0 && !spinChores.every(c => c.pending)
+  const canExtraSpin   = spinChores.length > 0 && spinChores.every(c => c.pending || c.completed)
+  const spinBlocked    = spinChores.length > 0 && !spinChores.every(c => c.pending || c.completed)
 
   const allItems = [...routines, ...requiredChores, ...(isChoreDay() ? spinChores : [])]
   const done     = allItems.filter(r => r.completed).length
