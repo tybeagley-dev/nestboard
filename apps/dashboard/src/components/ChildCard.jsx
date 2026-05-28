@@ -42,6 +42,10 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
   const requiredChores = assignedChores.filter(c => c.required)
   const spinChores     = assignedChores.filter(c => !c.required)
 
+  const canInitialSpin = spinChores.length === 0
+  const canExtraSpin   = spinChores.length > 0 && spinChores.every(c => c.pending)
+  const spinBlocked    = spinChores.length > 0 && !spinChores.every(c => c.pending)
+
   const allItems = [...routines, ...requiredChores, ...(isChoreDay() ? spinChores : [])]
   const done     = allItems.filter(r => r.completed).length
   const total    = allItems.length
@@ -183,8 +187,8 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
       <div className="child-card-pills">
         <button
           className="child-pill chore-pill"
-          onClick={isChoreDay() ? (spinChores.length === 0 ? onSpin : (spinChores.every(c => c.completed) ? onExtraSpin : onSpin)) : undefined}
-          disabled={!isChoreDay()}
+          onClick={isChoreDay() && !spinBlocked ? (canInitialSpin ? onSpin : canExtraSpin ? onExtraSpin : undefined) : undefined}
+          disabled={!isChoreDay() || spinBlocked}
           style={{ '--child-color': child.color }}
         >
           🎡 chore spinner

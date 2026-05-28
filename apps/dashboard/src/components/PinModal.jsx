@@ -1,11 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { CONFIG } from '../config/config'
+
+function isTouchDevice() {
+  return 'ontouchstart' in window || navigator.maxTouchPoints > 0
+}
 
 const PIN_LENGTH = 6
 
 export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN required' }) {
   const [pin, setPin] = useState('')
   const [error, setError] = useState(false)
+  const inputRef = useRef(null)
+  const touch = isTouchDevice()
+
+  useEffect(() => {
+    if (touch) inputRef.current?.focus()
+  }, [])
 
   useEffect(() => {
     function onKey(e) {
@@ -27,7 +37,10 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
         onSuccess()
       } else {
         setError(true)
-        setTimeout(() => setPin(''), 600)
+        setTimeout(() => {
+          setPin('')
+          if (inputRef.current) inputRef.current.value = ''
+        }, 600)
       }
     }
   }
@@ -42,6 +55,22 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
       <div className="modal-card pin-modal">
         <button className="modal-close" onClick={onCancel} aria-label="Close">×</button>
         <div className="bucks-pin-phase">
+          {touch && (
+            <input
+              ref={inputRef}
+              type="tel"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              value={pin}
+              onChange={e => {
+                const digits = e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH)
+                const added = digits.slice(pin.length)
+                for (const d of added) handleDigit(d)
+              }}
+              className="pin-hidden-input"
+              autoComplete="off"
+            />
+          )}
           <p className="pin-prompt">{prompt}</p>
           <div className={`pin-dots ${error ? 'pin-error' : ''}`}>
             {Array.from({ length: PIN_LENGTH }).map((_, i) => (

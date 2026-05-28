@@ -2012,11 +2012,23 @@ button {
   margin: -6px 0 0;
 }
 
+.pin-hidden-input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  width: 1px;
+  height: 1px;
+}
+
 .numpad {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 8px;
   width: 240px;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .numpad { display: none; }
 }
 
 .numpad-key {

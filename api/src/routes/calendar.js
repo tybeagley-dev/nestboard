@@ -238,7 +238,7 @@ router.get('/events', async (req, res) => {
   }
   const { child } = req.query
   const data = child
-    ? entry.data.filter(e => e.child === child)
+    ? entry.data.filter(e => e.child === child || e.child === null)
     : entry.data
   res.json(data)
 })
