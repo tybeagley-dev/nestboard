@@ -67,6 +67,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
 
   const [instructionsChore, setInstructionsChore] = useState(null)
   const [submitting, setSubmitting] = useState(new Set())
+  const [cooldownToast, setCooldownToast] = useState(false)
 
   async function handleChoreRequest(chore) {
     if (submitting.has(chore.id)) return
@@ -84,7 +85,11 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
 
   function handleChoreTap(chore) {
     if (chore.completed || chore.pending || submitting.has(chore.id)) return
-    if (cooldownMinsRemaining(chore) > 0) return
+    if (cooldownMinsRemaining(chore) > 0) {
+      setCooldownToast(true)
+      setTimeout(() => setCooldownToast(false), 3000)
+      return
+    }
     if (chore.instructions?.length) setInstructionsChore(chore)
     else handleChoreRequest(chore)
   }
@@ -197,6 +202,12 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
           upcoming
         </button>
       </div>
+
+      {cooldownToast && (
+        <div className="cooldown-toast">
+          You may be fast, but are you sure the chore is actually done already?
+        </div>
+      )}
 
       {instructionsChore && (
         <ChoreInstructionsModal

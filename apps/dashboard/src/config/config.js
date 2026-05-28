@@ -61,7 +61,7 @@ export const CONFIG = {
 
   // ── Chore Cool-down ────────────────────────────────────────────────────────
   // Minimum minutes between accepting a spin chore and marking it complete.
-  choreCooldownMinutes: 1,
+  choreCooldownMinutes: 5,
 
   // ── Screen Time ────────────────────────────────────────────────────────────
   // minutesPerChore: how much screen time is awarded per completed chore

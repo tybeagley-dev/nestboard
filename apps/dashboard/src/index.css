@@ -3820,6 +3820,29 @@ button {
 }
 
 /* ── Child card bottom pills ──────────────────────────────────────────── */
+.cooldown-toast {
+  position: absolute;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(30, 20, 10, 0.88);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: 12px;
+  text-align: center;
+  max-width: 85%;
+  pointer-events: none;
+  animation: toast-in 0.2s ease;
+  z-index: 10;
+}
+
+@keyframes toast-in {
+  from { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
 .child-card-pills {
   display: flex;
   gap: 7px;
