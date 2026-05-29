@@ -6,7 +6,7 @@ import { db } from './db/client.js'
 
 import choreRoutes from './routes/chores.js'
 import bucksRoutes from './routes/bucks.js'
-import screenTimeRoutes from './routes/screen-time.js'
+import screenTimeRoutes, { startAbstinenceJob } from './routes/screen-time.js'
 import routineRoutes from './routes/routines.js'
 import timerRoutes, { startExpiryJob } from './routes/timers.js'
 import groceryRoutes from './routes/grocery.js'
@@ -68,3 +68,4 @@ const PORT = process.env.PORT ?? 3001
 app.listen(PORT, () => console.log(`Hearthboard API running on port ${PORT}`))
 
 startExpiryJob()
+startAbstinenceJob()

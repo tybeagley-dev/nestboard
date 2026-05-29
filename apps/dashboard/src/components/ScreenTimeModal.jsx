@@ -2,21 +2,20 @@ import { useState, useEffect } from 'react'
 import { useScreenBalance, startChildTimer } from '../hooks/useScreenTime'
 import { useChorePoints } from '../hooks/useChores'
 import BuckBadge from './BuckBadge'
-import { getTodayKey } from '../utils/dateUtils'
 import { apiGet, apiPost } from '../utils/api'
 
-const PHASE           = { VIEW: 'view', BUY: 'buy' }
-const MINS_PER_BUCK   = 10
-const DAILY_MAX_BUCKS = 30
-const MAX_PER_TRADE   = 3
+const PHASE          = { VIEW: 'view', BUY: 'buy' }
+const BUCKS_PER_STEP = 5    // bucks per 10-minute increment
+const MINS_PER_STEP  = 10   // minutes per stepper step
 
 export default function ScreenTimeModal({ child, onClose }) {
-  const { balance, addMinutes } = useScreenBalance(child.name)
-  const { bucks, adjustBucks }  = useChorePoints(child.name)
-  const [phase,        setPhase]        = useState(PHASE.VIEW)
-  const [amount,       setAmount]       = useState(1)
-  const [tradedToday,  setTradedToday]  = useState(0)
-  const [tradeLoading, setTradeLoading] = useState(true)
+  const { balance, purchasedBalance, dailyFreeAvailable } = useScreenBalance(child.name)
+  const { bucks } = useChorePoints(child.name)
+  const [phase,          setPhase]          = useState(PHASE.VIEW)
+  const [steps,          setSteps]          = useState(1)   // stepper unit: 1 step = 10 min = 5 bucks
+  const [pendingRequest, setPendingRequest] = useState(undefined)  // undefined=loading, null=none, obj=exists
+  const [requestSent,    setRequestSent]    = useState(false)
+  const [requestError,   setRequestError]   = useState(null)
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -25,20 +24,24 @@ export default function ScreenTimeModal({ child, onClose }) {
   }, [onClose])
 
   useEffect(() => {
-    async function loadTradeCount() {
-      const data = await apiGet(`/screen-time/${child.name}/trade-count?date=${getTodayKey(new Date())}`)
-      if (data?.traded != null) setTradedToday(data.traded)
-      setTradeLoading(false)
+    async function checkPending() {
+      const data = await apiGet(`/screen-time/${child.name}/pending-purchase-request`)
+      setPendingRequest(data ?? null)
     }
-    loadTradeCount()
+    checkPending()
   }, [child.name])
 
-  async function handleBuy() {
-    const result = await apiPost(`/screen-time/${child.name}/trade`, { amount, date: getTodayKey(new Date()) })
-    if (!result?.success) return
-    adjustBucks(-result.bucksTrade)
-    window.dispatchEvent(new Event('fam_balance_update'))
-    onClose()
+  async function handleRequest() {
+    setRequestError(null)
+    const minutesAmount = steps * MINS_PER_STEP
+    const result = await apiPost(`/screen-time/${child.name}/request-purchase`, { minutesAmount })
+    if (result?.success) {
+      setRequestSent(true)
+      setPendingRequest({ minutes_amount: minutesAmount, bucks_amount: steps * BUCKS_PER_STEP })
+      setPhase(PHASE.VIEW)
+    } else {
+      setRequestError(result?.error ?? 'Something went wrong. Try again.')
+    }
   }
 
   function handleStart() {
@@ -46,10 +49,10 @@ export default function ScreenTimeModal({ child, onClose }) {
     onClose()
   }
 
-  const remaining     = Math.max(0, DAILY_MAX_BUCKS - tradedToday)
-  const maxTrade      = Math.min(bucks, remaining, MAX_PER_TRADE)
-  const canBuy        = maxTrade > 0 && !tradeLoading
-  const minutesGained = amount * MINS_PER_BUCK
+  const maxSteps     = Math.floor(bucks / BUCKS_PER_STEP)
+  const canRequest   = maxSteps > 0 && pendingRequest === null
+  const minutesGained = steps * MINS_PER_STEP
+  const bucksCost     = steps * BUCKS_PER_STEP
 
   return (
     <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}>
@@ -62,7 +65,7 @@ export default function ScreenTimeModal({ child, onClose }) {
           </div>
           <div>
             <h2 className="modal-title">{child.name}</h2>
-            <p className="modal-points-line">Screen Time Balance</p>
+            <p className="modal-points-line">Screen Time</p>
           </div>
         </div>
 
@@ -70,8 +73,19 @@ export default function ScreenTimeModal({ child, onClose }) {
           <>
             <div className="st-balance-display">
               <span className="st-balance-num">{balance}</span>
-              <span className="st-balance-unit">min banked</span>
+              <span className="st-balance-unit">min available</span>
             </div>
+
+            {(dailyFreeAvailable > 0 || purchasedBalance > 0) && (
+              <div className="st-balance-breakdown">
+                {dailyFreeAvailable > 0 && (
+                  <span className="st-bucket st-bucket-free">{dailyFreeAvailable}m free today</span>
+                )}
+                {purchasedBalance > 0 && (
+                  <span className="st-bucket st-bucket-banked">{purchasedBalance}m banked</span>
+                )}
+              </div>
+            )}
 
             {balance > 0 && (
               <button className="btn-start-timer st-start" onClick={handleStart}>
@@ -80,53 +94,60 @@ export default function ScreenTimeModal({ child, onClose }) {
             )}
 
             {!balance && (
-              <p className="st-empty">No screen time banked yet.</p>
+              <p className="st-empty">No screen time available.</p>
             )}
 
-            {canBuy && (
+            {requestSent && (
+              <p className="st-request-sent">Request sent — waiting for parent approval.</p>
+            )}
+
+            {!requestSent && pendingRequest && (
+              <p className="st-request-sent">
+                Request pending: {pendingRequest.minutes_amount}m for <BuckBadge amount={pendingRequest.bucks_amount} />
+              </p>
+            )}
+
+            {!requestSent && canRequest && (
               <button
                 className="btn-spend"
-                onClick={() => { setAmount(1); setPhase(PHASE.BUY) }}
+                onClick={() => { setSteps(1); setPhase(PHASE.BUY) }}
               >
-                Buy More Screen Time
+                Request More Screen Time
               </button>
-            )}
-
-            {!tradeLoading && bucks > 0 && remaining === 0 && (
-              <p className="trade-limit-msg">Daily trade limit reached ({DAILY_MAX_BUCKS} bucks)</p>
             )}
           </>
         )}
 
         {phase === PHASE.BUY && (
           <div className="bucks-spend-phase">
-            <p className="spend-prompt">Buy More Screen Time</p>
+            <p className="spend-prompt">Request More Screen Time</p>
             <div className="spend-stepper">
               <button
                 className="stepper-btn"
-                onClick={() => setAmount(a => Math.max(1, a - 1))}
-                disabled={amount <= 1}
+                onClick={() => setSteps(s => Math.max(1, s - 1))}
+                disabled={steps <= 1}
               >−</button>
               <span className="stepper-value adjust-value adding">
-                <BuckBadge amount={amount} />
+                {minutesGained} min
               </span>
               <button
                 className="stepper-btn"
-                onClick={() => setAmount(a => Math.min(maxTrade, a + 1))}
-                disabled={amount >= maxTrade}
+                onClick={() => setSteps(s => Math.min(maxSteps, s + 1))}
+                disabled={steps >= maxSteps}
               >+</button>
             </div>
             <p className="spend-remaining">
-              {amount} buck{amount !== 1 ? 's' : ''} → <strong>+{minutesGained} min</strong> screen time
+              <strong>{minutesGained} min</strong> → <BuckBadge amount={bucksCost} />
             </p>
             <p className="trade-balance-after">
-              Bucks after: <BuckBadge amount={Math.max(0, bucks - amount)} />
+              Bucks after approval: <BuckBadge amount={Math.max(0, bucks - bucksCost)} />
             </p>
+            {requestError && <p className="st-request-error">{requestError}</p>}
             <div className="spend-actions">
-              <button className="btn-confirm-spend btn-confirm-add" onClick={handleBuy}>
-                ✓ Add {minutesGained} Minutes
+              <button className="btn-confirm-spend btn-confirm-add" onClick={handleRequest}>
+                Send Request
               </button>
-              <button className="btn-cancel-spend" onClick={() => setPhase(PHASE.VIEW)}>Cancel</button>
+              <button className="btn-cancel-spend" onClick={() => { setPhase(PHASE.VIEW); setRequestError(null) }}>Cancel</button>
             </div>
           </div>
         )}

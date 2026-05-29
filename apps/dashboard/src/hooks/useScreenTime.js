@@ -10,30 +10,30 @@ function dispatchTimerUpdate()   { window.dispatchEvent(new Event('fam_timer_upd
 // ── Balance ───────────────────────────────────────────────────────────────────
 
 export function useScreenBalance(childName) {
-  const [balance, setBalance] = useState(0)
+  const [balance,           setBalance]           = useState(0)
+  const [purchasedBalance,  setPurchasedBalance]  = useState(0)
+  const [dailyFreeAvailable, setDailyFreeAvailable] = useState(0)
 
-  useEffect(() => {
-    async function load() {
-      const data = await apiGet('/screen-time')
-      if (!Array.isArray(data)) return
-      const row = data.find(d => d.child === childName)
-      if (row) setBalance(Number(row.balance))
-    }
-    load()
-    const id = setInterval(load, POLL_MS)
-    return () => clearInterval(id)
+  const sync = useCallback(async () => {
+    const data = await apiGet('/screen-time')
+    if (!Array.isArray(data)) return
+    const row = data.find(d => d.child === childName)
+    if (!row) return
+    setBalance(Number(row.balance ?? 0))
+    setPurchasedBalance(Number(row.purchased_balance ?? 0))
+    setDailyFreeAvailable(Number(row.daily_free_available ?? 0))
   }, [childName])
 
   useEffect(() => {
-    async function sync() {
-      const data = await apiGet('/screen-time')
-      if (!Array.isArray(data)) return
-      const row = data.find(d => d.child === childName)
-      if (row) setBalance(Number(row.balance))
-    }
+    sync()
+    const id = setInterval(sync, POLL_MS)
+    return () => clearInterval(id)
+  }, [sync])
+
+  useEffect(() => {
     window.addEventListener('fam_balance_update', sync)
     return () => window.removeEventListener('fam_balance_update', sync)
-  }, [childName])
+  }, [sync])
 
   const addMinutes = useCallback((minutes) => {
     setBalance(prev => Math.max(0, prev + minutes))
@@ -42,7 +42,7 @@ export function useScreenBalance(childName) {
     dispatchBalanceUpdate()
   }, [childName])
 
-  return { balance, addMinutes }
+  return { balance, purchasedBalance, dailyFreeAvailable, addMinutes }
 }
 
 // ── Timer ─────────────────────────────────────────────────────────────────────

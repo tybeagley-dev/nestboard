@@ -7,7 +7,7 @@ const TIME_PRESETS = [-30, -15, +15, +30]
 
 function ChildRow({ child }) {
   const { bucks, adjustBucks }  = useChorePoints(child.name)
-  const { balance, addMinutes } = useScreenBalance(child.name)
+  const { balance, purchasedBalance, addMinutes } = useScreenBalance(child.name)
   const [buckDelta, setBuckDelta] = useState(0)
   const [flash, setFlash]         = useState('')
 
@@ -24,7 +24,7 @@ function ChildRow({ child }) {
   }
 
   function applyTime(delta) {
-    const actual = delta < 0 ? Math.max(delta, -balance) : delta
+    const actual = delta < 0 ? Math.max(delta, -purchasedBalance) : delta
     if (actual === 0) return
     addMinutes(actual)
     pulse('time')
@@ -80,7 +80,7 @@ function ChildRow({ child }) {
               key={d}
               className={`parent-time-btn ${d < 0 ? 'deduct' : 'add'}`}
               onClick={() => applyTime(d)}
-              disabled={d < 0 && balance === 0}
+              disabled={d < 0 && purchasedBalance === 0}
             >
               {d > 0 ? `+${d}` : d}m
             </button>

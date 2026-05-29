@@ -76,10 +76,12 @@ CREATE TABLE IF NOT EXISTS bucks_balance (
 );
 
 CREATE TABLE IF NOT EXISTS screen_time_balance (
-  family_id  TEXT NOT NULL REFERENCES families(id),
-  child_id   TEXT NOT NULL REFERENCES children(id),
-  balance    INTEGER NOT NULL DEFAULT 0,
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  family_id         TEXT NOT NULL REFERENCES families(id),
+  child_id          TEXT NOT NULL REFERENCES children(id),
+  purchased_balance INTEGER NOT NULL DEFAULT 0,
+  daily_free_used   INTEGER NOT NULL DEFAULT 0,
+  daily_free_date   DATE    NOT NULL DEFAULT CURRENT_DATE,
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (family_id, child_id)
 );
 
@@ -126,13 +128,38 @@ CREATE TABLE IF NOT EXISTS routine_log (
 -- ── Timers ────────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS timers (
-  family_id        TEXT NOT NULL REFERENCES families(id),
-  child_id         TEXT NOT NULL REFERENCES children(id),
-  end_time         BIGINT NOT NULL,
-  duration_minutes INTEGER NOT NULL DEFAULT 0,
-  buffer_minutes   INTEGER NOT NULL DEFAULT 5,
-  started_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  family_id         TEXT NOT NULL REFERENCES families(id),
+  child_id          TEXT NOT NULL REFERENCES children(id),
+  end_time          BIGINT NOT NULL,
+  duration_minutes  INTEGER NOT NULL DEFAULT 0,
+  buffer_minutes    INTEGER NOT NULL DEFAULT 5,
+  free_minutes      INTEGER NOT NULL DEFAULT 0,
+  purchased_minutes INTEGER NOT NULL DEFAULT 0,
+  started_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (family_id, child_id)
+);
+
+-- ── Screentime requests ───────────────────────────────────────────────────────
+
+CREATE TABLE IF NOT EXISTS screentime_purchase_requests (
+  id             SERIAL PRIMARY KEY,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  family_id      TEXT NOT NULL REFERENCES families(id),
+  child_id       TEXT NOT NULL REFERENCES children(id),
+  bucks_amount   INTEGER NOT NULL,
+  minutes_amount INTEGER NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'pending'
+);
+
+CREATE TABLE IF NOT EXISTS screentime_abstinence_requests (
+  id            SERIAL PRIMARY KEY,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  family_id     TEXT NOT NULL REFERENCES families(id),
+  child_id      TEXT NOT NULL REFERENCES children(id),
+  date          DATE NOT NULL,
+  status        TEXT NOT NULL DEFAULT 'pending',
+  bucks_awarded INTEGER NOT NULL DEFAULT 15,
+  UNIQUE (family_id, child_id, date)
 );
 
 -- ── Purchases ─────────────────────────────────────────────────────────────────

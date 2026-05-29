@@ -50,7 +50,7 @@ for (const c of children) {
     [FAMILY_ID, c.id]
   )
   await db.query(
-    `INSERT INTO screen_time_balance (family_id, child_id, balance)
+    `INSERT INTO screen_time_balance (family_id, child_id, purchased_balance)
      VALUES ($1, $2, 0)
      ON CONFLICT (family_id, child_id) DO NOTHING`,
     [FAMILY_ID, c.id]

@@ -6,24 +6,47 @@ import { resolveChildId } from '../db/resolveChild.js'
 
 const router = Router()
 
-const TRADE_MINS_PER_BUCK = 10
-const TRADE_DAILY_MAX     = 30
+const DAILY_FREE_MINS  = 30
+const BUCKS_PER_10_MIN = 5   // 5 bucks buys 10 minutes
+const ABSTINENCE_BUCKS = 15
 
 router.use(requireFamily)
 
+function calcFreeAvailable(row) {
+  if (!row) return DAILY_FREE_MINS
+  const today = new Date().toISOString().split('T')[0]
+  const rowDate = row.daily_free_date instanceof Date
+    ? row.daily_free_date.toISOString().split('T')[0]
+    : String(row.daily_free_date)
+  return rowDate === today ? Math.max(0, DAILY_FREE_MINS - Number(row.daily_free_used)) : DAILY_FREE_MINS
+}
+
+// GET /screen-time
 router.get('/', async (req, res) => {
   const { rows } = await db.query(
-    `SELECT stb.family_id, stb.balance, stb.updated_at, ch.name AS child
+    `SELECT stb.family_id, stb.purchased_balance, stb.daily_free_used, stb.daily_free_date,
+            stb.updated_at, ch.name AS child
      FROM screen_time_balance stb
      JOIN children ch ON ch.id = stb.child_id
      WHERE stb.family_id = $1
      ORDER BY ch.sort_order`,
     [req.familyId]
   )
-  res.json(rows)
+  const result = rows.map(row => {
+    const dailyFreeAvailable = calcFreeAvailable(row)
+    return {
+      family_id:           row.family_id,
+      child:               row.child,
+      purchased_balance:   Number(row.purchased_balance),
+      daily_free_available: dailyFreeAvailable,
+      balance:             Number(row.purchased_balance) + dailyFreeAvailable,
+      updated_at:          row.updated_at,
+    }
+  })
+  res.json(result)
 })
 
-// POST /screen-time/:child/adjust  { delta }
+// POST /screen-time/:child/adjust  { delta }  — parent manual adjustment (today's free allotment)
 router.post('/:child/adjust', async (req, res) => {
   const { delta } = req.body
   const childName = req.params.child
@@ -33,73 +56,277 @@ router.post('/:child/adjust', async (req, res) => {
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
   const { rows } = await db.query(
-    `INSERT INTO screen_time_balance (family_id, child_id, balance) VALUES ($1, $2, GREATEST(0, $3))
+    `INSERT INTO screen_time_balance (family_id, child_id, daily_free_used, daily_free_date)
+     VALUES ($1, $2, GREATEST(0, LEAST($3, -$4::integer)), CURRENT_DATE)
      ON CONFLICT (family_id, child_id) DO UPDATE
-       SET balance = GREATEST(0, screen_time_balance.balance + $3), updated_at = NOW()
-     RETURNING balance`,
-    [req.familyId, childId, delta]
+       SET daily_free_used = GREATEST(0, LEAST($3,
+             CASE WHEN screen_time_balance.daily_free_date = CURRENT_DATE
+                  THEN screen_time_balance.daily_free_used - $4::integer
+                  ELSE -$4::integer
+             END)),
+           daily_free_date = CURRENT_DATE,
+           updated_at = NOW()
+     RETURNING purchased_balance, daily_free_used, daily_free_date`,
+    [req.familyId, childId, DAILY_FREE_MINS, delta]
   )
-  broadcast('screen_time', { child: childName, balance: rows[0].balance })
-  res.json({ success: true, balance: rows[0].balance })
+  const free = calcFreeAvailable(rows[0])
+  const balance = Number(rows[0].purchased_balance) + free
+  broadcast('screen_time', { child: childName, balance })
+  res.json({ success: true, balance })
 })
 
-// POST /screen-time/:child/trade  { amount, date }
-router.post('/:child/trade', async (req, res) => {
-  const { amount, date } = req.body
+// POST /screen-time/:child/request-purchase  { minutesAmount }
+router.post('/:child/request-purchase', async (req, res) => {
+  const { minutesAmount } = req.body
   const childName = req.params.child
-  if (!amount || isNaN(amount) || amount <= 0) return res.status(400).json({ error: 'Invalid amount' })
+
+  if (!minutesAmount || isNaN(minutesAmount) || minutesAmount <= 0 || minutesAmount % 10 !== 0) {
+    return res.status(400).json({ error: 'minutesAmount must be a positive multiple of 10' })
+  }
 
   const childId = await resolveChildId(req.familyId, childName)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
-  const { rows: tradeRows } = await db.query(
-    `SELECT COALESCE(SUM(ABS(amount)), 0) AS traded
-     FROM spend_events
-     WHERE family_id = $1 AND child_id = $2 AND type = 'trade' AND created_at::date = $3`,
-    [req.familyId, childId, date]
-  )
-  const traded  = Number(tradeRows[0].traded)
-  const allowed = Math.min(amount, TRADE_DAILY_MAX - traded)
-  if (allowed <= 0) return res.status(400).json({ error: 'Daily trade limit reached' })
+  const bucksAmount = (minutesAmount / 10) * BUCKS_PER_10_MIN
 
-  await db.query(
-    `UPDATE bucks_balance SET balance = GREATEST(0, balance - $1), updated_at = NOW()
-     WHERE family_id = $2 AND child_id = $3`,
-    [allowed, req.familyId, childId]
+  const { rows: buckRows } = await db.query(
+    `SELECT balance FROM bucks_balance WHERE family_id = $1 AND child_id = $2`,
+    [req.familyId, childId]
   )
-  const { rows: stRows } = await db.query(
-    `INSERT INTO screen_time_balance (family_id, child_id, balance) VALUES ($1, $2, $3)
-     ON CONFLICT (family_id, child_id) DO UPDATE
-       SET balance = screen_time_balance.balance + $3, updated_at = NOW()
-     RETURNING balance`,
-    [req.familyId, childId, allowed * TRADE_MINS_PER_BUCK]
+  const bucks = buckRows.length ? Number(buckRows[0].balance) : 0
+  if (bucks < bucksAmount) return res.status(400).json({ error: 'Insufficient bucks' })
+
+  const { rows: existing } = await db.query(
+    `SELECT id FROM screentime_purchase_requests WHERE family_id = $1 AND child_id = $2 AND status = 'pending'`,
+    [req.familyId, childId]
   )
-  await db.query(
-    `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, 'trade')`,
-    [req.familyId, childId, -allowed]
+  if (existing.length > 0) return res.status(409).json({ error: 'A request is already pending approval' })
+
+  const { rows } = await db.query(
+    `INSERT INTO screentime_purchase_requests (family_id, child_id, bucks_amount, minutes_amount)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [req.familyId, childId, bucksAmount, minutesAmount]
   )
 
-  broadcast('bucks',       { child: childName })
-  broadcast('screen_time', { child: childName, balance: stRows[0].balance })
-  res.json({ success: true, bucksTrade: allowed, minutesAdded: allowed * TRADE_MINS_PER_BUCK, newBalance: stRows[0].balance })
+  broadcast('screen_time_requests', { type: 'purchase_requested', child: childName })
+  res.json({ success: true, requestId: rows[0].id, bucksAmount, minutesAmount })
 })
 
-// GET /screen-time/:child/trade-count?date=YYYY-MM-DD
-router.get('/:child/trade-count', async (req, res) => {
-  const childName = req.params.child
-  const { date }  = req.query
-
-  const childId = await resolveChildId(req.familyId, childName)
+// GET /screen-time/:child/pending-purchase-request
+router.get('/:child/pending-purchase-request', async (req, res) => {
+  const childId = await resolveChildId(req.familyId, req.params.child)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
   const { rows } = await db.query(
-    `SELECT COALESCE(SUM(ABS(amount)), 0) AS traded
-     FROM spend_events
-     WHERE family_id = $1 AND child_id = $2 AND type = 'trade' AND created_at::date = $3`,
-    [req.familyId, childId, date]
+    `SELECT id, bucks_amount, minutes_amount, created_at
+     FROM screentime_purchase_requests
+     WHERE family_id = $1 AND child_id = $2 AND status = 'pending'
+     LIMIT 1`,
+    [req.familyId, childId]
   )
-  const traded = Number(rows[0].traded)
-  res.json({ traded, remaining: Math.max(0, TRADE_DAILY_MAX - traded) })
+  res.json(rows[0] || null)
+})
+
+// GET /screen-time/purchase-requests  — parent view
+router.get('/purchase-requests', async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT spr.id, spr.created_at, spr.bucks_amount, spr.minutes_amount,
+            ch.name AS child
+     FROM screentime_purchase_requests spr
+     JOIN children ch ON ch.id = spr.child_id
+     WHERE spr.family_id = $1 AND spr.status = 'pending'
+     ORDER BY spr.created_at ASC`,
+    [req.familyId]
+  )
+  res.json(rows)
+})
+
+// POST /screen-time/purchase-requests/:id/approve
+router.post('/purchase-requests/:id/approve', async (req, res) => {
+  const { rows: reqRows } = await db.query(
+    `SELECT * FROM screentime_purchase_requests WHERE id = $1 AND family_id = $2 AND status = 'pending'`,
+    [Number(req.params.id), req.familyId]
+  )
+  if (!reqRows.length) return res.status(404).json({ error: 'Request not found or already processed' })
+  const request = reqRows[0]
+
+  const { rows: buckRows } = await db.query(
+    `SELECT balance FROM bucks_balance WHERE family_id = $1 AND child_id = $2`,
+    [req.familyId, request.child_id]
+  )
+  const bucks = buckRows.length ? Number(buckRows[0].balance) : 0
+  if (bucks < request.bucks_amount) {
+    return res.status(400).json({ error: 'Child no longer has sufficient bucks' })
+  }
+
+  const client = await db.connect()
+  try {
+    await client.query('BEGIN')
+
+    await client.query(
+      `UPDATE bucks_balance SET balance = GREATEST(0, balance - $1), updated_at = NOW()
+       WHERE family_id = $2 AND child_id = $3`,
+      [request.bucks_amount, req.familyId, request.child_id]
+    )
+    await client.query(
+      `INSERT INTO screen_time_balance (family_id, child_id, purchased_balance)
+       VALUES ($1, $2, $3)
+       ON CONFLICT (family_id, child_id) DO UPDATE
+         SET purchased_balance = screen_time_balance.purchased_balance + $3, updated_at = NOW()`,
+      [req.familyId, request.child_id, request.minutes_amount]
+    )
+    await client.query(
+      `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, 'trade')`,
+      [req.familyId, request.child_id, -request.bucks_amount]
+    )
+    await client.query(
+      `UPDATE screentime_purchase_requests SET status = 'approved' WHERE id = $1`,
+      [request.id]
+    )
+
+    await client.query('COMMIT')
+
+    const { rows: childRows } = await db.query(`SELECT name FROM children WHERE id = $1`, [request.child_id])
+    const childName = childRows[0]?.name
+    broadcast('bucks', { child: childName })
+    broadcast('screen_time', { child: childName })
+    res.json({ success: true })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
+})
+
+// POST /screen-time/purchase-requests/:id/reject
+router.post('/purchase-requests/:id/reject', async (req, res) => {
+  const { rows } = await db.query(
+    `UPDATE screentime_purchase_requests SET status = 'rejected'
+     WHERE id = $1 AND family_id = $2 AND status = 'pending' RETURNING id`,
+    [Number(req.params.id), req.familyId]
+  )
+  if (!rows.length) return res.status(404).json({ error: 'Request not found' })
+  res.json({ success: true })
+})
+
+// GET /screen-time/abstinence-requests  — parent view
+router.get('/abstinence-requests', async (req, res) => {
+  const { rows } = await db.query(
+    `SELECT sar.id, sar.date, sar.bucks_awarded, sar.status, sar.created_at,
+            ch.name AS child
+     FROM screentime_abstinence_requests sar
+     JOIN children ch ON ch.id = sar.child_id
+     WHERE sar.family_id = $1 AND sar.status = 'pending'
+     ORDER BY sar.date DESC, ch.name ASC`,
+    [req.familyId]
+  )
+  res.json(rows)
+})
+
+// POST /screen-time/abstinence-requests/:id/approve
+router.post('/abstinence-requests/:id/approve', async (req, res) => {
+  const { rows: reqRows } = await db.query(
+    `SELECT * FROM screentime_abstinence_requests WHERE id = $1 AND family_id = $2 AND status = 'pending'`,
+    [Number(req.params.id), req.familyId]
+  )
+  if (!reqRows.length) return res.status(404).json({ error: 'Request not found' })
+  const request = reqRows[0]
+
+  await db.query(
+    `UPDATE bucks_balance SET balance = balance + $1, updated_at = NOW()
+     WHERE family_id = $2 AND child_id = $3`,
+    [request.bucks_awarded, req.familyId, request.child_id]
+  )
+  await db.query(
+    `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, 'abstinence_reward')`,
+    [req.familyId, request.child_id, request.bucks_awarded]
+  )
+  await db.query(
+    `UPDATE screentime_abstinence_requests SET status = 'approved' WHERE id = $1`,
+    [request.id]
+  )
+
+  const { rows: childRows } = await db.query(`SELECT name FROM children WHERE id = $1`, [request.child_id])
+  broadcast('bucks', { child: childRows[0]?.name })
+  res.json({ success: true })
+})
+
+// POST /screen-time/abstinence-requests/:id/reject
+router.post('/abstinence-requests/:id/reject', async (req, res) => {
+  const { rows } = await db.query(
+    `UPDATE screentime_abstinence_requests SET status = 'rejected'
+     WHERE id = $1 AND family_id = $2 AND status = 'pending' RETURNING id`,
+    [Number(req.params.id), req.familyId]
+  )
+  if (!rows.length) return res.status(404).json({ error: 'Request not found' })
+  res.json({ success: true })
+})
+
+// GET /screen-time/pending-count  — combined count for parent badge
+router.get('/pending-count', async (req, res) => {
+  const [{ rows: pr }, { rows: ar }] = await Promise.all([
+    db.query(
+      `SELECT COUNT(*) AS count FROM screentime_purchase_requests WHERE family_id = $1 AND status = 'pending'`,
+      [req.familyId]
+    ),
+    db.query(
+      `SELECT COUNT(*) AS count FROM screentime_abstinence_requests WHERE family_id = $1 AND status = 'pending'`,
+      [req.familyId]
+    ),
+  ])
+  res.json({ count: Number(pr[0].count) + Number(ar[0].count) })
 })
 
 export default router
+
+// ── Background job: daily abstinence request creation ────────────────────────
+
+async function processAbstinenceRequests() {
+  const yesterday = new Date()
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1)
+  const yesterdayStr = yesterday.toISOString().split('T')[0]
+
+  try {
+    const { rows } = await db.query(
+      `SELECT c.id AS child_id, c.family_id,
+              stb.daily_free_used, stb.daily_free_date
+       FROM children c
+       JOIN screen_time_balance stb ON stb.child_id = c.id AND stb.family_id = c.family_id`
+    )
+
+    for (const row of rows) {
+      const rowDate = row.daily_free_date instanceof Date
+        ? row.daily_free_date.toISOString().split('T')[0]
+        : String(row.daily_free_date)
+      const usedFreeYesterday = rowDate === yesterdayStr && Number(row.daily_free_used) > 0
+      if (usedFreeYesterday) continue
+
+      await db.query(
+        `INSERT INTO screentime_abstinence_requests (family_id, child_id, date, status, bucks_awarded)
+         VALUES ($1, $2, $3, 'pending', $4)
+         ON CONFLICT (family_id, child_id, date) DO NOTHING`,
+        [row.family_id, row.child_id, yesterdayStr, ABSTINENCE_BUCKS]
+      )
+    }
+  } catch (err) {
+    console.error('Abstinence job error:', err.message)
+  }
+}
+
+export async function startAbstinenceJob() {
+  await processAbstinenceRequests()
+
+  function scheduleNext() {
+    const now = new Date()
+    const nextMidnight = new Date(Date.UTC(
+      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1,
+      0, 0, 30
+    ))
+    setTimeout(async () => {
+      await processAbstinenceRequests()
+      scheduleNext()
+    }, nextMidnight - now)
+  }
+  scheduleNext()
+}

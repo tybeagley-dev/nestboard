@@ -6,3 +6,4 @@ node_modules/
 apps/dashboard/dist/
 NEXT_UP.md
 api/node_modules/
+.vscode/

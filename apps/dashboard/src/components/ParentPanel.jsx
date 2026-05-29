@@ -13,8 +13,11 @@ import ParentChildrenTab from './ParentChildrenTab'
 async function fetchPendingCount() {
   try {
     const { apiGet } = await import('../utils/api')
-    const data = await apiGet('/chores/pending-approvals')
-    return Array.isArray(data) ? data.length : 0
+    const [chores, stCount] = await Promise.all([
+      apiGet('/chores/pending-approvals'),
+      apiGet('/screen-time/pending-count'),
+    ])
+    return (Array.isArray(chores) ? chores.length : 0) + (stCount?.count ?? 0)
   } catch { return 0 }
 }
 
