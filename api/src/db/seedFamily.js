@@ -318,7 +318,17 @@ for (const cal of calendars) {
 }
 console.log('calendars seeded')
 
-console.log(`\nFamily slug: ${slug}`)
-console.log(`Set DEFAULT_FAMILY_SLUG=${slug} in your API .env`)
+console.log(`
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  SEED COMPLETE
+
+  Add this to api/.env:
+
+    DEFAULT_FAMILY_SLUG=${slug}
+
+  If the family row already existed, the slug was not
+  changed — check the DB and use the existing slug.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+`)
 
 await db.end()

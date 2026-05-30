@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Settings } from 'lucide-react'
 import TidyTimerButton from './TidyTimerButton'
 import TidyTimerPill from './TidyTimerPill'
@@ -20,10 +21,11 @@ function ToothbrushIcon({ size = 18 }) {
   )
 }
 
-export default function FloatingControls({ onParentOpen }) {
-  const tidy    = useTidyTimer()
-  const tooth   = useToothbrushTimer()
-  const reading = useReadingTimer()
+export default function FloatingControls() {
+  const navigate = useNavigate()
+  const tidy     = useTidyTimer()
+  const tooth    = useToothbrushTimer()
+  const reading  = useReadingTimer()
 
   useEffect(() => {
     if (tooth.expired) startChimeLoop()
@@ -89,7 +91,7 @@ export default function FloatingControls({ onParentOpen }) {
         <TidyTimerButton onStart={(mins, castSession) => tidy.startTimer(mins, castSession)} />
       )}
 
-      <button className="timer-icon-btn settings-btn" onClick={onParentOpen} title="Parent Panel" aria-label="Parent Panel">
+      <button className="timer-icon-btn settings-btn" onClick={() => navigate('/parent')} title="Parent Panel" aria-label="Parent Panel">
         <Settings size={18} strokeWidth={1.8} />
       </button>
     </div>
