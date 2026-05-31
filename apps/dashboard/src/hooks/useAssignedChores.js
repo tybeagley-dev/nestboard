@@ -174,11 +174,14 @@ export function useAssignedChores(childName, chores = []) {
       const builtIds     = new Set(built.map(c => c.id))
       const now          = Date.now()
       // Preserve locally-assigned chores not yet confirmed by the API, but only within a 5-minute window
+      const apiChildToday = data.today?.[childName] ?? {}
       const inFlight     = localChores.filter(c =>
         !c.required &&
         !builtIds.has(c.id) &&
         c.acceptedAt &&
-        (now - new Date(c.acceptedAt).getTime()) < 5 * 60 * 1000
+        (now - new Date(c.acceptedAt).getTime()) < 5 * 60 * 1000 &&
+        // If the API has no record and we had it as pending, it was rejected — don't re-add it
+        !(localPending.has(c.id) && !apiChildToday[c.id])
       )
       all[childName] = [
         ...built.map(c => ({
