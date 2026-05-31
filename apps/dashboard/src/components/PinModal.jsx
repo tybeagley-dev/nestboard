@@ -8,17 +8,25 @@ function isTouchDevice() {
 const PIN_LENGTH = 6
 
 export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN required' }) {
-  const [pin, setPin] = useState('')
+  const [pin,   setPin]   = useState('')
   const [error, setError] = useState(false)
   const inputRef = useRef(null)
   const touch = isTouchDevice()
 
   useEffect(() => {
+    if (touch) {
+      // Small delay so the page is fully rendered before focusing
+      const t = setTimeout(() => inputRef.current?.focus(), 100)
+      return () => clearTimeout(t)
+    }
+  }, [touch])
+
+  useEffect(() => {
+    if (touch) return
     function onKey(e) {
-      if (e.key === 'Escape') { onCancel(); return }
-      if (touch) return
+      if (e.key === 'Escape')    { onCancel(); return }
       if (e.key === 'Backspace') { handleBackspace(); return }
-      if (/^\d$/.test(e.key)) { handleDigit(e.key) }
+      if (/^\d$/.test(e.key))   { handleDigit(e.key) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -66,28 +74,32 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
               }}
               className="pin-hidden-input"
               autoComplete="off"
-              autoFocus
             />
           )}
           <p className="pin-prompt">{prompt}</p>
-          <div className={`pin-dots ${error ? 'pin-error' : ''}`}>
+          <div
+            className={`pin-dots ${error ? 'pin-error' : ''}`}
+            onClick={() => touch && inputRef.current?.focus()}
+          >
             {Array.from({ length: PIN_LENGTH }).map((_, i) => (
               <div key={i} className={`pin-dot ${i < pin.length ? 'filled' : ''}`} />
             ))}
           </div>
           {error && <p className="pin-error-msg">Incorrect PIN</p>}
-          <div className="numpad">
-            {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((k, i) => (
-              k === '' ? <div key={i} /> :
-              <button
-                key={i}
-                className="numpad-key"
-                onClick={() => k === '⌫' ? handleBackspace() : handleDigit(k)}
-              >
-                {k}
-              </button>
-            ))}
-          </div>
+          {!touch && (
+            <div className="numpad">
+              {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((k, i) => (
+                k === '' ? <div key={i} /> :
+                <button
+                  key={i}
+                  className="numpad-key"
+                  onClick={() => k === '⌫' ? handleBackspace() : handleDigit(k)}
+                >
+                  {k}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

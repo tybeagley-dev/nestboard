@@ -2072,9 +2072,6 @@ button {
   width: 240px;
 }
 
-@media (hover: none) and (pointer: coarse) {
-  .numpad { display: none; }
-}
 
 .numpad-key {
   aspect-ratio: 1;
