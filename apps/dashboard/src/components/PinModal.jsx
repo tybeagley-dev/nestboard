@@ -57,9 +57,12 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
 
   return (
     <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onCancel()}>
-      <div className="modal-card pin-modal">
+      <div className="modal-card pin-modal" onClick={() => touch && inputRef.current?.focus()}>
         <button className="modal-close" onClick={onCancel} aria-label="Close">×</button>
-        <div className="bucks-pin-phase">
+        <div
+          className="bucks-pin-phase"
+          onClick={() => touch && inputRef.current?.focus()}
+        >
           {touch && (
             <input
               ref={inputRef}
@@ -77,10 +80,7 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
             />
           )}
           <p className="pin-prompt">{prompt}</p>
-          <div
-            className={`pin-dots ${error ? 'pin-error' : ''}`}
-            onClick={() => touch && inputRef.current?.focus()}
-          >
+          <div className={`pin-dots ${error ? 'pin-error' : ''}`}>
             {Array.from({ length: PIN_LENGTH }).map((_, i) => (
               <div key={i} className={`pin-dot ${i < pin.length ? 'filled' : ''}`} />
             ))}
