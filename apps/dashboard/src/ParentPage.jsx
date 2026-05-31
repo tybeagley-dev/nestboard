@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, Menu, X } from 'lucide-react'
 import PinModal from './components/PinModal'
 import ParentBucksTab from './components/ParentBucksTab'
 import ParentChoresTab from './components/ParentChoresTab'
@@ -40,6 +40,7 @@ export default function ParentPage() {
   const [unlocked, setUnlocked] = useState(isUnlocked)
   const [tab, setTab] = useState('approvals')
   const [pendingCount, setPendingCount] = useState(0)
+  const [navOpen, setNavOpen] = useState(false)
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') navigate('/') }
@@ -87,7 +88,7 @@ export default function ParentPage() {
 
   return (
     <div className="parent-page">
-      <aside className="parent-sidebar">
+      <aside className={`parent-sidebar ${navOpen ? 'parent-sidebar--open' : ''}`}>
         <button className="parent-back-btn" onClick={() => navigate('/')}>
           <ArrowLeft size={15} strokeWidth={2} />
           Dashboard
@@ -98,7 +99,7 @@ export default function ParentPage() {
             <button
               key={t.id}
               className={`parent-nav-item ${tab === t.id ? 'active' : ''}`}
-              onClick={() => setTab(t.id)}
+              onClick={() => { setTab(t.id); setNavOpen(false) }}
             >
               {t.label}
               {t.badge > 0 && <span className="tab-badge">{t.badge}</span>}
@@ -107,8 +108,13 @@ export default function ParentPage() {
         </nav>
       </aside>
 
+      {navOpen && <div className="parent-nav-backdrop" onClick={() => setNavOpen(false)} />}
+
       <main className="parent-content">
         <h2 className="parent-content-title">
+          <button className="parent-nav-toggle" onClick={() => setNavOpen(o => !o)}>
+            {navOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
           {TABS.find(t => t.id === tab)?.label}
         </h2>
         <div className="parent-content-body">

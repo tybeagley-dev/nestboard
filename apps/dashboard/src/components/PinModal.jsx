@@ -66,7 +66,7 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
               }}
               className="pin-hidden-input"
               autoComplete="off"
-              readOnly
+              autoFocus
             />
           )}
           <p className="pin-prompt">{prompt}</p>

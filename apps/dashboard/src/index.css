@@ -2072,6 +2072,9 @@ button {
   width: 240px;
 }
 
+@media (hover: none) and (pointer: coarse) {
+  .numpad { display: none; }
+}
 
 .numpad-key {
   aspect-ratio: 1;
@@ -3238,6 +3241,63 @@ button {
   padding: 28px 32px 16px;
   border-bottom: 1px solid var(--border-light);
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.parent-nav-toggle {
+  display: none;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  padding: 2px;
+  flex-shrink: 0;
+}
+
+.parent-nav-backdrop {
+  display: none;
+}
+
+@media (max-width: 600px) {
+  .parent-page {
+    grid-template-columns: 1fr;
+  }
+
+  .parent-nav-toggle {
+    display: flex;
+  }
+
+  .parent-sidebar {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 50;
+    width: 240px;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .parent-sidebar--open {
+    display: flex;
+  }
+
+  .parent-nav-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 49;
+    background: rgba(42,31,20,0.4);
+  }
+
+  .parent-content-title {
+    padding: 20px 16px 14px;
+    font-size: 18px;
+  }
+
+  .parent-content-body {
+    padding: 16px;
+  }
 }
 
 .parent-content-body {

@@ -210,7 +210,7 @@ router.post('/:id/reject', requireParent, async (req, res) => {
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
   const { rowCount } = await db.query(
-    `DELETE FROM chore_events
+    `UPDATE chore_events SET status = 'accepted'
      WHERE family_id = $1 AND child_id = $2 AND chore_id = $3 AND status = 'pending_approval'`,
     [req.familyId, childId, choreId]
   )
