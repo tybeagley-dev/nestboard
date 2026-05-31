@@ -1,5 +1,6 @@
 self.addEventListener('push', e => {
-  const data = e.data?.json() ?? {}
+  let data = {}
+  try { data = e.data?.json() ?? {} } catch { data = { title: e.data?.text() ?? 'Hearthboard' } }
   e.waitUntil(
     self.registration.showNotification(data.title ?? 'Hearthboard', {
       body: data.body ?? '',
