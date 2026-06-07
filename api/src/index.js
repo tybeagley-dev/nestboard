@@ -2,6 +2,7 @@ import 'dotenv/config'
 import express from 'express'
 import cors from 'cors'
 import { rateLimit } from 'express-rate-limit'
+import { clerkMiddleware } from '@clerk/express'
 import { db } from './db/client.js'
 
 import choreRoutes from './routes/chores.js'
@@ -27,6 +28,7 @@ const app = express()
 app.set('trust proxy', 1)
 app.use(cors())
 app.use(express.json())
+app.use(clerkMiddleware())
 
 // General rate limit — 300 requests per minute per IP
 app.use(rateLimit({ windowMs: 60_000, max: 300, standardHeaders: true, legacyHeaders: false }))

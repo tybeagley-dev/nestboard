@@ -1,10 +1,18 @@
 import { CONFIG } from '../config/config'
 
-export function apiFetch(path, options = {}) {
+let _getToken = null
+
+export function setTokenGetter(fn) {
+  _getToken = fn
+}
+
+async function apiFetch(path, options = {}) {
+  const token = _getToken ? await _getToken() : null
   return fetch(`${CONFIG.apiUrl}${path}`, {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options.headers,
     },
   })

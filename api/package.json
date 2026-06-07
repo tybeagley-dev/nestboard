@@ -10,6 +10,7 @@
     "prod:seed": "railway run node src/db/seedFamily.js"
   },
   "dependencies": {
+    "@clerk/express": "^2.1.23",
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",

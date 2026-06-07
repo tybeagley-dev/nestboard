@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
+import { getAuth, clerkClient } from '@clerk/express'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 
@@ -31,13 +32,40 @@ router.post('/login', async (req, res) => {
   }
 })
 
-// GET /auth/family  → { id, name } for the resolved slug
-router.get('/family', requireFamily, async (req, res) => {
+// GET /auth/family  → { id, name } | { familyId: null } for new users (no membership yet)
+router.get('/family', async (req, res) => {
+  const { userId } = getAuth(req)
+
+  if (userId) {
+    try {
+      // Upsert the user record so we always have a local mirror
+      const clerkUser = await clerkClient().users.getUser(userId)
+      const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
+      await db.query(
+        `INSERT INTO users (id, email) VALUES ($1, $2)
+         ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email`,
+        [userId, email]
+      )
+
+      const { rows } = await db.query(
+        `SELECT f.id, f.name FROM families f
+         JOIN family_memberships fm ON fm.family_id = f.id
+         WHERE fm.user_id = $1`,
+        [userId]
+      )
+      if (!rows.length) return res.json({ familyId: null })
+      res.json(rows[0])
+    } catch (err) {
+      res.status(500).json({ error: 'Server error' })
+    }
+    return
+  }
+
+  // Dev fallback: slug-based resolution
+  const slug = req.headers['x-family-slug'] ?? process.env.DEFAULT_FAMILY_SLUG
+  if (!slug) return res.status(401).json({ error: 'Unauthorized' })
   try {
-    const { rows } = await db.query(
-      'SELECT id, name FROM families WHERE id = $1',
-      [req.familyId]
-    )
+    const { rows } = await db.query('SELECT id, name FROM families WHERE slug = $1', [slug])
     res.json(rows[0] ?? null)
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
