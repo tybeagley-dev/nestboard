@@ -248,7 +248,7 @@ function TodayAssignments({ children }) {
 
   async function handleUnassign(item) {
     setActing(`${item.child}-${item.choreId}`)
-    await apiDelete(`/chores/${item.choreId}/assignment?child=${encodeURIComponent(item.child)}`, CONFIG.parentPin)
+    await apiDelete(`/chores/${item.choreId}/assignment?child=${encodeURIComponent(item.child)}`, null, CONFIG.parentPin)
     unassignChore(item.child, item.choreId)
     triggerChoreRefetch()
     await load()
