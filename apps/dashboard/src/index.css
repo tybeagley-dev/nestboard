@@ -4770,6 +4770,206 @@ button {
   background: var(--bg);
 }
 
+/* ── Parent Family Tab ──────────────────────────────────────────────────────── */
+
+.parent-family-tab {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.family-code-card {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.family-code-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.family-code-name {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.family-code-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.family-code-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.family-code-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.family-code-value {
+  font-family: monospace;
+  font-size: 1.1rem;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.5rem 0.85rem;
+  letter-spacing: 0.05em;
+}
+
+.family-code-copy {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.family-code-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* ── Family Setup ───────────────────────────────────────────────────────────── */
+
+.family-setup-wrap {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 1.5rem;
+}
+
+.family-setup-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.family-setup-logo {
+  font-size: 2.5rem;
+  text-align: center;
+}
+
+.family-setup-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  text-align: center;
+  margin: 0;
+}
+
+.family-setup-subtitle {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.family-setup-tabs {
+  display: flex;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+}
+
+.family-setup-tab {
+  flex: 1;
+  padding: 0.6rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.family-setup-tab.active {
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 600;
+}
+
+.family-setup-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.family-setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.family-setup-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.family-setup-input {
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.family-setup-input:focus {
+  outline: none;
+  border-color: var(--text-muted);
+}
+
+.family-setup-error {
+  color: #c0392b;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.family-setup-submit {
+  padding: 0.8rem;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--text);
+  color: var(--bg);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 0.25rem;
+}
+
+.family-setup-submit:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 /* ── Child View ─────────────────────────────────────────────────────────────── */
 
 .child-view {

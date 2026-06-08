@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import bcrypt from 'bcryptjs'
+import { nanoid } from 'nanoid'
 import { getAuth, clerkClient } from '@clerk/express'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
@@ -67,6 +68,76 @@ router.get('/family', async (req, res) => {
   try {
     const { rows } = await db.query('SELECT id, name, slug FROM families WHERE slug = $1', [slug])
     res.json(rows[0] ?? null)
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST /families  { name, pin } → { id, name, slug }  — requires Clerk auth
+router.post('/families', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+  const { name, pin } = req.body
+  if (!name?.trim() || !pin?.trim()) return res.status(400).json({ error: 'Missing name or pin' })
+
+  try {
+    const existing = await db.query(
+      'SELECT family_id FROM family_memberships WHERE user_id = $1',
+      [userId]
+    )
+    if (existing.rows.length) return res.status(409).json({ error: 'Already in a family' })
+
+    const familyId = `fam_${nanoid(10)}`
+    const slug     = nanoid(12)
+    const hash     = await bcrypt.hash(pin.trim(), 12)
+
+    await db.query(
+      `INSERT INTO families (id, name, slug, parent_pin_hash) VALUES ($1, $2, $3, $4)`,
+      [familyId, name.trim(), slug, hash]
+    )
+    await db.query(
+      `INSERT INTO family_memberships (user_id, family_id, role) VALUES ($1, $2, 'owner')`,
+      [userId, familyId]
+    )
+
+    res.status(201).json({ id: familyId, name: name.trim(), slug })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST /families/join  { slug, pin } → { id, name, slug }  — requires Clerk auth
+router.post('/families/join', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+  const { slug, pin } = req.body
+  if (!slug?.trim() || !pin?.trim()) return res.status(400).json({ error: 'Missing slug or pin' })
+
+  try {
+    const existing = await db.query(
+      'SELECT family_id FROM family_memberships WHERE user_id = $1',
+      [userId]
+    )
+    if (existing.rows.length) return res.status(409).json({ error: 'Already in a family' })
+
+    const { rows } = await db.query(
+      'SELECT id, name, slug, parent_pin_hash FROM families WHERE slug = $1',
+      [slug.trim()]
+    )
+    if (!rows.length) return res.status(401).json({ error: 'Invalid family code or PIN' })
+
+    const valid = await bcrypt.compare(pin.trim(), rows[0].parent_pin_hash)
+    if (!valid) return res.status(401).json({ error: 'Invalid family code or PIN' })
+
+    await db.query(
+      `INSERT INTO family_memberships (user_id, family_id, role) VALUES ($1, $2, 'parent')
+       ON CONFLICT DO NOTHING`,
+      [userId, rows[0].id]
+    )
+
+    res.json({ id: rows[0].id, name: rows[0].name, slug: rows[0].slug })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
   }

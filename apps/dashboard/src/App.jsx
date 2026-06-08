@@ -1,9 +1,11 @@
+import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth, SignIn } from '@clerk/react'
-import { setTokenGetter } from './utils/api'
+import { setTokenGetter, apiGet } from './utils/api'
 import Dashboard from './Dashboard'
 import ParentPage from './ParentPage'
 import ChildView from './ChildView'
+import FamilySetup from './FamilySetup'
 
 function AuthGate({ children }) {
   const { isSignedIn, isLoaded, getToken } = useAuth()
@@ -19,6 +21,23 @@ function AuthGate({ children }) {
         <SignIn routing="hash" />
       </div>
     )
+  }
+
+  return <FamilyGate>{children}</FamilyGate>
+}
+
+function FamilyGate({ children }) {
+  const [family,  setFamily]  = useState(undefined) // undefined = loading
+  const [retryKey, setRetryKey] = useState(0)
+
+  useEffect(() => {
+    apiGet('/auth/family').then(data => setFamily(data ?? null))
+  }, [retryKey])
+
+  if (family === undefined) return null
+
+  if (!family || family.familyId === null) {
+    return <FamilySetup onComplete={() => setRetryKey(k => k + 1)} />
   }
 
   return children
