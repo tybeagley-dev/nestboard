@@ -1,6 +1,6 @@
 {
-  "name": "Hearthboard",
-  "short_name": "Hearthboard",
+  "name": "nestboard",
+  "short_name": "nestboard",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#F2EDE4",
