@@ -8,8 +8,8 @@ import { notifyParent, notifyChild } from '../utils/push.js'
 const router = Router()
 
 const DAILY_FREE_MINS  = 30
-const BUCKS_PER_10_MIN = 5   // 5 bucks buys 10 minutes
-const ABSTINENCE_BUCKS = 15
+const TOKENS_PER_10_MIN = 5   // 5 tokens buys 10 minutes
+const ABSTINENCE_TOKENS = 15
 
 router.use(requireFamily)
 
@@ -88,14 +88,14 @@ router.post('/:child/request-purchase', async (req, res) => {
   const childId = await resolveChildId(req.familyId, childName)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
-  const bucksAmount = (minutesAmount / 10) * BUCKS_PER_10_MIN
+  const tokensAmount = (minutesAmount / 10) * TOKENS_PER_10_MIN
 
-  const { rows: buckRows } = await db.query(
-    `SELECT balance FROM bucks_balance WHERE family_id = $1 AND child_id = $2`,
+  const { rows: tokenRows } = await db.query(
+    `SELECT balance FROM token_balance WHERE family_id = $1 AND child_id = $2`,
     [req.familyId, childId]
   )
-  const bucks = buckRows.length ? Number(buckRows[0].balance) : 0
-  if (bucks < bucksAmount) return res.status(400).json({ error: 'Insufficient bucks' })
+  const tokens = tokenRows.length ? Number(tokenRows[0].balance) : 0
+  if (tokens < tokensAmount) return res.status(400).json({ error: 'Insufficient tokens' })
 
   const { rows: existing } = await db.query(
     `SELECT id FROM screentime_purchase_requests WHERE family_id = $1 AND child_id = $2 AND status = 'pending'`,
@@ -104,14 +104,14 @@ router.post('/:child/request-purchase', async (req, res) => {
   if (existing.length > 0) return res.status(409).json({ error: 'A request is already pending approval' })
 
   const { rows } = await db.query(
-    `INSERT INTO screentime_purchase_requests (family_id, child_id, bucks_amount, minutes_amount)
+    `INSERT INTO screentime_purchase_requests (family_id, child_id, tokens_amount, minutes_amount)
      VALUES ($1, $2, $3, $4) RETURNING id`,
-    [req.familyId, childId, bucksAmount, minutesAmount]
+    [req.familyId, childId, tokensAmount, minutesAmount]
   )
 
   broadcast('screen_time_requests', { type: 'purchase_requested', child: childName })
-  notifyParent(req.familyId, { title: 'Screen time requested', body: `${childName} wants to trade ${bucksAmount} BB for ${minutesAmount} minutes` })
-  res.json({ success: true, requestId: rows[0].id, bucksAmount, minutesAmount })
+  notifyParent(req.familyId, { title: 'Screen time requested', body: `${childName} wants to trade ${tokensAmount} tokens for ${minutesAmount} minutes` })
+  res.json({ success: true, requestId: rows[0].id, tokensAmount, minutesAmount })
 })
 
 // GET /screen-time/:child/pending-purchase-request
@@ -120,7 +120,7 @@ router.get('/:child/pending-purchase-request', async (req, res) => {
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
   const { rows } = await db.query(
-    `SELECT id, bucks_amount, minutes_amount, created_at
+    `SELECT id, tokens_amount, minutes_amount, created_at
      FROM screentime_purchase_requests
      WHERE family_id = $1 AND child_id = $2 AND status = 'pending'
      LIMIT 1`,
@@ -132,7 +132,7 @@ router.get('/:child/pending-purchase-request', async (req, res) => {
 // GET /screen-time/purchase-requests  — parent view
 router.get('/purchase-requests', async (req, res) => {
   const { rows } = await db.query(
-    `SELECT spr.id, spr.created_at, spr.bucks_amount, spr.minutes_amount,
+    `SELECT spr.id, spr.created_at, spr.tokens_amount, spr.minutes_amount,
             ch.name AS child
      FROM screentime_purchase_requests spr
      JOIN children ch ON ch.id = spr.child_id
@@ -152,13 +152,13 @@ router.post('/purchase-requests/:id/approve', async (req, res) => {
   if (!reqRows.length) return res.status(404).json({ error: 'Request not found or already processed' })
   const request = reqRows[0]
 
-  const { rows: buckRows } = await db.query(
-    `SELECT balance FROM bucks_balance WHERE family_id = $1 AND child_id = $2`,
+  const { rows: tokenRows } = await db.query(
+    `SELECT balance FROM token_balance WHERE family_id = $1 AND child_id = $2`,
     [req.familyId, request.child_id]
   )
-  const bucks = buckRows.length ? Number(buckRows[0].balance) : 0
-  if (bucks < request.bucks_amount) {
-    return res.status(400).json({ error: 'Child no longer has sufficient bucks' })
+  const tokens = tokenRows.length ? Number(tokenRows[0].balance) : 0
+  if (tokens < request.tokens_amount) {
+    return res.status(400).json({ error: 'Child no longer has sufficient tokens' })
   }
 
   const client = await db.connect()
@@ -166,9 +166,9 @@ router.post('/purchase-requests/:id/approve', async (req, res) => {
     await client.query('BEGIN')
 
     await client.query(
-      `UPDATE bucks_balance SET balance = GREATEST(0, balance - $1), updated_at = NOW()
+      `UPDATE token_balance SET balance = GREATEST(0, balance - $1), updated_at = NOW()
        WHERE family_id = $2 AND child_id = $3`,
-      [request.bucks_amount, req.familyId, request.child_id]
+      [request.tokens_amount, req.familyId, request.child_id]
     )
     await client.query(
       `INSERT INTO screen_time_balance (family_id, child_id, purchased_balance)
@@ -179,7 +179,7 @@ router.post('/purchase-requests/:id/approve', async (req, res) => {
     )
     await client.query(
       `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, 'trade')`,
-      [req.familyId, request.child_id, -request.bucks_amount]
+      [req.familyId, request.child_id, -request.tokens_amount]
     )
     await client.query(
       `UPDATE screentime_purchase_requests SET status = 'approved' WHERE id = $1`,
@@ -190,7 +190,7 @@ router.post('/purchase-requests/:id/approve', async (req, res) => {
 
     const { rows: childRows } = await db.query(`SELECT name FROM children WHERE id = $1`, [request.child_id])
     const childName = childRows[0]?.name
-    broadcast('bucks', { child: childName })
+    broadcast('tokens', { child: childName })
     broadcast('screen_time', { child: childName })
     notifyChild(req.familyId, request.child_id, { title: 'Screen time approved!', body: `${request.minutes_amount} minutes added to your balance` })
     res.json({ success: true })
@@ -216,7 +216,7 @@ router.post('/purchase-requests/:id/reject', async (req, res) => {
 // GET /screen-time/abstinence-requests  — parent view
 router.get('/abstinence-requests', async (req, res) => {
   const { rows } = await db.query(
-    `SELECT sar.id, sar.date, sar.bucks_awarded, sar.status, sar.created_at,
+    `SELECT sar.id, sar.date, sar.tokens_awarded, sar.status, sar.created_at,
             ch.name AS child
      FROM screentime_abstinence_requests sar
      JOIN children ch ON ch.id = sar.child_id
@@ -237,13 +237,13 @@ router.post('/abstinence-requests/:id/approve', async (req, res) => {
   const request = reqRows[0]
 
   await db.query(
-    `UPDATE bucks_balance SET balance = balance + $1, updated_at = NOW()
+    `UPDATE token_balance SET balance = balance + $1, updated_at = NOW()
      WHERE family_id = $2 AND child_id = $3`,
-    [request.bucks_awarded, req.familyId, request.child_id]
+    [request.tokens_awarded, req.familyId, request.child_id]
   )
   await db.query(
     `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, 'abstinence_reward')`,
-    [req.familyId, request.child_id, request.bucks_awarded]
+    [req.familyId, request.child_id, request.tokens_awarded]
   )
   await db.query(
     `UPDATE screentime_abstinence_requests SET status = 'approved' WHERE id = $1`,
@@ -251,7 +251,7 @@ router.post('/abstinence-requests/:id/approve', async (req, res) => {
   )
 
   const { rows: childRows } = await db.query(`SELECT name FROM children WHERE id = $1`, [request.child_id])
-  broadcast('bucks', { child: childRows[0]?.name })
+  broadcast('tokens', { child: childRows[0]?.name })
   res.json({ success: true })
 })
 
@@ -306,10 +306,10 @@ async function processAbstinenceRequests() {
       if (usedFreeYesterday) continue
 
       await db.query(
-        `INSERT INTO screentime_abstinence_requests (family_id, child_id, date, status, bucks_awarded)
+        `INSERT INTO screentime_abstinence_requests (family_id, child_id, date, status, tokens_awarded)
          VALUES ($1, $2, $3, 'pending', $4)
          ON CONFLICT (family_id, child_id, date) DO NOTHING`,
-        [row.family_id, row.child_id, yesterdayStr, ABSTINENCE_BUCKS]
+        [row.family_id, row.child_id, yesterdayStr, ABSTINENCE_TOKENS]
       )
     }
   } catch (err) {

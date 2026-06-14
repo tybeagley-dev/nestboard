@@ -4,13 +4,13 @@ import { apiGet, apiPost, apiDelete } from '../utils/api'
 import { unassignChore, triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { getTodayKey } from '../utils/dateUtils'
 import { CONFIG } from '../config/config'
-import BuckBadge from './BuckBadge'
+import TokenBadge from './TokenBadge'
 
 const DAYS      = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const DAY_SHORT = { Sunday: 'Sun', Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat' }
 
 function emptyChore() {
-  return { id: '', label: '', icon: '', bucks: 1, active: true, days: [], frequency: 'daily', required: false, instructions: [] }
+  return { id: '', label: '', icon: '', tokens: 1, active: true, days: [], frequency: 'daily', required: false, instructions: [] }
 }
 
 // ── Chore row in list view ────────────────────────────────────────────────────
@@ -23,7 +23,7 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
     await apiPost(`/chores/${chore.id}/accept`, {
       child:      child.name,
       choreLabel: chore.label,
-      bucks:      chore.bucks,
+      tokens:      chore.tokens,
     })
     setAssigned(child.name)
     setAssigning(false)
@@ -66,7 +66,7 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
         )}
         {assigned && <span className="chore-assign-confirm">Assigned to {assigned} ✓</span>}
       </div>
-      <BuckBadge amount={chore.bucks} />
+      <TokenBadge amount={chore.tokens} />
       {!assigning && !assigned && (
         <button className="chore-assign-btn" onClick={() => setAssigning(true)} title="Assign to child">→</button>
       )}
@@ -81,7 +81,7 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
 function ChoreForm({ chore, onSave, onCancel, saving }) {
   const [label,        setLabel]        = useState(chore.label || '')
   const [icon,         setIcon]         = useState(chore.icon || '')
-  const [bucks,        setBucks]        = useState(chore.bucks || 1)
+  const [tokens,        setTokens]        = useState(chore.tokens || 1)
   const [active,       setActive]       = useState(chore.active !== false)
   const [days,         setDays]         = useState(chore.days || [])
   const [frequency,    setFrequency]    = useState(chore.frequency || 'daily')
@@ -104,7 +104,7 @@ function ChoreForm({ chore, onSave, onCancel, saving }) {
 
   function handleSave() {
     if (!label.trim()) return
-    onSave({ ...chore, label: label.trim(), icon, bucks, active, days, frequency, required, instructions })
+    onSave({ ...chore, label: label.trim(), icon, tokens, active, days, frequency, required, instructions })
   }
 
   return (
@@ -131,10 +131,10 @@ function ChoreForm({ chore, onSave, onCancel, saving }) {
           />
         </div>
         <div className="chore-form-field">
-          <label className="chore-form-label">Bucks</label>
+          <label className="chore-form-label">Tokens</label>
           <div className="chore-form-toggle">
-            <button className={bucks === 1 ? 'active' : ''} onClick={() => setBucks(1)}>1 BB</button>
-            <button className={bucks === 2 ? 'active' : ''} onClick={() => setBucks(2)}>2 BB</button>
+            <button className={tokens === 1 ? 'active' : ''} onClick={() => setTokens(1)}>1</button>
+            <button className={tokens === 2 ? 'active' : ''} onClick={() => setTokens(2)}>2</button>
           </div>
         </div>
       </div>
@@ -232,7 +232,7 @@ function TodayAssignments({ children }) {
       const childObj = children.find(c => c.name === childName)
       for (const [choreId, entry] of Object.entries(chores)) {
         if (entry.status === 'accepted') {
-          flat.push({ child: childName, childObj, choreId, choreLabel: entry.choreLabel, bucks: entry.bucks })
+          flat.push({ child: childName, childObj, choreId, choreLabel: entry.choreLabel, tokens: entry.tokens })
         }
       }
     }
@@ -275,7 +275,7 @@ function TodayAssignments({ children }) {
                 <span className="approval-child">{item.child}</span>
                 <span className="approval-label">{item.choreLabel}</span>
               </div>
-              <BuckBadge amount={item.bucks} />
+              <TokenBadge amount={item.tokens} />
             </div>
             <div className="approval-actions">
               <button

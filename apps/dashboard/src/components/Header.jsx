@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { formatDate, formatTime, getGreeting } from '../utils/dateUtils'
 import { getWeatherInfo } from '../utils/weatherCodes'
 import { CONFIG } from '../config/config'
+import { useFamily } from '../FamilyContext'
 import TidyTimerButton from './TidyTimerButton'
 import TidyTimerPill from './TidyTimerPill'
 import WeatherModal from './WeatherModal'
@@ -10,6 +11,7 @@ import { useToothbrushTimer } from '../hooks/useToothbrushTimer'
 import { startChimeLoop, stopChimeLoop } from '../utils/chime'
 
 export default function Header({ now, weather, onParentOpen }) {
+  const family = useFamily()
   const weatherInfo = weather ? getWeatherInfo(weather.code) : null
   const tidy  = useTidyTimer()
   const tooth = useToothbrushTimer()
@@ -27,7 +29,7 @@ export default function Header({ now, weather, onParentOpen }) {
     <>
     <header className="dashboard-header">
       <div className="header-greeting">
-        <span className="greeting-text">{getGreeting(now)}, {CONFIG.familyName}!</span>
+        <span className="greeting-text">{getGreeting(now)}, {family?.name ?? CONFIG.familyName}!</span>
       </div>
 
       <div className="header-center">

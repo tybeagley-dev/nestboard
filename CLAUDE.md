@@ -3,9 +3,12 @@
 ## Local dev
 
 ```
-npm run db:up   # start Postgres Docker container
-npm run dev     # runs api + dashboard concurrently
+npm run dev     # full stack: starts Postgres, runs migrations, then api + dashboard
 ```
+
+`npm run dev` brings up the DB (`db:up --wait`), applies migrations (`db:migrate`, idempotent),
+then runs api + dashboard concurrently. DB-only helpers still available: `db:up`, `db:down`,
+`db:reset`, `db:pull`.
 
 ## Reserved ports (never use these)
 

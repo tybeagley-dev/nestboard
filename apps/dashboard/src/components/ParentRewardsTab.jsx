@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
-import { adminGetAllMomStoreItems, adminAddMomStoreItem, adminEditMomStoreItem, adminDeleteMomStoreItem, usePurchases, redeemPurchase, buyMomStoreItem } from '../hooks/useMomStore'
-import BuckBadge from './BuckBadge'
+import { adminGetAllRewards, adminAddReward, adminEditReward, adminDeleteReward, usePurchases, redeemPurchase, buyReward } from '../hooks/useRewards'
+import TokenBadge from './TokenBadge'
 
 function emptyItem() {
   return { id: '', label: '', icon: '', cost: 5, requiresApproval: false, active: true }
@@ -31,7 +31,7 @@ function StoreRow({ item, onEdit, confirmDelete, onDeleteRequest, onConfirmDelet
           {item.requiresApproval ? 'Requires approval' : 'Self-purchase'}
         </span>
       </div>
-      <BuckBadge amount={item.cost} />
+      <TokenBadge amount={item.cost} />
       <button className="chore-admin-edit-btn" onClick={onEdit}>Edit</button>
       <button className="chore-admin-del-btn"  onClick={onDeleteRequest}>×</button>
     </div>
@@ -76,7 +76,7 @@ function StoreForm({ item, onSave, onCancel, saving }) {
           />
         </div>
         <div className="chore-form-field">
-          <label className="chore-form-label">Cost (BB)</label>
+          <label className="chore-form-label">Cost (Tokens)</label>
           <input
             className="chore-form-input"
             type="number"
@@ -106,7 +106,7 @@ function StoreForm({ item, onSave, onCancel, saving }) {
         <p className="chore-form-hint" style={{ marginTop: 4 }}>
           {requiresApproval
             ? 'Kids see the item and are prompted to ask a parent. No automatic deduction.'
-            : 'Kids can purchase this on their own. Bucks deducted immediately.'}
+            : 'Kids can purchase this on their own. Tokens deducted immediately.'}
         </p>
       </div>
 
@@ -150,7 +150,7 @@ function AwardItem({ items, children, onAwarded }) {
   async function handleAward() {
     if (!child || !itemId) return
     setAwarding(true)
-    await buyMomStoreItem(child, itemId)
+    await buyReward(child, itemId)
     setAwarding(false)
     setItemId('')
     setFlash(true)
@@ -182,7 +182,7 @@ function AwardItem({ items, children, onAwarded }) {
         >
           <option value="">Pick an item…</option>
           {approvalItems.map(i => (
-            <option key={i.id} value={i.id}>{i.icon} {i.label} ({i.cost} BB)</option>
+            <option key={i.id} value={i.id}>{i.icon} {i.label} ({i.cost} tokens)</option>
           ))}
         </select>
 
@@ -198,7 +198,7 @@ function AwardItem({ items, children, onAwarded }) {
 
       {selectedItem && (
         <p className="award-hint">
-          Deducts {selectedItem.cost} BB from {child} and adds to their wallet.
+          Deducts {selectedItem.cost} tokens from {child} and adds to their wallet.
         </p>
       )}
     </div>
@@ -243,8 +243,8 @@ function PendingRedemptions({ items, children }) {
             {ps.map(p => (
               <div key={p.id} className="redemptions-row">
                 <span className="redemptions-icon">{p.itemIcon || '🎁'}</span>
-                <span className="redemptions-label">{p.itemLabel}</span>
-                <BuckBadge amount={p.cost} />
+                <span className="redemptions-label">{p.item_label}</span>
+                <TokenBadge amount={p.cost} />
                 <button
                   className="redemptions-btn"
                   onClick={() => handleRedeem(p.id)}
@@ -263,7 +263,7 @@ function PendingRedemptions({ items, children }) {
 
 // ── Tab root ──────────────────────────────────────────────────────────────────
 
-export default function ParentMomStoreTab({ children = [] }) {
+export default function ParentRewardsTab({ children = [] }) {
   const [items,         setItems]         = useState([])
   const [loading,       setLoading]       = useState(true)
   const [form,          setForm]          = useState(null)
@@ -273,7 +273,7 @@ export default function ParentMomStoreTab({ children = [] }) {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const data = await adminGetAllMomStoreItems()
+    const data = await adminGetAllRewards()
     setItems(data)
     setLoading(false)
   }, [])
@@ -282,15 +282,15 @@ export default function ParentMomStoreTab({ children = [] }) {
 
   async function handleSave(data) {
     setSaving(true)
-    if (data.id) await adminEditMomStoreItem(data)
-    else         await adminAddMomStoreItem(data)
+    if (data.id) await adminEditReward(data)
+    else         await adminAddReward(data)
     setSaving(false)
     await load()
     setForm(null)
   }
 
   async function handleDelete(id) {
-    await adminDeleteMomStoreItem(id)
+    await adminDeleteReward(id)
     setDeleteConfirm(null)
     await load()
   }

@@ -1,18 +1,20 @@
 import { useState, useEffect } from 'react'
 import { useScreenBalance, startChildTimer } from '../hooks/useScreenTime'
 import { useChorePoints } from '../hooks/useChores'
-import BuckBadge from './BuckBadge'
+import { useLabels } from '../FamilyContext'
+import TokenBadge from './TokenBadge'
 import { apiGet, apiPost } from '../utils/api'
 
 const PHASE          = { VIEW: 'view', BUY: 'buy' }
-const BUCKS_PER_STEP = 5    // bucks per 10-minute increment
+const TOKENS_PER_STEP = 5    // tokens per 10-minute increment
 const MINS_PER_STEP  = 10   // minutes per stepper step
 
 export default function ScreenTimeModal({ child, onClose }) {
+  const labels = useLabels()
   const { balance, purchasedBalance, dailyFreeAvailable } = useScreenBalance(child.name)
-  const { bucks } = useChorePoints(child.name)
+  const { tokens } = useChorePoints(child.name)
   const [phase,          setPhase]          = useState(PHASE.VIEW)
-  const [steps,          setSteps]          = useState(1)   // stepper unit: 1 step = 10 min = 5 bucks
+  const [steps,          setSteps]          = useState(1)   // stepper unit: 1 step = 10 min = 5 tokens
   const [pendingRequest, setPendingRequest] = useState(undefined)  // undefined=loading, null=none, obj=exists
   const [requestSent,    setRequestSent]    = useState(false)
   const [requestError,   setRequestError]   = useState(null)
@@ -37,7 +39,7 @@ export default function ScreenTimeModal({ child, onClose }) {
     const result = await apiPost(`/screen-time/${child.name}/request-purchase`, { minutesAmount })
     if (result?.success) {
       setRequestSent(true)
-      setPendingRequest({ minutes_amount: minutesAmount, bucks_amount: steps * BUCKS_PER_STEP })
+      setPendingRequest({ minutes_amount: minutesAmount, tokens_amount: steps * TOKENS_PER_STEP })
       setPhase(PHASE.VIEW)
     } else {
       setRequestError(result?.error ?? 'Something went wrong. Try again.')
@@ -49,10 +51,10 @@ export default function ScreenTimeModal({ child, onClose }) {
     onClose()
   }
 
-  const maxSteps     = Math.floor(bucks / BUCKS_PER_STEP)
+  const maxSteps     = Math.floor(tokens / TOKENS_PER_STEP)
   const canRequest   = maxSteps > 0 && pendingRequest === null
   const minutesGained = steps * MINS_PER_STEP
-  const bucksCost     = steps * BUCKS_PER_STEP
+  const tokensCost     = steps * TOKENS_PER_STEP
 
   return (
     <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onClose()}>
@@ -103,7 +105,7 @@ export default function ScreenTimeModal({ child, onClose }) {
 
             {!requestSent && pendingRequest && (
               <p className="st-request-sent">
-                Request pending: {pendingRequest.minutes_amount}m for <BuckBadge amount={pendingRequest.bucks_amount} />
+                Request pending: {pendingRequest.minutes_amount}m for <TokenBadge amount={pendingRequest.tokens_amount} />
               </p>
             )}
 
@@ -119,7 +121,7 @@ export default function ScreenTimeModal({ child, onClose }) {
         )}
 
         {phase === PHASE.BUY && (
-          <div className="bucks-spend-phase">
+          <div className="tokens-spend-phase">
             <p className="spend-prompt">Request More Screen Time</p>
             <div className="spend-stepper">
               <button
@@ -137,10 +139,10 @@ export default function ScreenTimeModal({ child, onClose }) {
               >+</button>
             </div>
             <p className="spend-remaining">
-              <strong>{minutesGained} min</strong> → <BuckBadge amount={bucksCost} />
+              <strong>{minutesGained} min</strong> → <TokenBadge amount={tokensCost} />
             </p>
             <p className="trade-balance-after">
-              Bucks after approval: <BuckBadge amount={Math.max(0, bucks - bucksCost)} />
+              {labels.tokenName} after approval: <TokenBadge amount={Math.max(0, tokens - tokensCost)} />
             </p>
             {requestError && <p className="st-request-error">{requestError}</p>}
             <div className="spend-actions">

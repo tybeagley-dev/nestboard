@@ -39,7 +39,7 @@ export default function FamilySetup({ onComplete }) {
   return (
     <div className="family-setup-wrap">
       <div className="family-setup-card">
-        <div className="family-setup-logo">🏠</div>
+        <img className="family-setup-logo" src="/logo.png" alt="nestboard" />
         <h1 className="family-setup-title">Welcome to nestboard</h1>
         <p className="family-setup-subtitle">
           {mode === 'create'

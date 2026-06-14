@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
-import BuckBadge from './BuckBadge'
+import TokenBadge from './TokenBadge'
+import { useLabels } from '../FamilyContext'
 
 export default function ChoreInstructionsModal({ chore, onComplete, onClose }) {
+  const labels = useLabels()
   const [checked, setChecked] = useState(() =>
     chore.instructions.map(() => false)
   )
@@ -27,8 +29,8 @@ export default function ChoreInstructionsModal({ chore, onComplete, onClose }) {
           <span className="instructions-icon">{chore.icon}</span>
           <div>
             <h2 className="modal-title">{chore.label}</h2>
-            <p className="instructions-bucks">
-              <BuckBadge amount={chore.bucks} /> {chore.bucks} Beagley Buck{chore.bucks !== 1 ? 's' : ''}
+            <p className="instructions-tokens">
+              <TokenBadge amount={chore.tokens} /> {chore.tokens} {chore.tokens !== 1 ? labels.tokenName : labels.tokenNameSingular}
             </p>
           </div>
         </div>

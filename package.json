@@ -5,8 +5,9 @@
     "apps/dashboard"
   ],
   "scripts": {
-    "dev": "concurrently --names api,web --prefix-colors cyan,magenta \"npm run dev --prefix api\" \"npm run dev --workspace apps/dashboard\"",
+    "dev": "npm run db:up && npm run db:migrate && concurrently --names api,web --prefix-colors cyan,magenta \"npm run dev --prefix api\" \"npm run dev --workspace apps/dashboard\"",
     "db:up": "docker compose up -d --wait db",
+    "db:migrate": "npm run migrate --prefix api",
     "db:down": "docker compose down",
     "db:reset": "docker compose down -v && docker compose up -d --wait db",
     "db:pull": "docker run --rm postgres:18 pg_dump \"$PROD_DATABASE_URL\" --no-owner --no-privileges --clean --if-exists | psql postgresql://nestboard:nestboard@localhost:5433/nestboard"

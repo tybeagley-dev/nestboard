@@ -2,16 +2,16 @@ import { useState, useEffect, useCallback } from 'react'
 import { CONFIG } from '../config/config'
 import { getTodayKey } from '../utils/dateUtils'
 
-const BUCKS_KEY      = 'fam_dash_bucks'
+const TOKENS_KEY      = 'fam_dash_tokens'
 const CHORE_DONE_KEY = 'fam_dash_chore_done'
 
-function getLocalBucks() {
-  return JSON.parse(localStorage.getItem(BUCKS_KEY) ?? '{}')
+function getLocalTokens() {
+  return JSON.parse(localStorage.getItem(TOKENS_KEY) ?? '{}')
 }
 
-function saveLocalBucks(obj) {
-  localStorage.setItem(BUCKS_KEY, JSON.stringify(obj))
-  window.dispatchEvent(new Event('fam_bucks_update'))
+function saveLocalTokens(obj) {
+  localStorage.setItem(TOKENS_KEY, JSON.stringify(obj))
+  window.dispatchEvent(new Event('fam_tokens_update'))
 }
 
 // ── Chore pool ────────────────────────────────────────────────────────────────
@@ -38,78 +38,78 @@ export function useChores() {
   return { chores, loading, reload: load }
 }
 
-// ── Beagley Bucks ─────────────────────────────────────────────────────────────
+// ── Tokens ─────────────────────────────────────────────────────────────
 
 export function useChorePoints(childName) {
-  const [bucks, setBucks] = useState(() => getLocalBucks()[childName] ?? 0)
+  const [tokens, setTokens] = useState(() => getLocalTokens()[childName] ?? 0)
 
   // Hydrate from API on mount
   useEffect(() => {
     async function load() {
       const { apiGet } = await import('../utils/api')
-      const data = await apiGet('/bucks')
+      const data = await apiGet('/tokens')
       if (!Array.isArray(data)) return
       const row = data.find(d => d.child === childName)
       if (row) {
-        setBucks(Number(row.balance))
-        const local = getLocalBucks()
+        setTokens(Number(row.balance))
+        const local = getLocalTokens()
         local[childName] = Number(row.balance)
-        saveLocalBucks(local)
+        saveLocalTokens(local)
       }
     }
     load()
   }, [childName])
 
-  // Sync across hook instances when any instance updates bucks
+  // Sync across hook instances when any instance updates tokens
   useEffect(() => {
-    function onUpdate() { setBucks(getLocalBucks()[childName] ?? 0) }
-    window.addEventListener('fam_bucks_update', onUpdate)
-    return () => window.removeEventListener('fam_bucks_update', onUpdate)
+    function onUpdate() { setTokens(getLocalTokens()[childName] ?? 0) }
+    window.addEventListener('fam_tokens_update', onUpdate)
+    return () => window.removeEventListener('fam_tokens_update', onUpdate)
   }, [childName])
 
-  const recordCompletion = useCallback(async (_child, _choreId, bucksEarned) => {
-    setBucks(b => {
-      const next = b + bucksEarned
-      const local = getLocalBucks()
+  const recordCompletion = useCallback(async (_child, _choreId, tokensEarned) => {
+    setTokens(b => {
+      const next = b + tokensEarned
+      const local = getLocalTokens()
       local[childName] = next
-      saveLocalBucks(local)
+      saveLocalTokens(local)
       return next
     })
-    return { success: true, bucksEarned }
+    return { success: true, tokensEarned }
   }, [childName])
 
-  const adjustBucks = useCallback(async (delta) => {
-    setBucks(b => {
+  const adjustTokens = useCallback(async (delta) => {
+    setTokens(b => {
       const next = Math.max(0, b + delta)
-      const local = getLocalBucks()
+      const local = getLocalTokens()
       local[childName] = next
-      saveLocalBucks(local)
+      saveLocalTokens(local)
       return next
     })
     const { apiPost } = await import('../utils/api')
-    const result = await apiPost(`/bucks/${childName}/adjust`, { delta, type: 'adjustment' }, CONFIG.parentPin)
+    const result = await apiPost(`/tokens/${childName}/adjust`, { delta, type: 'adjustment' }, CONFIG.parentPin)
     if (result?.balance !== undefined) {
-      setBucks(Number(result.balance))
-      const local = getLocalBucks()
+      setTokens(Number(result.balance))
+      const local = getLocalTokens()
       local[childName] = Number(result.balance)
-      saveLocalBucks(local)
+      saveLocalTokens(local)
     }
   }, [childName])
 
-  const reloadBucks = useCallback(async () => {
+  const reloadTokens = useCallback(async () => {
     const { apiGet } = await import('../utils/api')
-    const data = await apiGet('/bucks')
+    const data = await apiGet('/tokens')
     if (!Array.isArray(data)) return
     const row = data.find(d => d.child === childName)
     if (row) {
-      setBucks(Number(row.balance))
-      const local = getLocalBucks()
+      setTokens(Number(row.balance))
+      const local = getLocalTokens()
       local[childName] = Number(row.balance)
-      saveLocalBucks(local)
+      saveLocalTokens(local)
     }
   }, [childName])
 
-  return { bucks, recordCompletion, adjustBucks, reloadBucks }
+  return { tokens, recordCompletion, adjustTokens, reloadTokens }
 }
 
 // ── Chore-as-routine tracking ─────────────────────────────────────────────────
@@ -151,7 +151,7 @@ export async function adminAddChore(data) {
   return apiPost('/chores', {
     id:           data.id || Date.now().toString(36),
     label:        data.label,
-    bucks:        data.bucks,
+    tokens:        data.tokens,
     icon:         data.icon,
     active:       data.active !== false,
     required:     data.required ?? false,
@@ -171,7 +171,7 @@ export async function adminEditChore(data) {
   const { apiPut } = await import('../utils/api')
   return apiPut(`/chores/${data.id}`, {
     label:        data.label,
-    bucks:        data.bucks,
+    tokens:        data.tokens,
     icon:         data.icon,
     active:       data.active !== false,
     required:     data.required ?? false,

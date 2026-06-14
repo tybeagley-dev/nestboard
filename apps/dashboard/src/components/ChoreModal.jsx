@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react'
 import SpinningWheel from './SpinningWheel'
-import BuckBadge from './BuckBadge'
+import TokenBadge from './TokenBadge'
 import { assignChores, acceptChoresToApi, getClaimedChoreIds, triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { isChoreAvailableThisWeek } from '../hooks/useChoreFrequency'
+import { useLabels } from '../FamilyContext'
 
 const PHASE = { READY: 'ready', RESULT: 'result', RESPIN: 'respin', CHOOSE: 'choose' }
 const MODE  = { TWO_ONE: '2x1', ONE_TWO: '1x2' }
@@ -12,6 +13,7 @@ function todayName() {
 }
 
 export default function ChoreModal({ child, chores = [], onClose, isExtra = false }) {
+  const labels = useLabels()
   const [phase,        setPhase]        = useState(PHASE.READY)
   const [mode,         setMode]         = useState(MODE.TWO_ONE)
   const [firstBundle,  setFirstBundle]  = useState([])
@@ -19,12 +21,12 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
   const [spinning,     setSpinning]     = useState(false)
 
   function filteredPool(excludeIds = []) {
-    const targetBucks = mode === MODE.TWO_ONE ? 1 : 2
+    const targetTokens = mode === MODE.TWO_ONE ? 1 : 2
     const claimed     = getClaimedChoreIds(child.name)
     const today       = todayName()
     return chores.filter(c =>
       c.active !== false &&
-      c.bucks === targetBucks &&
+      c.tokens === targetTokens &&
       !c.required &&
       (c.days.length === 0 || c.days.includes(today)) &&
       isChoreAvailableThisWeek(c, child.name) &&
@@ -87,7 +89,7 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
           </div>
           <div>
             <h2 className="modal-title">{isExtra ? 'Bonus Chore' : `${child.name}'s Chore`}</h2>
-            {isExtra && <p className="modal-subtitle">Earns Beagley Bucks only</p>}
+            {isExtra && <p className="modal-subtitle">Earns {labels.tokenName} only</p>}
           </div>
         </div>
 
@@ -97,13 +99,13 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
               className={`chore-mode-btn ${mode === MODE.TWO_ONE ? 'active' : ''}`}
               onClick={() => switchMode(MODE.TWO_ONE)}
             >
-              <BuckBadge amount={1} /> × 2 chores
+              <TokenBadge amount={1} /> × 2 chores
             </button>
             <button
               className={`chore-mode-btn ${mode === MODE.ONE_TWO ? 'active' : ''}`}
               onClick={() => switchMode(MODE.ONE_TWO)}
             >
-              <BuckBadge amount={2} /> × 1 chore
+              <TokenBadge amount={2} /> × 1 chore
             </button>
           </div>
         )}
@@ -119,7 +121,7 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
                     <div key={c.id} className="chore-bundle-item">
                       <span className="chore-result-icon">{c.icon}</span>
                       <span className="chore-result-name">{c.label}</span>
-                      <BuckBadge amount={c.bucks} />
+                      <TokenBadge amount={c.tokens} />
                     </div>
                   ))}
                 </button>
@@ -133,7 +135,7 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
           <>
             {activePool.length === 0 ? (
               <div className="modal-loading">
-                No {mode === MODE.TWO_ONE ? '1-buck' : '2-buck'} chores available today
+                No {mode === MODE.TWO_ONE ? '1-token' : '2-token'} chores available today
               </div>
             ) : (
               <div className={`modal-wheel-wrap ${!isSpinPhase ? 'dimmed' : ''}`}>
@@ -157,7 +159,7 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
                     <div key={chore.id} className="chore-result-card">
                       <span className="chore-result-icon">{chore.icon}</span>
                       <span className="chore-result-name">{chore.label}</span>
-                      <BuckBadge amount={chore.bucks} />
+                      <TokenBadge amount={chore.tokens} />
                     </div>
                   ))}
                 </div>

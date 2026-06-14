@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { CONFIG } from '../config/config'
-import BuckBadge from './BuckBadge'
+import TokenBadge from './TokenBadge'
 import { apiGet, apiPost } from '../utils/api'
 
 export default function ParentApprovalsTab({ children = [] }) {
@@ -104,7 +104,7 @@ export default function ParentApprovalsTab({ children = [] }) {
                     <span className="approval-child">{item.child}</span>
                     <span className="approval-label">{item.chore_label}</span>
                   </div>
-                  <BuckBadge amount={item.bucks} />
+                  <TokenBadge amount={item.tokens} />
                 </div>
                 <div className="approval-actions">
                   <button className="approval-btn approve" onClick={() => handleChoreApprove(item)} disabled={busy}>
@@ -138,7 +138,7 @@ export default function ParentApprovalsTab({ children = [] }) {
                     <span className="approval-child">{item.child}</span>
                     <span className="approval-label">{item.minutes_amount} min screen time</span>
                   </div>
-                  <BuckBadge amount={item.bucks_amount} />
+                  <TokenBadge amount={item.tokens_amount} />
                 </div>
                 <div className="approval-actions">
                   <button className="approval-btn approve" onClick={() => handlePurchaseApprove(item)} disabled={busy}>
@@ -174,7 +174,7 @@ export default function ParentApprovalsTab({ children = [] }) {
                     <span className="approval-child">{item.child}</span>
                     <span className="approval-label">No screen time — {dateStr}</span>
                   </div>
-                  <BuckBadge amount={item.bucks_awarded} />
+                  <TokenBadge amount={item.tokens_awarded} />
                 </div>
                 <div className="approval-actions">
                   <button className="approval-btn approve" onClick={() => handleAbstinenceApprove(item)} disabled={busy}>

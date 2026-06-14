@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowLeft, Menu, X } from 'lucide-react'
 import PinModal from './components/PinModal'
-import ParentBucksTab from './components/ParentBucksTab'
+import ParentTokensTab from './components/ParentTokensTab'
 import ParentChoresTab from './components/ParentChoresTab'
 import ParentMealsTab from './components/ParentMealsTab'
 import ParentRoutinesTab from './components/ParentRoutinesTab'
 import ParentZonesTab from './components/ParentZonesTab'
-import ParentMomStoreTab from './components/ParentMomStoreTab'
+import ParentRewardsTab from './components/ParentRewardsTab'
 import ParentApprovalsTab from './components/ParentApprovalsTab'
 import ParentGroceryTab from './components/ParentGroceryTab'
 import ParentChildrenTab from './components/ParentChildrenTab'
@@ -75,12 +75,12 @@ export default function ParentPage() {
 
   const TABS = [
     { id: 'approvals', label: 'Approvals', badge: pendingCount },
-    { id: 'bucks',     label: 'Bucks & Time' },
+    { id: 'tokens',     label: 'Tokens & Time' },
     { id: 'chores',    label: 'Chores'       },
     { id: 'routines',  label: 'Routines'     },
     { id: 'zones',     label: 'Zones'        },
     { id: 'meals',     label: 'Meals'        },
-    { id: 'store',     label: 'Mom Store'    },
+    { id: 'store',     label: 'Rewards'    },
     { id: 'grocery',   label: 'Grocery'      },
     { id: 'children',  label: 'Children'     },
     { id: 'calendars',     label: 'Calendars'      },
@@ -121,12 +121,12 @@ export default function ParentPage() {
         </h2>
         <div className="parent-content-body">
           {tab === 'approvals' && <ParentApprovalsTab children={children} />}
-          {tab === 'bucks'     && <ParentBucksTab children={children} />}
+          {tab === 'tokens'     && <ParentTokensTab children={children} />}
           {tab === 'chores'    && <ParentChoresTab children={children} />}
           {tab === 'routines'  && <ParentRoutinesTab children={children} />}
           {tab === 'zones'     && <ParentZonesTab children={children} />}
           {tab === 'meals'     && <ParentMealsTab />}
-          {tab === 'store'     && <ParentMomStoreTab children={children} />}
+          {tab === 'store'     && <ParentRewardsTab children={children} />}
           {tab === 'grocery'   && <ParentGroceryTab />}
           {tab === 'children'  && <ParentChildrenTab children={children} onReload={reloadChildren} />}
           {tab === 'calendars'     && <ParentCalendarTab children={children} />}

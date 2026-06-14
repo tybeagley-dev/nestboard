@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import { useChorePoints } from '../hooks/useChores'
 import { useScreenBalance } from '../hooks/useScreenTime'
-import BuckBadge from './BuckBadge'
+import { useLabels } from '../FamilyContext'
+import TokenBadge from './TokenBadge'
 
 const TIME_PRESETS = [-30, -15, +15, +30]
 
 function ChildRow({ child }) {
-  const { bucks, adjustBucks }  = useChorePoints(child.name)
+  const labels = useLabels()
+  const { tokens, adjustTokens }  = useChorePoints(child.name)
   const { balance, purchasedBalance, addMinutes } = useScreenBalance(child.name)
-  const [buckDelta, setBuckDelta] = useState(0)
+  const [tokenDelta, setTokenDelta] = useState(0)
   const [flash, setFlash]         = useState('')
 
   function pulse(which) {
@@ -16,11 +18,11 @@ function ChildRow({ child }) {
     setTimeout(() => setFlash(''), 1000)
   }
 
-  function applyBucks() {
-    if (buckDelta === 0) return
-    adjustBucks(buckDelta)
-    setBuckDelta(0)
-    pulse('bucks')
+  function applyTokens() {
+    if (tokenDelta === 0) return
+    adjustTokens(tokenDelta)
+    setTokenDelta(0)
+    pulse('tokens')
   }
 
   function applyTime(delta) {
@@ -30,10 +32,10 @@ function ChildRow({ child }) {
     pulse('time')
   }
 
-  function stepBuck(dir) {
-    setBuckDelta(d => {
+  function stepToken(dir) {
+    setTokenDelta(d => {
       const next = d + dir
-      if (dir < 0 && next < -bucks) return d
+      if (dir < 0 && next < -tokens) return d
       if (next === 0) return dir > 0 ? 1 : -1
       return next
     })
@@ -46,21 +48,21 @@ function ChildRow({ child }) {
         <span className="parent-child-name">{child.name}</span>
       </div>
 
-      {/* Bucks */}
+      {/* Tokens */}
       <div className="parent-section">
         <div className="parent-section-row">
-          <span className="parent-section-label">Beagley Bucks</span>
-          <span className={`parent-balance ${flash === 'bucks' ? 'flashed' : ''}`}>
-            <BuckBadge amount={bucks} />
+          <span className="parent-section-label">{labels.tokenName}</span>
+          <span className={`parent-balance ${flash === 'tokens' ? 'flashed' : ''}`}>
+            <TokenBadge amount={tokens} />
           </span>
         </div>
         <div className="parent-stepper-row">
-          <button className="stepper-btn" onClick={() => stepBuck(-1)} disabled={buckDelta <= -bucks && bucks > 0}>−</button>
-          <span className={`stepper-value adjust-value ${buckDelta > 0 ? 'adding' : buckDelta < 0 ? 'deducting' : ''}`} style={{ fontSize: '26px', minWidth: '56px' }}>
-            {buckDelta > 0 ? `+${buckDelta}` : buckDelta}
+          <button className="stepper-btn" onClick={() => stepToken(-1)} disabled={tokenDelta <= -tokens && tokens > 0}>−</button>
+          <span className={`stepper-value adjust-value ${tokenDelta > 0 ? 'adding' : tokenDelta < 0 ? 'deducting' : ''}`} style={{ fontSize: '26px', minWidth: '56px' }}>
+            {tokenDelta > 0 ? `+${tokenDelta}` : tokenDelta}
           </span>
-          <button className="stepper-btn" onClick={() => stepBuck(1)}>+</button>
-          <button className="parent-apply-btn" onClick={applyBucks} disabled={buckDelta === 0}>
+          <button className="stepper-btn" onClick={() => stepToken(1)}>+</button>
+          <button className="parent-apply-btn" onClick={applyTokens} disabled={tokenDelta === 0}>
             Apply
           </button>
         </div>
@@ -91,9 +93,9 @@ function ChildRow({ child }) {
   )
 }
 
-export default function ParentBucksTab({ children = [] }) {
+export default function ParentTokensTab({ children = [] }) {
   return (
-    <div className="parent-bucks-tab">
+    <div className="parent-tokens-tab">
       {children.map(child => (
         <ChildRow key={child.name} child={child} />
       ))}

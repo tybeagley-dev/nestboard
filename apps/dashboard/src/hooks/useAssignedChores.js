@@ -57,7 +57,7 @@ function buildFromApi(childName, todayEntries, weekCompleted, chores) {
       return {
         id:           choreId,
         label:        entry.choreLabel,
-        bucks:        entry.bucks,
+        tokens:        entry.tokens,
         icon:         def.icon ?? '',
         required:     def.required ?? false,
         instructions: def.instructions ?? [],
@@ -130,16 +130,16 @@ export function acceptChoresToApi(child, chores) {
     apiPost(`/chores/${c.id}/accept`, {
       child:      child.name,
       choreLabel: c.label,
-      bucks:      c.bucks,
+      tokens:      c.tokens,
     })
   ))
 }
 
-export function submitApprovalRequest(child, choreId, choreLabel, bucks) {
+export function submitApprovalRequest(child, choreId, choreLabel, tokens) {
   return apiPost(`/chores/${choreId}/request-approval`, {
     child:      child.name,
     choreLabel,
-    bucks,
+    tokens,
   })
 }
 

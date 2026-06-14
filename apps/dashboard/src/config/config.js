@@ -73,7 +73,7 @@ export const CONFIG = {
   },
 
   // ── Parent PIN ─────────────────────────────────────────────────────────────
-  // Required to confirm Beagley Bucks deductions (Mom Store, real-money exchange)
+  // Required to confirm token deductions (rewards store, real-money exchange)
   parentPin: import.meta.env.VITE_PARENT_PIN ?? '',
 
   // ── Tidy Timer ─────────────────────────────────────────────────────────────

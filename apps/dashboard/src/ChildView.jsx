@@ -69,7 +69,7 @@ export default function ChildView() {
 
   const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child?.name ?? '', chores)
   const { balance }  = useScreenBalance(child?.name ?? '')
-  const { bucks }    = useChorePoints(child?.name ?? '')
+  const { tokens }    = useChorePoints(child?.name ?? '')
 
   const [showChoreModal,  setShowChoreModal]  = useState(false)
   const [showUpcoming,    setShowUpcoming]    = useState(false)
@@ -99,7 +99,7 @@ export default function ChildView() {
       markChoreAsPending(child.name, chore.id)
       markChoreToday(child.name)
       recordChoreCompletion(child.name, chore.id, chore.required)
-      await submitApprovalRequest(child, chore.id, chore.label, chore.bucks)
+      await submitApprovalRequest(child, chore.id, chore.label, chore.tokens)
       triggerChoreRefetch()
     } finally {
       setSubmitting(prev => { const next = new Set(prev); next.delete(chore.id); return next })
@@ -131,7 +131,7 @@ export default function ChildView() {
         </div>
         <div className="child-view-balance-pill">
           <Coins size={16} strokeWidth={1.8} />
-          <span>{bucks} bucks</span>
+          <span>{tokens} tokens</span>
         </div>
       </div>
 

@@ -8,7 +8,7 @@ import CalendarModal from './components/CalendarModal'
 import Routines from './components/Routines'
 import ChoreModal from './components/ChoreModal'
 import ScreenTimeModal from './components/ScreenTimeModal'
-import BucksModal from './components/BucksModal'
+import TokensModal from './components/TokensModal'
 import NotesAndGrocery from './components/NotesAndGrocery'
 import UpcomingModal from './components/UpcomingModal'
 import { useClock } from './hooks/useClock'
@@ -54,7 +54,7 @@ export default function Dashboard() {
   const [showGrocery,       setShowGrocery]        = useState(false)
   const [activeChoreChild,  setActiveChoreChild]   = useState(null)
   const [activeScreenChild, setActiveScreenChild]  = useState(null)
-  const [activeBucksChild,  setActiveBucksChild]   = useState(null)
+  const [activeTokensChild,  setActiveTokensChild]   = useState(null)
   const [upcomingChild,     setUpcomingChild]      = useState(null)
 
   return (
@@ -80,7 +80,7 @@ export default function Dashboard() {
           scheduleConfig={scheduleConfig}
           onSpinChore={(child, chores, isExtra) => setActiveChoreChild({ child, chores, isExtra: !!isExtra })}
           onScreenTime={setActiveScreenChild}
-          onBucks={setActiveBucksChild}
+          onTokens={setActiveTokensChild}
           onUpcoming={setUpcomingChild}
         />
       </div>
@@ -96,8 +96,8 @@ export default function Dashboard() {
       {activeScreenChild && (
         <ScreenTimeModal child={activeScreenChild} onClose={() => setActiveScreenChild(null)} />
       )}
-      {activeBucksChild && (
-        <BucksModal child={activeBucksChild} onClose={() => setActiveBucksChild(null)} />
+      {activeTokensChild && (
+        <TokensModal child={activeTokensChild} onClose={() => setActiveTokensChild(null)} />
       )}
       {upcomingChild && (
         <UpcomingModal child={upcomingChild} onClose={() => setUpcomingChild(null)} />

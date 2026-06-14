@@ -31,7 +31,7 @@ router.get('/state', async (req, res) => {
   weekStart.setDate(ref.getDate() - dow)
 
   const { rows } = await db.query(
-    `SELECT ce.chore_id, ce.chore_label, ce.bucks, ce.status, ce.accepted_at, ce.created_at,
+    `SELECT ce.chore_id, ce.chore_label, ce.tokens, ce.status, ce.accepted_at, ce.created_at,
             ch.name AS child
      FROM chore_events ce
      JOIN children ch ON ch.id = ce.child_id
@@ -50,7 +50,7 @@ router.get('/state', async (req, res) => {
 
   for (const row of rows) {
     const rowDate = row.created_at.toISOString().slice(0, 10)
-    const { child, chore_id, chore_label, bucks, status, accepted_at } = row
+    const { child, chore_id, chore_label, tokens, status, accepted_at } = row
 
     if (rowDate === date || rowDate === nextDayKey) {
       if (!today[child]) today[child] = {}
@@ -59,7 +59,7 @@ router.get('/state', async (req, res) => {
       if (!existing || (PRIORITY[status] ?? 0) > existingPri) {
         today[child][chore_id] = {
           choreLabel: chore_label,
-          bucks,
+          tokens,
           status,
           acceptedAt: accepted_at ?? existing?.acceptedAt ?? null,
         }
@@ -79,7 +79,7 @@ router.get('/state', async (req, res) => {
 router.get('/pending-approvals', async (req, res) => {
   const { rows } = await db.query(
     `SELECT ce.id, ce.family_id, ce.child_id, ce.chore_id, ce.chore_label,
-            ce.bucks, ce.status, ce.accepted_at, ce.created_at, ch.name AS child
+            ce.tokens, ce.status, ce.accepted_at, ce.created_at, ch.name AS child
      FROM chore_events ce
      JOIN children ch ON ch.id = ce.child_id
      WHERE ce.family_id = $1 AND ce.status = 'pending_approval'
@@ -119,9 +119,9 @@ router.delete('/:id/assignment', requireParent, async (req, res) => {
   }
 })
 
-// POST /chores/:id/accept  { child, choreLabel, bucks }
+// POST /chores/:id/accept  { child, choreLabel, tokens }
 router.post('/:id/accept', async (req, res) => {
-  const { child, choreLabel, bucks } = req.body
+  const { child, choreLabel, tokens } = req.body
   const choreId = req.params.id
   if (!child || !choreId || !choreLabel) return res.status(400).json({ error: 'Missing params' })
 
@@ -130,9 +130,9 @@ router.post('/:id/accept', async (req, res) => {
 
   try {
     await db.query(
-      `INSERT INTO chore_events (family_id, child_id, chore_id, chore_label, bucks, status, accepted_at)
+      `INSERT INTO chore_events (family_id, child_id, chore_id, chore_label, tokens, status, accepted_at)
        VALUES ($1, $2, $3, $4, $5, 'accepted', NOW())`,
-      [req.familyId, childId, choreId, choreLabel, bucks]
+      [req.familyId, childId, choreId, choreLabel, tokens]
     )
     broadcast('chore_state', { child })
     res.json({ success: true })
@@ -142,9 +142,9 @@ router.post('/:id/accept', async (req, res) => {
   }
 })
 
-// POST /chores/:id/request-approval  { child, choreLabel, bucks }
+// POST /chores/:id/request-approval  { child, choreLabel, tokens }
 router.post('/:id/request-approval', async (req, res) => {
-  const { child, choreLabel, bucks } = req.body
+  const { child, choreLabel, tokens } = req.body
   const choreId = req.params.id
   if (!child || !choreId) return res.status(400).json({ error: 'Missing params' })
 
@@ -180,21 +180,21 @@ router.post('/:id/approve', requireParent, async (req, res) => {
   const { rows } = await db.query(
     `UPDATE chore_events SET status = 'completed'
      WHERE family_id = $1 AND child_id = $2 AND chore_id = $3 AND status = 'pending_approval'
-     RETURNING bucks`,
+     RETURNING tokens`,
     [req.familyId, childId, choreId]
   )
   if (!rows.length) return res.status(404).json({ error: 'No pending approval found' })
 
-  const bucksEarned = rows[0].bucks
+  const tokensEarned = rows[0].tokens
   await db.query(
-    `UPDATE bucks_balance SET balance = balance + $1, updated_at = NOW()
+    `UPDATE token_balance SET balance = balance + $1, updated_at = NOW()
      WHERE family_id = $2 AND child_id = $3`,
-    [bucksEarned, req.familyId, childId]
+    [tokensEarned, req.familyId, childId]
   )
   broadcast('chore_state', { child })
-  broadcast('bucks', { child })
-  notifyChild(req.familyId, childId, { title: 'Chore approved!', body: `You earned ${bucksEarned} Beagley Buck${bucksEarned !== 1 ? 's' : ''}` })
-  res.json({ success: true, bucksEarned })
+  broadcast('tokens', { child })
+  notifyChild(req.familyId, childId, { title: 'Chore approved!', body: `You earned ${tokensEarned} token${tokensEarned !== 1 ? 's' : ''}` })
+  res.json({ success: true, tokensEarned })
 })
 
 // POST /chores/:id/reject  { child }
@@ -219,22 +219,22 @@ router.post('/:id/reject', requireParent, async (req, res) => {
 // ── Admin (parent only) ───────────────────────────────────────────────────────
 
 router.post('/', requireParent, async (req, res) => {
-  const { id, label, bucks, icon, active, required, days, instructions, max_per_week } = req.body
+  const { id, label, tokens, icon, active, required, days, instructions, max_per_week } = req.body
   await db.query(
-    `INSERT INTO chores (id, family_id, label, bucks, icon, active, required, days, instructions, max_per_week)
+    `INSERT INTO chores (id, family_id, label, tokens, icon, active, required, days, instructions, max_per_week)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-    [id, req.familyId, label, bucks, icon, active ?? true, required ?? false, days ?? [], instructions ?? [], max_per_week ?? null]
+    [id, req.familyId, label, tokens, icon, active ?? true, required ?? false, days ?? [], instructions ?? [], max_per_week ?? null]
   )
   res.json({ success: true })
 })
 
 router.put('/:id', requireParent, async (req, res) => {
-  const { label, bucks, icon, active, required, days, instructions, max_per_week } = req.body
+  const { label, tokens, icon, active, required, days, instructions, max_per_week } = req.body
   await db.query(
-    `UPDATE chores SET label=$1, bucks=$2, icon=$3, active=$4, required=$5,
+    `UPDATE chores SET label=$1, tokens=$2, icon=$3, active=$4, required=$5,
      days=$6, instructions=$7, max_per_week=$8
      WHERE id=$9 AND family_id=$10`,
-    [label, bucks, icon, active, required, days, instructions, max_per_week, req.params.id, req.familyId]
+    [label, tokens, icon, active, required, days, instructions, max_per_week, req.params.id, req.familyId]
   )
   res.json({ success: true })
 })
@@ -249,7 +249,7 @@ router.delete('/:id', requireParent, async (req, res) => {
 router.get('/events', requireParent, async (req, res) => {
   const { child, date } = req.query
   let query = `SELECT ce.id, ce.family_id, ce.child_id, ce.chore_id, ce.chore_label,
-                      ce.bucks, ce.status, ce.accepted_at, ce.created_at, ch.name AS child
+                      ce.tokens, ce.status, ce.accepted_at, ce.created_at, ch.name AS child
                FROM chore_events ce
                JOIN children ch ON ch.id = ce.child_id
                WHERE ce.family_id = $1`

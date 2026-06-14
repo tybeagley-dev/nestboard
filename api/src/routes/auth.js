@@ -49,7 +49,7 @@ router.get('/family', async (req, res) => {
       )
 
       const { rows } = await db.query(
-        `SELECT f.id, f.name, f.slug FROM families f
+        `SELECT f.id, f.name, f.slug, f.labels FROM families f
          JOIN family_memberships fm ON fm.family_id = f.id
          WHERE fm.user_id = $1`,
         [userId]
@@ -66,7 +66,7 @@ router.get('/family', async (req, res) => {
   const slug = req.headers['x-family-slug'] ?? process.env.DEFAULT_FAMILY_SLUG
   if (!slug) return res.status(401).json({ error: 'Unauthorized' })
   try {
-    const { rows } = await db.query('SELECT id, name, slug FROM families WHERE slug = $1', [slug])
+    const { rows } = await db.query('SELECT id, name, slug, labels FROM families WHERE slug = $1', [slug])
     res.json(rows[0] ?? null)
   } catch (err) {
     res.status(500).json({ error: 'Server error' })

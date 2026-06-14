@@ -1,13 +1,15 @@
 import { formatDate, formatTime, getGreeting } from '../utils/dateUtils'
 import { CONFIG } from '../config/config'
+import { useFamily } from '../FamilyContext'
 
 export default function GreetingSection({ now, onGrocery }) {
+  const family = useFamily()
   return (
     <div className="greeting-section">
       <div className="greeting-body">
         <p className="greeting-tagline">Do good, be kind, have fun!</p>
         <h1 className="greeting-headline">
-          {getGreeting(now)},<br />{CONFIG.familyName}!
+          {getGreeting(now)},<br />{family?.name ?? CONFIG.familyName}!
         </h1>
         <div className="greeting-datetime">
           <span className="greeting-time">{formatTime(now)}</span>

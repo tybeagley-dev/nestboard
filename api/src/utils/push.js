@@ -2,15 +2,22 @@ import webpush from 'web-push'
 import { db } from '../db/client.js'
 
 let vapidConfigured = false
+let vapidChecked = false
 function ensureVapid() {
-  if (vapidConfigured) return
+  if (vapidChecked) return
+  vapidChecked = true
   if (!process.env.VAPID_PUBLIC_KEY || !process.env.VAPID_PRIVATE_KEY) return
-  webpush.setVapidDetails(
-    'mailto:tybeagley.dev@gmail.com',
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  )
-  vapidConfigured = true
+  // Invalid keys must disable push, never crash the API (notify* is fire-and-forget).
+  try {
+    webpush.setVapidDetails(
+      'mailto:tybeagley.dev@gmail.com',
+      process.env.VAPID_PUBLIC_KEY,
+      process.env.VAPID_PRIVATE_KEY
+    )
+    vapidConfigured = true
+  } catch (err) {
+    console.warn('Push notifications disabled — invalid VAPID config:', err.message)
+  }
 }
 
 // Send to all parent subscriptions for a family (child_id IS NULL)

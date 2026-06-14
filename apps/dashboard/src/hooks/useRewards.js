@@ -2,14 +2,17 @@ import { useState, useEffect, useCallback } from 'react'
 import { CONFIG } from '../config/config'
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
 
-export function useMomStore() {
+// API returns snake_case; expose the camelCase alias the UI reads.
+const normalizeReward = r => ({ ...r, requiresApproval: r.requires_approval })
+
+export function useRewards() {
   const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const data = await apiGet('/mom-store')
-    setItems(Array.isArray(data) ? data : [])
+    const data = await apiGet('/rewards')
+    setItems(Array.isArray(data) ? data.map(normalizeReward) : [])
     setLoading(false)
   }, [])
 
@@ -18,8 +21,8 @@ export function useMomStore() {
   return { items, loading, reload: load }
 }
 
-export async function buyMomStoreItem(child, itemId) {
-  return apiPost(`/mom-store/${itemId}/buy`, { child })
+export async function buyReward(child, itemId) {
+  return apiPost(`/rewards/${itemId}/buy`, { child })
 }
 
 export function usePurchases(childName) {
@@ -29,8 +32,8 @@ export function usePurchases(childName) {
   const load = useCallback(async () => {
     setLoading(true)
     const path = childName
-      ? `/mom-store/purchases?child=${childName}`
-      : '/mom-store/purchases'
+      ? `/rewards/purchases?child=${childName}`
+      : '/rewards/purchases'
     const data = await apiGet(path)
     setPurchases(Array.isArray(data) ? data : [])
     setLoading(false)
@@ -42,18 +45,18 @@ export function usePurchases(childName) {
 }
 
 export async function redeemPurchase(id) {
-  return apiPost(`/mom-store/purchases/${id}/redeem`, {}, CONFIG.parentPin)
+  return apiPost(`/rewards/purchases/${id}/redeem`, {}, CONFIG.parentPin)
 }
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
 
-export async function adminGetAllMomStoreItems() {
-  const data = await apiGet('/mom-store?includeInactive=true')
-  return Array.isArray(data) ? data : []
+export async function adminGetAllRewards() {
+  const data = await apiGet('/rewards?includeInactive=true')
+  return Array.isArray(data) ? data.map(normalizeReward) : []
 }
 
-export async function adminAddMomStoreItem(data) {
-  return apiPost('/mom-store', {
+export async function adminAddReward(data) {
+  return apiPost('/rewards', {
     id:               data.id || Date.now().toString(36),
     label:            data.label,
     icon:             data.icon,
@@ -62,8 +65,8 @@ export async function adminAddMomStoreItem(data) {
   }, CONFIG.parentPin)
 }
 
-export async function adminEditMomStoreItem(data) {
-  return apiPut(`/mom-store/${data.id}`, {
+export async function adminEditReward(data) {
+  return apiPut(`/rewards/${data.id}`, {
     label:            data.label,
     icon:             data.icon,
     cost:             data.cost,
@@ -72,6 +75,6 @@ export async function adminEditMomStoreItem(data) {
   }, CONFIG.parentPin)
 }
 
-export async function adminDeleteMomStoreItem(id) {
-  return apiDelete(`/mom-store/${id}`, CONFIG.parentPin)
+export async function adminDeleteReward(id) {
+  return apiDelete(`/rewards/${id}`, CONFIG.parentPin)
 }

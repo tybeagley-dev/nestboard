@@ -6,6 +6,7 @@ import Dashboard from './Dashboard'
 import ParentPage from './ParentPage'
 import ChildView from './ChildView'
 import FamilySetup from './FamilySetup'
+import { FamilyProvider } from './FamilyContext'
 
 function AuthGate({ children }) {
   const { isSignedIn, isLoaded, getToken } = useAuth()
@@ -40,7 +41,7 @@ function FamilyGate({ children }) {
     return <FamilySetup onComplete={() => setRetryKey(k => k + 1)} />
   }
 
-  return children
+  return <FamilyProvider family={family}>{children}</FamilyProvider>
 }
 
 export default function App() {

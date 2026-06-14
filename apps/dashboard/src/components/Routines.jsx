@@ -3,7 +3,7 @@ import { useRoutines } from '../hooks/useRoutines'
 import { useChores } from '../hooks/useChores'
 import { useActiveChildTimers } from '../hooks/useScreenTime'
 
-export default function Routines({ now, children, scheduleConfig, onSpinChore, onScreenTime, onBucks, onUpcoming }) {
+export default function Routines({ now, children, scheduleConfig, onSpinChore, onScreenTime, onTokens, onUpcoming }) {
   const { routinesByChild, toggleRoutine, loading: routinesLoading } = useRoutines(now, children, scheduleConfig)
   const { chores, loading } = useChores()
   const activeTimers = useActiveChildTimers()
@@ -22,7 +22,7 @@ export default function Routines({ now, children, scheduleConfig, onSpinChore, o
           onSpin={() => onSpinChore(child, chores)}
           onExtraSpin={() => onSpinChore(child, chores, true)}
           onScreenTime={() => onScreenTime(child)}
-          onBucks={() => onBucks(child)}
+          onTokens={() => onTokens(child)}
           onUpcoming={() => onUpcoming(child)}
           timer={activeTimers.find(t => t.child === child.name) ?? null}
           routinesLoading={routinesLoading}

@@ -60,7 +60,7 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
       <div className="modal-card pin-modal" onClick={() => touch && inputRef.current?.focus()}>
         <button className="modal-close" onClick={onCancel} aria-label="Close">×</button>
         <div
-          className="bucks-pin-phase"
+          className="tokens-pin-phase"
           onClick={() => touch && inputRef.current?.focus()}
         >
           {touch && (

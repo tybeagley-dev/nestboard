@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import PinModal from './PinModal'
-import ParentBucksTab from './ParentBucksTab'
+import ParentTokensTab from './ParentTokensTab'
 import ParentChoresTab from './ParentChoresTab'
 import ParentMealsTab    from './ParentMealsTab'
 import ParentRoutinesTab from './ParentRoutinesTab'
 import ParentZonesTab from './ParentZonesTab'
-import ParentMomStoreTab from './ParentMomStoreTab'
+import ParentRewardsTab from './ParentRewardsTab'
 import ParentApprovalsTab from './ParentApprovalsTab'
 import ParentGroceryTab from './ParentGroceryTab'
 import ParentChildrenTab from './ParentChildrenTab'
@@ -52,12 +52,12 @@ export default function ParentPanel({ onClose, children, reloadChildren }) {
 
   const TABS = [
     { id: 'approvals', label: 'Approvals', badge: pendingCount },
-    { id: 'bucks',     label: 'Bucks & Time' },
+    { id: 'tokens',     label: 'Tokens & Time' },
     { id: 'chores',    label: 'Chores'       },
     { id: 'routines',  label: 'Routines'     },
     { id: 'zones',     label: 'Zones'        },
     { id: 'meals',     label: 'Meals'        },
-    { id: 'store',     label: 'Mom Store'    },
+    { id: 'store',     label: 'Rewards'    },
     { id: 'grocery',   label: 'Grocery'      },
     { id: 'children',  label: 'Children'     },
   ]
@@ -85,12 +85,12 @@ export default function ParentPanel({ onClose, children, reloadChildren }) {
 
         <div className="parent-panel-body">
           {tab === 'approvals' && <ParentApprovalsTab children={children} />}
-          {tab === 'bucks'     && <ParentBucksTab children={children} />}
+          {tab === 'tokens'     && <ParentTokensTab children={children} />}
           {tab === 'chores'    && <ParentChoresTab children={children} />}
           {tab === 'routines'  && <ParentRoutinesTab children={children} />}
           {tab === 'zones'     && <ParentZonesTab children={children} />}
           {tab === 'meals'     && <ParentMealsTab />}
-          {tab === 'store'     && <ParentMomStoreTab children={children} />}
+          {tab === 'store'     && <ParentRewardsTab children={children} />}
           {tab === 'grocery'   && <ParentGroceryTab />}
           {tab === 'children'  && <ParentChildrenTab children={children} onReload={reloadChildren} />}
         </div>

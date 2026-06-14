@@ -9,6 +9,7 @@ import { useAssignedChores, markChoreAsPending, submitApprovalRequest, triggerCh
 import { recordChoreCompletion } from '../hooks/useChoreFrequency'
 import { startChimeLoop, stopChimeLoop } from '../utils/chime'
 import { CONFIG } from '../config/config'
+import { useLabels } from '../FamilyContext'
 import ZoneCard from './ZoneCard'
 
 const COOLDOWN_MESSAGES = [
@@ -23,7 +24,9 @@ const COOLDOWN_MESSAGES = [
 ]
 
 function isChoreDay() {
-  return new Date().getDay() !== 0
+  // TODO(onboarding): make spin-available days a per-family setting. Was Sunday-locked
+  // (getDay() !== 0); unblocked for now so spinning works every day.
+  return true
 }
 
 function SkeletonList() {
@@ -36,10 +39,11 @@ function SkeletonList() {
   )
 }
 
-export default function ChildCard({ child, now, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onBucks, onUpcoming, timer }) {
+export default function ChildCard({ child, now, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onTokens, onUpcoming, timer }) {
   const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child.name, chores)
   const { balance } = useScreenBalance(child.name)
-  const { bucks }   = useChorePoints(child.name)
+  const { tokens }   = useChorePoints(child.name)
+  const labels = useLabels()
 
   const isLoading = routinesLoading || choresLoading || assignedLoading
 
@@ -87,7 +91,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
       markChoreAsPending(child.name, chore.id)
       markChoreToday(child.name)
       recordChoreCompletion(child.name, chore.id, chore.required)
-      await submitApprovalRequest(child, chore.id, chore.label, chore.bucks)
+      await submitApprovalRequest(child, chore.id, chore.label, chore.tokens)
       triggerChoreRefetch()
     } finally {
       setSubmitting(prev => { const next = new Set(prev); next.delete(chore.id); return next })
@@ -153,12 +157,12 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
           </button>
 
           <button
-            className="child-icon-btn bucks-icon-btn"
-            onClick={onBucks}
-            title={`${bucks} Beagley Bucks`}
+            className="child-icon-btn tokens-icon-btn"
+            onClick={onTokens}
+            title={`${tokens} ${labels.tokenName}`}
           >
             <Coins size={16} strokeWidth={1.8} />
-            {bucks > 0 && <span className="child-icon-badge">{bucks}</span>}
+            {tokens > 0 && <span className="child-icon-badge">{tokens}</span>}
           </button>
 
           <div className="child-avatar" style={{ background: child.color }}>
