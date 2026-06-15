@@ -57,7 +57,7 @@ button {
   flex-direction: column;
   gap: 10px;
   padding: 12px;
-  overflow: hidden;
+  overflow-y: auto;
   position: relative;
 }
 
@@ -78,8 +78,7 @@ button {
   display: grid;
   grid-template-columns: repeat(var(--cols, 3), 1fr);
   gap: 10px;
-  flex: 1;
-  min-height: 0;
+  flex: 1 0 auto;
 }
 /* One kid: center a constrained card instead of stretching it full width. */
 .dashboard-children.solo {
@@ -440,9 +439,8 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow: hidden;
+  overflow: visible;
   transition: box-shadow 0.2s ease;
-  min-height: 0;
 }
 
 .child-card.all-done {
@@ -601,8 +599,7 @@ button {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  overflow-y: auto;
-  flex: 1;
+  overflow: visible;
 }
 
 .routine-item {
