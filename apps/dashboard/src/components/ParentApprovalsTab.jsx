@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
 import { triggerChoreRefetch } from '../hooks/useAssignedChores'
-import { CONFIG } from '../config/config'
 import TokenBadge from './TokenBadge'
 import { apiGet, apiPost } from '../utils/api'
 
@@ -28,7 +27,7 @@ export default function ParentApprovalsTab({ children = [] }) {
 
   async function handleChoreApprove(item) {
     setActing(`chore-${item.chore_id}`)
-    await apiPost(`/chores/${item.chore_id}/approve`, { child: item.child }, CONFIG.parentPin)
+    await apiPost(`/chores/${item.chore_id}/approve`, { child: item.child })
     triggerChoreRefetch()
     await load()
     setActing(null)
@@ -36,7 +35,7 @@ export default function ParentApprovalsTab({ children = [] }) {
 
   async function handleChoreReject(item) {
     setActing(`chore-${item.chore_id}`)
-    await apiPost(`/chores/${item.chore_id}/reject`, { child: item.child }, CONFIG.parentPin)
+    await apiPost(`/chores/${item.chore_id}/reject`, { child: item.child })
     triggerChoreRefetch()
     await load()
     setActing(null)

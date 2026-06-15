@@ -15,8 +15,8 @@ export function useScheduleConfig() {
 
   useEffect(() => { load() }, [load])
 
-  const save = useCallback(async (config, parentToken) => {
-    const data = await apiPut('/schedule/config', config, parentToken)
+  const save = useCallback(async (config) => {
+    const data = await apiPut('/schedule/config', config)
     if (data) setScheduleConfig(data)
   }, [])
 

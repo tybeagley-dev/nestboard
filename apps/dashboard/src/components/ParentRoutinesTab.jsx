@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRoutineDefs, adminAddRoutineDef, adminEditRoutineDef, adminDeleteRoutineDef, useScheduleConfig } from '../hooks/useRoutines'
 import { CALCULATED_HOLIDAYS } from '../utils/holidayUtils'
-import { CONFIG } from '../config/config'
 
 const SCHEDULES     = ['school', 'weekend', 'summer', 'holiday']
 const SCHED_LABEL   = { school: 'School', weekend: 'Weekend', summer: 'Summer', holiday: 'Holiday' }
@@ -201,7 +200,7 @@ function ScheduleConfigSection() {
 
   async function patchConfig(patch) {
     setSaving(true)
-    await save({ summer, disabledHolidays, breaks, ...patch }, CONFIG.parentPin)
+    await save({ summer, disabledHolidays, breaks, ...patch })
     setSaving(false)
   }
 

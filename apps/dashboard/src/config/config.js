@@ -72,10 +72,6 @@ export const CONFIG = {
     timerBufferMinutes: 35,
   },
 
-  // ── Parent PIN ─────────────────────────────────────────────────────────────
-  // Required to confirm token deductions (rewards store, real-money exchange)
-  parentPin: import.meta.env.VITE_PARENT_PIN ?? '',
-
   // ── Tidy Timer ─────────────────────────────────────────────────────────────
   // defaultMinutes: pre-selected duration when the popover opens
   //

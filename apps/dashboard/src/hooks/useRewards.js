@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { CONFIG } from '../config/config'
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
 
 // API returns snake_case; expose the camelCase alias the UI reads.
@@ -45,7 +44,7 @@ export function usePurchases(childName) {
 }
 
 export async function redeemPurchase(id) {
-  return apiPost(`/rewards/purchases/${id}/redeem`, {}, CONFIG.parentPin)
+  return apiPost(`/rewards/purchases/${id}/redeem`, {})
 }
 
 // ── Admin ─────────────────────────────────────────────────────────────────────
@@ -62,7 +61,7 @@ export async function adminAddReward(data) {
     icon:             data.icon,
     cost:             data.cost,
     requires_approval: data.requiresApproval ?? false,
-  }, CONFIG.parentPin)
+  })
 }
 
 export async function adminEditReward(data) {
@@ -72,9 +71,9 @@ export async function adminEditReward(data) {
     cost:             data.cost,
     requires_approval: data.requiresApproval ?? false,
     active:           data.active !== false,
-  }, CONFIG.parentPin)
+  })
 }
 
 export async function adminDeleteReward(id) {
-  return apiDelete(`/rewards/${id}`, CONFIG.parentPin)
+  return apiDelete(`/rewards/${id}`)
 }

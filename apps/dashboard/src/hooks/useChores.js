@@ -87,7 +87,7 @@ export function useChorePoints(childName) {
       return next
     })
     const { apiPost } = await import('../utils/api')
-    const result = await apiPost(`/tokens/${childName}/adjust`, { delta, type: 'adjustment' }, CONFIG.parentPin)
+    const result = await apiPost(`/tokens/${childName}/adjust`, { delta, type: 'adjustment' })
     if (result?.balance !== undefined) {
       setTokens(Number(result.balance))
       const local = getLocalTokens()
@@ -158,7 +158,7 @@ export async function adminAddChore(data) {
     days:         data.days ?? [],
     instructions: data.instructions?.filter(Boolean) ?? [],
     max_per_week: data.frequency === 'weekly' ? 1 : null,
-  }, CONFIG.parentPin)
+  })
 }
 
 export async function adminGetAllChores() {
@@ -178,10 +178,10 @@ export async function adminEditChore(data) {
     days:         data.days ?? [],
     instructions: data.instructions?.filter(Boolean) ?? [],
     max_per_week: data.frequency === 'weekly' ? 1 : null,
-  }, CONFIG.parentPin)
+  })
 }
 
 export async function adminDeleteChore(id) {
   const { apiDelete } = await import('../utils/api')
-  return apiDelete(`/chores/${id}`, CONFIG.parentPin)
+  return apiDelete(`/chores/${id}`)
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { CONFIG } from '../config/config'
+import { apiPost, setParentToken } from '../utils/api'
 
 function isTouchDevice() {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0
@@ -10,6 +10,7 @@ const PIN_LENGTH = 6
 export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN required' }) {
   const [pin,   setPin]   = useState('')
   const [error, setError] = useState(false)
+  const [busy,  setBusy]  = useState(false)
   const inputRef = useRef(null)
   const touch = isTouchDevice()
 
@@ -32,22 +33,28 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
     return () => window.removeEventListener('keydown', onKey)
   }, [pin, onCancel, touch])
 
+  async function verify(candidate) {
+    setBusy(true)
+    const data = await apiPost('/auth/parent', { pin: candidate })
+    setBusy(false)
+    if (data?.token) {
+      setParentToken(data.token)
+      onSuccess()
+    } else {
+      setError(true)
+      setTimeout(() => {
+        setPin('')
+        if (inputRef.current) inputRef.current.value = ''
+      }, 600)
+    }
+  }
+
   function handleDigit(d) {
-    if (pin.length >= PIN_LENGTH) return
+    if (busy || pin.length >= PIN_LENGTH) return
     const next = pin + d
     setPin(next)
     setError(false)
-    if (next.length === PIN_LENGTH) {
-      if (next === (CONFIG.parentPin ?? '052115')) {
-        onSuccess()
-      } else {
-        setError(true)
-        setTimeout(() => {
-          setPin('')
-          if (inputRef.current) inputRef.current.value = ''
-        }, 600)
-      }
-    }
+    if (next.length === PIN_LENGTH) verify(next)
   }
 
   function handleBackspace() {

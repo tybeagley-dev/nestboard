@@ -6,10 +6,7 @@ import {
   adminUpdateAssignment, adminAddManualAssignment, adminDeleteAssignment,
 } from '../hooks/useZone'
 import { apiGet } from '../utils/api'
-import { CONFIG } from '../config/config'
 import { getTodayKey } from '../utils/dateUtils'
-
-const PIN = CONFIG.parentPin
 
 // ── Micro-zone picker ─────────────────────────────────────────────────────────
 
@@ -60,7 +57,7 @@ function ThisWeek({ children, defs, onChanged }) {
   }
 
   async function handleUpdateAssignment(assignmentId, microZoneId) {
-    await adminUpdateAssignment(assignmentId, microZoneId, PIN)
+    await adminUpdateAssignment(assignmentId, microZoneId)
     setPicking(null)
     await load()
     onChanged()
@@ -68,14 +65,14 @@ function ThisWeek({ children, defs, onChanged }) {
 
   async function handleAddAssignment(childId, microZoneId) {
     const today = getTodayKey(new Date())
-    await adminAddManualAssignment({ child_id: childId, micro_zone_id: microZoneId, date: today }, PIN)
+    await adminAddManualAssignment({ child_id: childId, micro_zone_id: microZoneId, date: today })
     setPicking(null)
     await load()
     onChanged()
   }
 
   async function handleDelete(assignmentId) {
-    await adminDeleteAssignment(assignmentId, PIN)
+    await adminDeleteAssignment(assignmentId)
     await load()
     onChanged()
   }
@@ -163,7 +160,7 @@ function MicroZoneRow({ item, onUpdated, confirmDelete, onDeleteRequest, onConfi
 
   async function handleSave() {
     setSaving(true)
-    await adminEditMicroZone(item.id, { label, active, sort_order: item.sort_order }, PIN)
+    await adminEditMicroZone(item.id, { label, active, sort_order: item.sort_order })
     setSaving(false)
     setEditing(false)
     onUpdated()
@@ -228,7 +225,7 @@ function ZoneRow({ zone, children, onEdit, onUpdated, confirmDelete, onDeleteReq
   async function handleAddItem() {
     if (!newItemLabel.trim()) return
     setSavingItem(true)
-    await adminAddMicroZone(zone.id, { label: newItemLabel.trim(), active: true, sort_order: zone.micro_zones.length }, PIN)
+    await adminAddMicroZone(zone.id, { label: newItemLabel.trim(), active: true, sort_order: zone.micro_zones.length })
     setNewItemLabel('')
     setAddingItem(false)
     setSavingItem(false)
@@ -236,7 +233,7 @@ function ZoneRow({ zone, children, onEdit, onUpdated, confirmDelete, onDeleteReq
   }
 
   async function handleDeleteItem(id) {
-    await adminDeleteMicroZone(id, PIN)
+    await adminDeleteMicroZone(id)
     setDeleteItem(null)
     onUpdated()
   }
@@ -379,15 +376,15 @@ export default function ParentZonesTab({ children }) {
 
   async function handleSave(data) {
     setSaving(true)
-    if (data.id) await adminEditZone(data.id, data, PIN)
-    else         await adminAddZone(data, PIN)
+    if (data.id) await adminEditZone(data.id, data)
+    else         await adminAddZone(data)
     setSaving(false)
     await reload()
     setForm(null)
   }
 
   async function handleDelete(id) {
-    await adminDeleteZone(id, PIN)
+    await adminDeleteZone(id)
     setDeleteConfirm(null)
     await reload()
   }

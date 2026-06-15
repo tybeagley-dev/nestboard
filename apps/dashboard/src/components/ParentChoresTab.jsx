@@ -3,7 +3,6 @@ import { adminGetAllChores, adminAddChore, adminEditChore, adminDeleteChore } fr
 import { apiGet, apiPost, apiDelete } from '../utils/api'
 import { unassignChore, triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { getTodayKey } from '../utils/dateUtils'
-import { CONFIG } from '../config/config'
 import { useScheduleConfig } from '../hooks/useRoutines'
 import TokenBadge from './TokenBadge'
 
@@ -24,7 +23,7 @@ function SpinDaysPicker() {
       ? spinDays.filter(d => d !== n)
       : [...spinDays, n].sort((a, b) => a - b)
     setSaving(true)
-    await save({ ...scheduleConfig, spinDays: next }, CONFIG.parentPin)
+    await save({ ...scheduleConfig, spinDays: next })
     setSaving(false)
   }
 
@@ -289,7 +288,7 @@ function TodayAssignments({ children }) {
 
   async function handleUnassign(item) {
     setActing(`${item.child}-${item.choreId}`)
-    await apiDelete(`/chores/${item.choreId}/assignment?child=${encodeURIComponent(item.child)}`, null, CONFIG.parentPin)
+    await apiDelete(`/chores/${item.choreId}/assignment?child=${encodeURIComponent(item.child)}`)
     unassignChore(item.child, item.choreId)
     triggerChoreRefetch()
     await load()

@@ -7,12 +7,27 @@ import { requireFamily } from '../middleware/requireFamily.js'
 
 const router = Router()
 
-// POST /auth/parent  { pin } → { token } — legacy single-family support
-// Token is the raw PIN; requireParent now bcrypt-compares it against the DB hash.
+// POST /auth/parent  { pin } → { token } — validates the PIN against the
+// requesting family's stored hash. Family is resolved via requireFamily (Clerk
+// membership or x-family-slug). On success the raw PIN is the parent token;
+// requireParent bcrypt-compares it against the DB hash on later writes.
 router.post('/parent', (req, res) => {
-  const { pin } = req.body
-  if (!pin) return res.status(400).json({ error: 'Missing pin' })
-  res.json({ token: pin })
+  requireFamily(req, res, async () => {
+    const { pin } = req.body ?? {}
+    if (!pin) return res.status(400).json({ error: 'Missing pin' })
+    try {
+      const { rows } = await db.query(
+        'SELECT parent_pin_hash FROM families WHERE id = $1',
+        [req.familyId]
+      )
+      if (!rows.length || !await bcrypt.compare(pin, rows[0].parent_pin_hash)) {
+        return res.status(401).json({ error: 'Invalid PIN' })
+      }
+      res.json({ token: pin })
+    } catch (err) {
+      res.status(500).json({ error: 'Server error' })
+    }
+  })
 })
 
 // POST /auth/login  { slug, pin } → { familyId, name }

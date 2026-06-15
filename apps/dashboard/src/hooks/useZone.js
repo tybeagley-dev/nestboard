@@ -75,57 +75,57 @@ export function useZoneDefs() {
   return { defs, loading, reload: load }
 }
 
-export async function adminAddZone(data, parentToken) {
+export async function adminAddZone(data) {
   return apiPost('/zones/defs', {
     label:              data.label,
     icon:               data.icon,
     eligible_child_ids: data.eligible_child_ids ?? [],
     sort_order:         data.sort_order ?? 0,
-  }, parentToken)
+  })
 }
 
-export async function adminEditZone(id, data, parentToken) {
+export async function adminEditZone(id, data) {
   return apiPut(`/zones/defs/${id}`, {
     label:              data.label,
     icon:               data.icon,
     eligible_child_ids: data.eligible_child_ids ?? [],
     sort_order:         data.sort_order ?? 0,
-  }, parentToken)
+  })
 }
 
-export async function adminDeleteZone(id, parentToken) {
-  return apiDelete(`/zones/defs/${id}`, parentToken)
+export async function adminDeleteZone(id) {
+  return apiDelete(`/zones/defs/${id}`)
 }
 
-export async function adminAddMicroZone(zoneId, data, parentToken) {
+export async function adminAddMicroZone(zoneId, data) {
   return apiPost('/zones/micro-zones', {
     zone_id:    zoneId,
     label:      data.label,
     active:     data.active ?? true,
     sort_order: data.sort_order ?? 0,
-  }, parentToken)
+  })
 }
 
-export async function adminEditMicroZone(id, data, parentToken) {
+export async function adminEditMicroZone(id, data) {
   return apiPut(`/zones/micro-zones/${id}`, {
     label:      data.label,
     active:     data.active ?? true,
     sort_order: data.sort_order ?? 0,
-  }, parentToken)
+  })
 }
 
-export async function adminDeleteMicroZone(id, parentToken) {
-  return apiDelete(`/zones/micro-zones/${id}`, parentToken)
+export async function adminDeleteMicroZone(id) {
+  return apiDelete(`/zones/micro-zones/${id}`)
 }
 
-export async function adminUpdateAssignment(id, microZoneId, parentToken) {
-  return apiPut(`/zones/assignments/${id}`, { micro_zone_id: microZoneId }, parentToken)
+export async function adminUpdateAssignment(id, microZoneId) {
+  return apiPut(`/zones/assignments/${id}`, { micro_zone_id: microZoneId })
 }
 
-export async function adminAddManualAssignment(data, parentToken) {
-  return apiPost('/zones/assignments', data, parentToken)
+export async function adminAddManualAssignment(data) {
+  return apiPost('/zones/assignments', data)
 }
 
-export async function adminDeleteAssignment(id, parentToken) {
-  return apiDelete(`/zones/assignments/${id}`, parentToken)
+export async function adminDeleteAssignment(id) {
+  return apiDelete(`/zones/assignments/${id}`)
 }

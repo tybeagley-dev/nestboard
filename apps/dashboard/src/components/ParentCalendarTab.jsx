@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
-import { CONFIG } from '../config/config'
 
-const PIN = CONFIG.parentPin
 const COLOR_PRESETS = ['#C17A4A', '#6B8BA4', '#7D9B76', '#C4837A', '#A68B5B', '#8B7BB5', '#5B9BA6', '#A67B8B']
 
 function emptyCalendar() {
@@ -101,9 +99,9 @@ export default function ParentCalendarTab({ children }) {
   async function handleSave(cal) {
     setSaving(true)
     if (cal.id) {
-      await apiPut(`/calendar/${cal.id}`, cal, PIN)
+      await apiPut(`/calendar/${cal.id}`, cal)
     } else {
-      await apiPost('/calendar', cal, PIN)
+      await apiPost('/calendar', cal)
     }
     setSaving(false)
     setEditing(null)
@@ -112,7 +110,7 @@ export default function ParentCalendarTab({ children }) {
 
   async function handleDelete(cal) {
     setDeleting(cal.id)
-    await apiDelete(`/calendar/${cal.id}`, PIN)
+    await apiDelete(`/calendar/${cal.id}`)
     setDeleting(null)
     load()
   }

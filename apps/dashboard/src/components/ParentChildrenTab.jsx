@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { apiPost, apiPut, apiDelete, apiGet } from '../utils/api'
-import { CONFIG } from '../config/config'
 
 const COLOR_PRESETS = ['#C4837A', '#6B8BA4', '#7D9B76', '#A68B5B', '#8B7BB5', '#5B9BA6', '#A67B8B', '#7BA67B']
 
@@ -162,15 +161,15 @@ export default function ParentChildrenTab({ children, onReload }) {
 
   async function handleSave(data) {
     setSaving(true)
-    if (data.id) await apiPut(`/children/${data.id}`, data, CONFIG.parentPin)
-    else         await apiPost('/children', data, CONFIG.parentPin)
+    if (data.id) await apiPut(`/children/${data.id}`, data)
+    else         await apiPost('/children', data)
     setSaving(false)
     await onReload()
     setForm(null)
   }
 
   async function handleDelete(id) {
-    await apiDelete(`/children/${id}`, CONFIG.parentPin)
+    await apiDelete(`/children/${id}`)
     setDeleteConfirm(null)
     await onReload()
   }
