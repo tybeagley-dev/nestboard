@@ -15,12 +15,17 @@ router.get('/config', async (req, res) => {
 })
 
 router.put('/config', requireParent, async (req, res) => {
-  const { summer, disabledHolidays, breaks } = req.body
+  // Merge with existing config so partial saves (e.g. routines saves summer/breaks,
+  // chores saves spinDays) don't wipe each other's fields.
+  const { rows } = await db.query('SELECT schedule_config FROM families WHERE id = $1', [req.familyId])
+  const current = rows[0]?.schedule_config ?? {}
+  const { summer, disabledHolidays, breaks, spinDays } = req.body
 
   const config = {
-    summer:           summer           ?? null,
-    disabledHolidays: disabledHolidays ?? [],
-    breaks:           breaks           ?? [],
+    summer:           summer           !== undefined ? summer           : (current.summer ?? null),
+    disabledHolidays: disabledHolidays !== undefined ? disabledHolidays : (current.disabledHolidays ?? []),
+    breaks:           breaks           !== undefined ? breaks           : (current.breaks ?? []),
+    spinDays:         spinDays         !== undefined ? spinDays         : current.spinDays,
   }
 
   await db.query(

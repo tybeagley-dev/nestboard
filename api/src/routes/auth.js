@@ -49,7 +49,7 @@ router.get('/family', async (req, res) => {
       )
 
       const { rows } = await db.query(
-        `SELECT f.id, f.name, f.slug, f.labels FROM families f
+        `SELECT f.id, f.name, f.slug, f.labels, f.onboarded FROM families f
          JOIN family_memberships fm ON fm.family_id = f.id
          WHERE fm.user_id = $1`,
         [userId]
@@ -66,7 +66,7 @@ router.get('/family', async (req, res) => {
   const slug = req.headers['x-family-slug'] ?? process.env.DEFAULT_FAMILY_SLUG
   if (!slug) return res.status(401).json({ error: 'Unauthorized' })
   try {
-    const { rows } = await db.query('SELECT id, name, slug, labels FROM families WHERE slug = $1', [slug])
+    const { rows } = await db.query('SELECT id, name, slug, labels, onboarded FROM families WHERE slug = $1', [slug])
     res.json(rows[0] ?? null)
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -138,6 +138,43 @@ router.post('/families/join', async (req, res) => {
     )
 
     res.json({ id: rows[0].id, name: rows[0].name, slug: rows[0].slug })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// PUT /auth/family/labels { tokenName, tokenNameSingular, rewardsName }
+// Stores only non-empty values — blanks fall back to the generic defaults in the UI.
+router.put('/family/labels', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  const { tokenName, tokenNameSingular, rewardsName } = req.body ?? {}
+  const labels = {}
+  if (tokenName?.trim())         labels.tokenName = tokenName.trim()
+  if (tokenNameSingular?.trim()) labels.tokenNameSingular = tokenNameSingular.trim()
+  if (rewardsName?.trim())       labels.rewardsName = rewardsName.trim()
+  try {
+    const { rows } = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
+    if (!rows.length) return res.status(404).json({ error: 'No family' })
+    await db.query('UPDATE families SET labels = $1 WHERE id = $2', [JSON.stringify(labels), rows[0].family_id])
+    res.json({ success: true, labels })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST /auth/family/complete-onboarding → mark the authed user's family onboarded
+router.post('/family/complete-onboarding', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const { rows } = await db.query(
+      'SELECT family_id FROM family_memberships WHERE user_id = $1',
+      [userId]
+    )
+    if (!rows.length) return res.status(404).json({ error: 'No family' })
+    await db.query('UPDATE families SET onboarded = true WHERE id = $1', [rows[0].family_id])
+    res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
   }

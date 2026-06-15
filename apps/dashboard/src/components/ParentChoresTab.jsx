@@ -4,7 +4,48 @@ import { apiGet, apiPost, apiDelete } from '../utils/api'
 import { unassignChore, triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { getTodayKey } from '../utils/dateUtils'
 import { CONFIG } from '../config/config'
+import { useScheduleConfig } from '../hooks/useRoutines'
 import TokenBadge from './TokenBadge'
+
+const WEEKDAYS = [
+  { n: 0, label: 'S' }, { n: 1, label: 'M' }, { n: 2, label: 'T' },
+  { n: 3, label: 'W' }, { n: 4, label: 'T' }, { n: 5, label: 'F' }, { n: 6, label: 'S' },
+]
+
+// Which weekdays the chore spinner is available. Stored in schedule_config.spinDays;
+// undefined = every day. Surfaced here so families control when chores can be spun.
+function SpinDaysPicker() {
+  const { scheduleConfig, save } = useScheduleConfig()
+  const spinDays = Array.isArray(scheduleConfig.spinDays) ? scheduleConfig.spinDays : [0, 1, 2, 3, 4, 5, 6]
+  const [saving, setSaving] = useState(false)
+
+  async function toggle(n) {
+    const next = spinDays.includes(n)
+      ? spinDays.filter(d => d !== n)
+      : [...spinDays, n].sort((a, b) => a - b)
+    setSaving(true)
+    await save({ ...scheduleConfig, spinDays: next }, CONFIG.parentPin)
+    setSaving(false)
+  }
+
+  return (
+    <div className="spin-days-picker">
+      <span className="spin-days-label">Chores can be spun on</span>
+      <div className="spin-days-row">
+        {WEEKDAYS.map((d, idx) => (
+          <button
+            key={idx}
+            className={`chore-day-chip ${spinDays.includes(d.n) ? 'active' : ''}`}
+            onClick={() => toggle(d.n)}
+            disabled={saving}
+          >
+            {d.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
 
 const DAYS      = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 const DAY_SHORT = { Sunday: 'Sun', Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat' }
@@ -343,6 +384,8 @@ export default function ParentChoresTab({ children = [] }) {
   return (
     <div className="parent-chores-tab">
       <TodayAssignments children={children} />
+
+      <SpinDaysPicker />
 
       <button className="parent-add-chore-btn" onClick={() => setForm(emptyChore())}>
         + Add Chore

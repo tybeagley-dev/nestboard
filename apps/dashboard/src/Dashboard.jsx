@@ -57,6 +57,10 @@ export default function Dashboard() {
   const [activeTokensChild,  setActiveTokensChild]   = useState(null)
   const [upcomingChild,     setUpcomingChild]      = useState(null)
 
+  // Column count chosen to avoid a lonely last row (e.g. 4 → 2×2, not 3+1).
+  const n = children.length
+  const colCount = n <= 1 ? 1 : n <= 3 ? n : n === 4 ? 2 : n <= 6 ? 3 : 4
+
   return (
     <div className="dashboard">
       <FloatingControls />
@@ -73,7 +77,7 @@ export default function Dashboard() {
         <Calendar now={now} onExpand={() => setShowCalendar(true)} />
       </div>
 
-      <div className="dashboard-children">
+      <div className={`dashboard-children${n === 1 ? ' solo' : ''}`} style={{ '--cols': colCount }}>
         <Routines
           now={now}
           children={children}

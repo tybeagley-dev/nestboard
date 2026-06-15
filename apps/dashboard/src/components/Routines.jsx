@@ -26,6 +26,7 @@ export default function Routines({ now, children, scheduleConfig, onSpinChore, o
           onUpcoming={() => onUpcoming(child)}
           timer={activeTimers.find(t => t.child === child.name) ?? null}
           routinesLoading={routinesLoading}
+          scheduleConfig={scheduleConfig}
         />
       ))}
     </>

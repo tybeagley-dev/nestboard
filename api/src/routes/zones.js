@@ -183,21 +183,31 @@ router.post('/assignments', requireParent, async (req, res) => {
   const weekOf = getMondayOf(date ?? new Date().toISOString().slice(0, 10))
   const id = nanoid()
 
-  await db.query(
-    `INSERT INTO zone_assignments (id, family_id, child_id, micro_zone_id, week_of, is_auto)
-     VALUES ($1, $2, $3, $4, $5, false)`,
-    [id, req.familyId, child_id, micro_zone_id, weekOf]
-  )
-  res.json({ id })
+  try {
+    await db.query(
+      `INSERT INTO zone_assignments (id, family_id, child_id, micro_zone_id, week_of, is_auto)
+       VALUES ($1, $2, $3, $4, $5, false)`,
+      [id, req.familyId, child_id, micro_zone_id, weekOf]
+    )
+    res.json({ id })
+  } catch (err) {
+    console.error('zone assignment insert failed:', err.message)
+    res.status(400).json({ error: 'Could not create assignment (unknown child or micro-zone)' })
+  }
 })
 
 router.put('/assignments/:id', requireParent, async (req, res) => {
   const { micro_zone_id } = req.body
-  await db.query(
-    `UPDATE zone_assignments SET micro_zone_id=$1 WHERE id=$2 AND family_id=$3`,
-    [micro_zone_id, req.params.id, req.familyId]
-  )
-  res.json({ success: true })
+  try {
+    await db.query(
+      `UPDATE zone_assignments SET micro_zone_id=$1 WHERE id=$2 AND family_id=$3`,
+      [micro_zone_id, req.params.id, req.familyId]
+    )
+    res.json({ success: true })
+  } catch (err) {
+    console.error('zone assignment update failed:', err.message)
+    res.status(400).json({ error: 'Could not update assignment (unknown micro-zone)' })
+  }
 })
 
 router.delete('/assignments/:id', requireParent, async (req, res) => {

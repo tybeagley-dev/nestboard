@@ -160,7 +160,9 @@ export function useAssignedChores(childName, chores = []) {
 
   // API is source of truth — fetch on mount, poll every 20s, and on demand
   useEffect(() => {
-    if (!chores.length) return
+    // No chores to assign — resolve loading so the card shows its empty state
+    // instead of spinning forever (e.g. a brand-new family with no chores yet).
+    if (!chores.length) { setLoading(false); return }
 
     async function hydrate() {
       const data = await apiGet(`/chores/state?date=${getToday()}`)

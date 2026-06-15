@@ -23,10 +23,11 @@ const COOLDOWN_MESSAGES = [
   "The clock says no.",
 ]
 
-function isChoreDay() {
-  // TODO(onboarding): make spin-available days a per-family setting. Was Sunday-locked
-  // (getDay() !== 0); unblocked for now so spinning works every day.
-  return true
+function isChoreDay(scheduleConfig) {
+  // Per-family spin days as weekday numbers (0=Sun..6=Sat). Undefined = every day.
+  const days = scheduleConfig?.spinDays
+  if (!Array.isArray(days)) return true
+  return days.includes(new Date().getDay())
 }
 
 function SkeletonList() {
@@ -39,11 +40,12 @@ function SkeletonList() {
   )
 }
 
-export default function ChildCard({ child, now, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onTokens, onUpcoming, timer }) {
+export default function ChildCard({ child, now, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onTokens, onUpcoming, timer, scheduleConfig }) {
   const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child.name, chores)
   const { balance } = useScreenBalance(child.name)
   const { tokens }   = useChorePoints(child.name)
   const labels = useLabels()
+  const choreDay = isChoreDay(scheduleConfig)
 
   const isLoading = routinesLoading || choresLoading || assignedLoading
 
@@ -61,7 +63,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
   const canExtraSpin   = spinChores.length > 0 && spinChores.every(c => c.pending || c.completed)
   const spinBlocked    = spinChores.length > 0 && !spinChores.every(c => c.pending || c.completed)
 
-  const allItems = [...routines, ...requiredChores, ...(isChoreDay() ? spinChores : [])]
+  const allItems = [...routines, ...requiredChores, ...(choreDay ? spinChores : [])]
   const done     = allItems.filter(r => r.completed).length
   const total    = allItems.length
   const allDone  = total > 0 && done === total
@@ -193,7 +195,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
                 onToggle={() => handleChoreTap(chore)}
               />
             ))}
-            {isChoreDay() && spinChores.map(chore => (
+            {choreDay && spinChores.map(chore => (
               <RoutineItem
                 key={chore.id}
                 routine={{ ...chore, cooldownMins: cooldownMinsRemaining(chore) }}
@@ -208,8 +210,8 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
       <div className="child-card-pills">
         <button
           className="child-pill chore-pill"
-          onClick={isChoreDay() && !spinBlocked ? (canInitialSpin ? onSpin : canExtraSpin ? onExtraSpin : undefined) : undefined}
-          disabled={!isChoreDay() || spinBlocked}
+          onClick={choreDay && !spinBlocked ? (canInitialSpin ? onSpin : canExtraSpin ? onExtraSpin : undefined) : undefined}
+          disabled={!choreDay || spinBlocked}
           style={{ '--child-color': child.color }}
         >
           🎡 chore spinner

@@ -91,9 +91,11 @@ function ThisWeek({ children, defs, onChanged }) {
             <MicroZonePicker
               defs={defs}
               onPick={microZoneId => {
-                if (typeof picking === 'string') {
-                  const childId = picking.replace('new-', '')
-                  handleAddAssignment(childId, microZoneId)
+                // "new-<childId>" → add a manual assignment; anything else is an
+                // existing assignment id → update it. (Both are strings, so the
+                // prefix — not typeof — is the discriminator.)
+                if (typeof picking === 'string' && picking.startsWith('new-')) {
+                  handleAddAssignment(picking.replace('new-', ''), microZoneId)
                 } else {
                   handleUpdateAssignment(picking, microZoneId)
                 }

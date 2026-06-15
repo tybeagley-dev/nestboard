@@ -6,6 +6,7 @@ import Dashboard from './Dashboard'
 import ParentPage from './ParentPage'
 import ChildView from './ChildView'
 import FamilySetup from './FamilySetup'
+import OnboardingWizard from './OnboardingWizard'
 import { FamilyProvider } from './FamilyContext'
 
 function AuthGate({ children }) {
@@ -39,6 +40,14 @@ function FamilyGate({ children }) {
 
   if (!family || family.familyId === null) {
     return <FamilySetup onComplete={() => setRetryKey(k => k + 1)} />
+  }
+
+  if (!family.onboarded) {
+    return (
+      <FamilyProvider family={family}>
+        <OnboardingWizard onComplete={() => setRetryKey(k => k + 1)} />
+      </FamilyProvider>
+    )
   }
 
   return <FamilyProvider family={family}>{children}</FamilyProvider>

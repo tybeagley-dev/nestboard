@@ -5,11 +5,11 @@ import { CONFIG } from '../config/config'
 
 const COLOR_PRESETS = ['#C4837A', '#6B8BA4', '#7D9B76', '#A68B5B', '#8B7BB5', '#5B9BA6', '#A67B8B', '#7BA67B']
 
-function emptyChild() {
+export function emptyChild() {
   return { name: '', color: COLOR_PRESETS[0], emoji: '👤' }
 }
 
-function ChildForm({ child, onSave, onCancel, saving }) {
+export function ChildForm({ child, onSave, onCancel, saving }) {
   const [name,  setName]  = useState(child.name  || '')
   const [color, setColor] = useState(child.color || COLOR_PRESETS[0])
   const [emoji, setEmoji] = useState(child.emoji || '👤')
@@ -76,7 +76,7 @@ function ChildForm({ child, onSave, onCancel, saving }) {
   )
 }
 
-function ChildRow({ child, onEdit, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
+export function ChildRow({ child, onEdit, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
   if (confirmDelete) {
     return (
       <div className="chore-admin-row deleting">
@@ -101,7 +101,7 @@ function ChildRow({ child, onEdit, confirmDelete, onDeleteRequest, onConfirmDele
   )
 }
 
-function ChildQRSection({ children, slug }) {
+export function ChildQRSection({ children, slug }) {
   const [copied, setCopied] = useState(null)
 
   if (!slug) return null

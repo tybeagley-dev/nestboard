@@ -70,6 +70,18 @@ app.use('/zones',         zoneRoutes)
 app.use('/push',          pushRoutes)
 app.use('/schedule',      scheduleRoutes)
 
+// Global error handler — any error surfaced to Express returns JSON instead of hanging.
+app.use((err, req, res, next) => {
+  console.error('Unhandled route error:', err?.message ?? err)
+  if (res.headersSent) return next(err)
+  res.status(500).json({ error: 'Server error' })
+})
+
+// Safety net: a failed async handler or background job must never crash the whole API.
+// A single bad request returning an error is fine; taking down every family's app is not.
+process.on('unhandledRejection', reason => console.error('Unhandled rejection:', reason))
+process.on('uncaughtException',  err    => console.error('Uncaught exception:', err?.message ?? err))
+
 const PORT = process.env.PORT ?? 3001
 app.listen(PORT, () => console.log(`nestboard API running on port ${PORT}`))
 
