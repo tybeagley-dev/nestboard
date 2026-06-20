@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
+import CalendarGuide from './CalendarGuide'
 
 const COLOR_PRESETS = ['#C17A4A', '#6B8BA4', '#7D9B76', '#C4837A', '#A68B5B', '#8B7BB5', '#5B9BA6', '#A67B8B']
 
@@ -80,7 +81,7 @@ function CalendarForm({ calendar, onSave, onCancel, saving }) {
   )
 }
 
-export default function ParentCalendarTab({ children }) {
+export default function ParentCalendarTab({ children, guideOpen = false }) {
   const [calendars, setCalendars] = useState([])
   const [loading,   setLoading]   = useState(true)
   const [editing,   setEditing]   = useState(null)   // null | 'new' | calendar object
@@ -117,44 +118,46 @@ export default function ParentCalendarTab({ children }) {
 
   if (loading) return <p className="tab-empty">Loading…</p>
 
-  if (editing) {
-    return (
-      <CalendarForm
-        calendar={editing === 'new' ? emptyCalendar() : editing}
-        onSave={handleSave}
-        onCancel={() => setEditing(null)}
-        saving={saving}
-      />
-    )
-  }
-
   return (
     <div>
-      <button className="parent-add-chore-btn" onClick={() => setEditing('new')}>+ Add Calendar</button>
+      <CalendarGuide defaultOpen={guideOpen} />
 
-      {calendars.length === 0 && (
-        <p className="tab-empty">No calendars added yet.</p>
-      )}
+      {editing ? (
+        <CalendarForm
+          calendar={editing === 'new' ? emptyCalendar() : editing}
+          onSave={handleSave}
+          onCancel={() => setEditing(null)}
+          saving={saving}
+        />
+      ) : (
+        <>
+          <button className="parent-add-chore-btn" onClick={() => setEditing('new')}>+ Add Calendar</button>
 
-      <div>
-        {calendars.map(cal => (
-          <div key={cal.id} className="chore-admin-row">
-            <span className="chore-admin-icon" style={{ color: cal.color }}>●</span>
-            <div className="chore-admin-info">
-              <span className="chore-admin-label">{cal.name}</span>
-              {cal.is_family && <span className="chore-admin-meta">Shown on child cards</span>}
-            </div>
-            <button className="chore-admin-edit-btn" onClick={() => setEditing({ ...cal, is_family: cal.is_family })}>Edit</button>
-            <button
-              className="chore-admin-del-btn"
-              onClick={() => handleDelete(cal)}
-              disabled={deleting === cal.id}
-            >
-              {deleting === cal.id ? '…' : '×'}
-            </button>
+          {calendars.length === 0 && (
+            <p className="tab-empty">No calendars added yet.</p>
+          )}
+
+          <div>
+            {calendars.map(cal => (
+              <div key={cal.id} className="chore-admin-row">
+                <span className="chore-admin-icon" style={{ color: cal.color }}>●</span>
+                <div className="chore-admin-info">
+                  <span className="chore-admin-label">{cal.name}</span>
+                  {cal.is_family && <span className="chore-admin-meta">Shown on child cards</span>}
+                </div>
+                <button className="chore-admin-edit-btn" onClick={() => setEditing({ ...cal, is_family: cal.is_family })}>Edit</button>
+                <button
+                  className="chore-admin-del-btn"
+                  onClick={() => handleDelete(cal)}
+                  disabled={deleting === cal.id}
+                >
+                  {deleting === cal.id ? '…' : '×'}
+                </button>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   )
 }

@@ -5388,6 +5388,41 @@ button {
   background: var(--surface-2);
 }
 
+/* ── Calendar guide (shared: onboarding + parent Calendar tab) ───────────────── */
+.calendar-guide {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1.25rem;
+}
+.calendar-guide-summary {
+  font-weight: 700;
+  cursor: pointer;
+  list-style: none;
+}
+.calendar-guide-summary::-webkit-details-marker { display: none; }
+.calendar-guide-summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: 0.5rem;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+.calendar-guide[open] .calendar-guide-summary::before { transform: rotate(90deg); }
+.calendar-guide-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-top: 1rem;
+}
+.calendar-guide-heading {
+  font-weight: 700;
+  font-size: 0.95rem;
+  margin: 0 0 0.6rem;
+  color: var(--text-secondary);
+}
+
 /* ── Onboarding Done screen ─────────────────────────────────────────────────── */
 .onboarding-done { text-align: center; }
 .onboarding-done-mark { font-size: 2.5rem; margin: 0 0 0.25rem; }
