@@ -210,7 +210,6 @@ button {
 .greeting-pill:active { filter: brightness(0.9); }
 
 .grocery-pill  { background: #B07050; }
-.token-pill    { background: #A08030; }
 
 /* ── Shared Card ────────────────────────────────────────────────────────── */
 .card {
@@ -4117,6 +4116,14 @@ button {
   max-height: 85vh;
   overflow-y: auto;
   position: relative;
+}
+
+.grocery-modal-title {
+  margin: 0 0 4px;
+  padding-right: 28px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 /* Weather location picker (onboarding step + Family settings) */

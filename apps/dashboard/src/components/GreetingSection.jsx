@@ -20,9 +20,6 @@ export default function GreetingSection({ now, onGrocery }) {
         <button className="greeting-pill grocery-pill" onClick={onGrocery}>
           grocery list
         </button>
-        <button className="greeting-pill token-pill">
-          token trading
-        </button>
       </div>
     </div>
   )
