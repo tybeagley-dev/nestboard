@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS families (
   parent_pin_hash  TEXT NOT NULL,         -- bcrypt hash of parent PIN
   labels           JSONB NOT NULL DEFAULT '{}',  -- per-family display names rendered over the generic core
   onboarded        BOOLEAN NOT NULL DEFAULT false, -- false until the setup wizard is completed
+  weather          JSONB,                          -- { lat, lon, label } for the forecast; NULL = no weather pill
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

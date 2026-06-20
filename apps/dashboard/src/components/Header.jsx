@@ -79,22 +79,14 @@ export default function Header({ now, weather, onParentOpen }) {
           ⚙️
         </button>
 
-        {/* Weather pill */}
-        <button
-          className="header-weather"
-          onClick={() => weather && setShowWeather(true)}
-          style={{ cursor: weather ? 'pointer' : 'default' }}
-        >
-          {weatherInfo ? (
-            <>
-              <span className="weather-emoji">{weatherInfo.emoji}</span>
-              <span className="weather-temp">{weather.temp}°</span>
-              <span className="weather-label">{weatherInfo.label}</span>
-            </>
-          ) : (
-            <span className="weather-loading">—</span>
-          )}
-        </button>
+        {/* Weather pill — hidden entirely when the family has no location set */}
+        {weather && weatherInfo && (
+          <button className="header-weather" onClick={() => setShowWeather(true)}>
+            <span className="weather-emoji">{weatherInfo.emoji}</span>
+            <span className="weather-temp">{weather.temp}°</span>
+            <span className="weather-label">{weatherInfo.label}</span>
+          </button>
+        )}
       </div>
     </header>
 

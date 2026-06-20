@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { apiGet } from '../utils/api'
+import WeatherLocationPicker from './WeatherLocationPicker'
 
 export default function ParentFamilyTab() {
   const [family,  setFamily]  = useState(null)
@@ -36,6 +37,16 @@ export default function ParentFamilyTab() {
           <p className="family-code-hint">
             Share this code and your parent PIN with anyone you want to add to this family. They'll use both to join from the sign-in screen.
           </p>
+        </div>
+      </div>
+
+      <div className="family-code-card">
+        <div className="family-code-section">
+          <span className="family-code-label">Weather location</span>
+          <WeatherLocationPicker
+            current={family.weather ?? null}
+            onSaved={w => setFamily(f => ({ ...f, weather: w }))}
+          />
         </div>
       </div>
     </div>

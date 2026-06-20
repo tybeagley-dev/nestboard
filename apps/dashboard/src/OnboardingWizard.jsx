@@ -5,6 +5,7 @@ import { useChildren } from './hooks/useChildren'
 import StepChildren from './onboarding/StepChildren'
 import StepLabels from './onboarding/StepLabels'
 import StepCalendars from './onboarding/StepCalendars'
+import StepWeather from './onboarding/StepWeather'
 import StepDone from './onboarding/StepDone'
 import ParentRoutinesTab from './components/ParentRoutinesTab'
 import ParentZonesTab from './components/ParentZonesTab'
@@ -18,6 +19,7 @@ const STEPS = [
   { key: 'chores',   title: 'Chores & tokens',   optional: true,  blurb: 'Set up the chore spinner, the token economy, and which days chores can be spun.' },
   { key: 'meals',     title: 'Meal plan',         optional: true,  blurb: 'Optional — a weekly dinner plan on the dashboard.' },
   { key: 'calendars', title: 'Connect calendars', optional: true,  blurb: 'Pull in Google Calendars so family events show on the dashboard.' },
+  { key: 'weather',   title: 'Local weather',     optional: true,  blurb: 'Show your city’s forecast on the dashboard.' },
   { key: 'labels',    title: 'Name your rewards', optional: true,  blurb: 'Want custom names? Otherwise we’ll use "Tokens" and "Rewards Store."' },
   { key: 'done',      title: 'You’re all set',    optional: false, blurb: 'A few finishing touches, then you’re off.' },
 ]
@@ -50,6 +52,7 @@ export default function OnboardingWizard({ onComplete }) {
       case 'chores':   return <ParentChoresTab children={children} />
       case 'meals':     return <ParentMealsTab />
       case 'calendars': return <StepCalendars children={children} />
+      case 'weather':   return <StepWeather />
       case 'labels':    return <StepLabels />
       case 'done':      return <StepDone children={children} />
       default:

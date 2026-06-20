@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CONFIG } from '../config/config'
+import { apiGet } from '../utils/api'
 
 const REFRESH_MS = 30 * 60 * 1000 // 30 minutes
 
@@ -24,9 +24,12 @@ export function useWeather() {
   const [weather, setWeather] = useState(null)
 
   useEffect(() => {
-    async function fetch_() {
+    let cancelled = false
+    let intervalId
+
+    async function fetch_(coords) {
       try {
-        const { lat, lon } = CONFIG.weather
+        const { lat, lon, label } = coords
         const url = [
           `https://api.open-meteo.com/v1/forecast`,
           `?latitude=${lat}&longitude=${lon}`,
@@ -75,7 +78,9 @@ export function useWeather() {
           }
         })
 
+        if (cancelled) return
         setWeather({
+          label,
           // Current conditions (used by header pill)
           temp:      Math.round(c.temperature_2m),
           code:      c.weather_code,
@@ -94,9 +99,15 @@ export function useWeather() {
       }
     }
 
-    fetch_()
-    const id = setInterval(fetch_, REFRESH_MS)
-    return () => clearInterval(id)
+    // Coords live on the family record (per-family, set in onboarding/Settings).
+    // No location set → no fetch, weather stays null and the pill stays hidden.
+    apiGet('/auth/family').then(fam => {
+      if (cancelled || typeof fam?.weather?.lat !== 'number') return
+      fetch_(fam.weather)
+      intervalId = setInterval(() => fetch_(fam.weather), REFRESH_MS)
+    })
+
+    return () => { cancelled = true; if (intervalId) clearInterval(intervalId) }
   }, [])
 
   return weather

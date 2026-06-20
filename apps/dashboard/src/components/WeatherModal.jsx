@@ -1,6 +1,5 @@
 import { useEffect } from 'react'
 import { getWeatherInfo } from '../utils/weatherCodes'
-import { CONFIG } from '../config/config'
 
 const DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
@@ -28,7 +27,7 @@ export default function WeatherModal({ weather, onClose }) {
       <div className="modal-card weather-modal">
         <button className="modal-close" onClick={onClose} aria-label="Close">×</button>
 
-        <div className="wm-location">{CONFIG.weather.label}</div>
+        <div className="wm-location">{weather.label}</div>
 
         {/* ── Current conditions ── */}
         <div className="wm-current">

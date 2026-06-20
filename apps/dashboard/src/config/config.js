@@ -8,14 +8,6 @@ export const CONFIG = {
   // ── Family ─────────────────────────────────────────────────────────────────
   familyName: 'Beagley Fam',
 
-  // ── Weather ────────────────────────────────────────────────────────────────
-  // Find your lat/lon at https://www.latlong.net
-  weather: {
-    lat: 40.310871,
-    lon: -112.012589,
-    label: 'Eagle Mountain',
-  },
-
   // ── Schedule Modes ─────────────────────────────────────────────────────────
   // The dashboard auto-detects which mode today falls into and shows the
   // matching routines. Dates are YYYY-MM-DD strings (inclusive on both ends).
