@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { CONFIG } from '../config/config'
 import { apiGet } from '../utils/api'
 
 export function useCalendarEvents(child = null) {
-  const [events, setEvents] = useState(child ? [] : (CONFIG.events ?? []))
+  const [events, setEvents] = useState([])
 
   useEffect(() => {
     const url = child ? `/calendar/events?child=${encodeURIComponent(child)}` : '/calendar/events'

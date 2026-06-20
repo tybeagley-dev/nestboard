@@ -18,8 +18,8 @@ export default function FamilySetup({ onComplete }) {
       setError('PINs do not match')
       return
     }
-    if (pin.length < 4) {
-      setError('PIN must be at least 4 digits')
+    if (!/^\d{6}$/.test(pin)) {
+      setError('PIN must be exactly 6 digits')
       return
     }
 
@@ -102,8 +102,9 @@ export default function FamilySetup({ onComplete }) {
               type="password"
               inputMode="numeric"
               value={pin}
-              onChange={e => setPin(e.target.value)}
-              placeholder="4+ digits"
+              onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              placeholder="6 digits"
+              maxLength={6}
               required
             />
           </div>
@@ -116,8 +117,9 @@ export default function FamilySetup({ onComplete }) {
                 type="password"
                 inputMode="numeric"
                 value={pinConf}
-                onChange={e => setPinConf(e.target.value)}
+                onChange={e => setPinConf(e.target.value.replace(/\D/g, '').slice(0, 6))}
                 placeholder="Repeat PIN"
+                maxLength={6}
                 required
               />
             </div>

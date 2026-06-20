@@ -1,33 +1,19 @@
 import { useState, useEffect, useCallback } from 'react'
-import { CONFIG } from '../config/config'
 import { apiGet, apiPost } from '../utils/api'
 
 const DAY_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-function configMealsToArray() {
-  return DAY_ORDER.map(day => ({
-    day,
-    main:  CONFIG.meals?.[day]?.main  ?? '',
-    note:  CONFIG.meals?.[day]?.note  ?? '',
-    lunch: CONFIG.meals?.[day]?.lunch ?? '',
-  }))
+function emptyMealsToArray() {
+  return DAY_ORDER.map(day => ({ day, main: '', note: '', lunch: '' }))
 }
 
 export function useMeals() {
-  const [meals,  setMeals]  = useState(configMealsToArray)
+  const [meals,  setMeals]  = useState(emptyMealsToArray)
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
     apiGet('/meals').then(data => {
-      if (Array.isArray(data) && data.length > 0) {
-        setMeals(data)
-      } else {
-        // Seed DB from config on first run
-        const defaults = configMealsToArray()
-        defaults.forEach(({ day, main, note, lunch }) =>
-          apiPost(`/meals/${day}`, { main, note, lunch })
-        )
-      }
+      if (Array.isArray(data) && data.length > 0) setMeals(data)
       setLoaded(true)
     })
   }, [])

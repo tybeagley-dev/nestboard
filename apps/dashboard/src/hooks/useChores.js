@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { CONFIG } from '../config/config'
 import { getTodayKey } from '../utils/dateUtils'
 
 const TOKENS_KEY      = 'fam_dash_tokens'
@@ -25,9 +24,9 @@ export function useChores() {
     try {
       const { apiGet } = await import('../utils/api')
       const data = await apiGet('/chores')
-      setChores(Array.isArray(data) && data.length > 0 ? data : CONFIG.demoChores)
+      setChores(Array.isArray(data) ? data : [])
     } catch {
-      setChores(CONFIG.demoChores)
+      setChores([])
     } finally {
       setLoading(false)
     }
@@ -164,7 +163,7 @@ export async function adminAddChore(data) {
 export async function adminGetAllChores() {
   const { apiGet } = await import('../utils/api')
   const data = await apiGet('/chores?includeInactive=true')
-  return Array.isArray(data) && data.length > 0 ? data : CONFIG.demoChores
+  return Array.isArray(data) ? data : []
 }
 
 export async function adminEditChore(data) {
