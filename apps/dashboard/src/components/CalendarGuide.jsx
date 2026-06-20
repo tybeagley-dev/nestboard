@@ -10,11 +10,13 @@ const GOOGLE = [
   { text: 'Add a calendar below and paste that link into the iCal URL field.' },
 ]
 
+// Works for iCloud calendars (not Google calendars synced onto the device) and
+// can be done entirely on an iPhone — no Mac required.
 const APPLE = [
-  { text: 'On a Mac, open the Calendar app — or go to iCloud.com and open Calendar.' },
-  { text: 'In the sidebar, hover the calendar you want and click the share icon (on iCloud.com, right-click it and choose “Sharing settings”).' },
+  { text: 'Open the Calendar app on your iPhone (or use a Mac, or iCloud.com → Calendar). This works for calendars stored in iCloud.' },
+  { text: 'On iPhone: tap “Calendars” at the bottom, then the ⓘ info button next to the calendar you want. On Mac/web: hover the calendar and open its sharing settings.' },
   { text: 'Turn on “Public Calendar.”' },
-  { text: 'Copy the link it shows — it starts with webcal://. Paste it below exactly as-is; we’ll handle the rest.' },
+  { text: 'Tap “Share Link” and copy it — it starts with webcal://. Paste it below exactly as-is; we’ll handle the rest.' },
 ]
 
 function Steps({ steps }) {
