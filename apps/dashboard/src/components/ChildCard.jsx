@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect } from 'react'
 import { Monitor, Coins } from 'lucide-react'
 import RoutineItem from './RoutineItem'
+import ChildIcon from './ChildIcon'
 import Confetti from './Confetti'
 import ChoreInstructionsModal from './ChoreInstructionsModal'
 import { useScreenBalance, stopChildTimer } from '../hooks/useScreenTime'
@@ -168,7 +169,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
           </button>
 
           <div className="child-avatar" style={{ background: child.color }}>
-            {child.emoji}
+            <ChildIcon name={child.icon} size={26} />
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminGetAllChores, adminAddChore, adminEditChore, adminDeleteChore } from '../hooks/useChores'
+import ChildIcon from './ChildIcon'
 import { apiGet, apiPost, apiDelete } from '../utils/api'
 import { unassignChore, triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { getTodayKey } from '../utils/dateUtils'
@@ -98,7 +99,7 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
           <div className="chore-assign-picker">
             {children.map(child => (
               <button key={child.name} className="chore-assign-child-btn" onClick={() => handleAssign(child)}>
-                {child.emoji} {child.name}
+                <ChildIcon name={child.icon} size={15} color={child.color} style={{ verticalAlign: 'text-bottom' }} /> {child.name}
               </button>
             ))}
             <button className="chore-assign-cancel" onClick={() => setAssigning(false)}>Cancel</button>
@@ -308,7 +309,7 @@ function TodayAssignments({ children }) {
             <div className="approval-info">
               {item.childObj && (
                 <span className="approval-avatar" style={{ background: item.childObj.color }}>
-                  {item.childObj.emoji}
+                  <ChildIcon name={item.childObj.icon} size={16} />
                 </span>
               )}
               <div className="approval-meta">

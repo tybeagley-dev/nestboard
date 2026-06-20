@@ -1,21 +1,24 @@
 import { useState, useEffect } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { apiPost, apiPut, apiDelete, apiGet } from '../utils/api'
+import ChildIcon from './ChildIcon'
+import { CHILD_ICONS } from '../config/childIcons'
 
 const COLOR_PRESETS = ['#C4837A', '#6B8BA4', '#7D9B76', '#A68B5B', '#8B7BB5', '#5B9BA6', '#A67B8B', '#7BA67B']
 
 export function emptyChild() {
-  return { name: '', color: COLOR_PRESETS[0], emoji: '👤' }
+  return { name: '', color: COLOR_PRESETS[0], emoji: '👤', icon: 'user' }
 }
 
 export function ChildForm({ child, onSave, onCancel, saving }) {
   const [name,  setName]  = useState(child.name  || '')
   const [color, setColor] = useState(child.color || COLOR_PRESETS[0])
-  const [emoji, setEmoji] = useState(child.emoji || '👤')
+  const [icon,  setIcon]  = useState(child.icon  || 'user')
 
   function handleSave() {
     if (!name.trim()) return
-    onSave({ ...child, name: name.trim(), color, emoji })
+    // emoji passed through unchanged (legacy column); icon is what renders now.
+    onSave({ ...child, name: name.trim(), color, icon })
   }
 
   return (
@@ -31,37 +34,43 @@ export function ChildForm({ child, onSave, onCancel, saving }) {
         />
       </div>
 
-      <div className="chore-form-row">
-        <div className="chore-form-field">
-          <label className="chore-form-label">Emoji</label>
-          <input
-            className="chore-form-input chore-form-icon-input"
-            value={emoji}
-            onChange={e => setEmoji(e.target.value)}
-            placeholder="👤"
-          />
+      <div className="chore-form-field">
+        <label className="chore-form-label">Color</label>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {COLOR_PRESETS.map(c => (
+            <button
+              key={c}
+              onClick={() => setColor(c)}
+              style={{
+                width: 28, height: 28, borderRadius: '50%', background: c, border: 'none',
+                cursor: 'pointer', outline: color === c ? '2px solid white' : 'none',
+                boxShadow: color === c ? `0 0 0 3px ${c}` : 'none',
+              }}
+            />
+          ))}
         </div>
-        <div className="chore-form-field">
-          <label className="chore-form-label">Color</label>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {COLOR_PRESETS.map(c => (
-              <button
-                key={c}
-                onClick={() => setColor(c)}
-                style={{
-                  width: 28, height: 28, borderRadius: '50%', background: c, border: 'none',
-                  cursor: 'pointer', outline: color === c ? '2px solid white' : 'none',
-                  boxShadow: color === c ? `0 0 0 3px ${c}` : 'none',
-                }}
-              />
-            ))}
-          </div>
+      </div>
+
+      <div className="chore-form-field">
+        <label className="chore-form-label">Icon</label>
+        <div className="icon-picker">
+          {CHILD_ICONS.map(({ name: n, Icon }) => (
+            <button
+              key={n}
+              type="button"
+              className={`icon-picker-btn ${icon === n ? 'selected' : ''}`}
+              onClick={() => setIcon(n)}
+              aria-label={n}
+            >
+              <Icon size={20} strokeWidth={2} />
+            </button>
+          ))}
         </div>
       </div>
 
       <div style={{ marginTop: 12 }}>
-        <div className="parent-child-avatar" style={{ background: color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: '50%', fontSize: 24 }}>
-          {emoji}
+        <div className="parent-child-avatar" style={{ background: color, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: '50%' }}>
+          <ChildIcon name={icon} size={24} />
         </div>
       </div>
 
@@ -89,7 +98,7 @@ export function ChildRow({ child, onEdit, confirmDelete, onDeleteRequest, onConf
   return (
     <div className="chore-admin-row">
       <span className="chore-admin-icon" style={{ background: child.color, borderRadius: '50%', width: 32, height: 32, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-        {child.emoji}
+        <ChildIcon name={child.icon} size={18} />
       </span>
       <div className="chore-admin-info">
         <span className="chore-admin-label">{child.name}</span>
@@ -122,7 +131,7 @@ export function ChildQRSection({ children, slug }) {
         {children.map(child => (
           <div key={child.id} className="child-qr-row">
             <div className="child-qr-meta">
-              <span className="child-qr-avatar" style={{ background: child.color }}>{child.emoji}</span>
+              <span className="child-qr-avatar" style={{ background: child.color }}><ChildIcon name={child.icon} size={18} /></span>
               <span className="child-qr-name">{child.name}</span>
               <button className="child-qr-copy" onClick={() => handleCopy(child)}>
                 {copied === child.id ? 'Copied!' : 'Copy URL'}
@@ -137,7 +146,7 @@ export function ChildQRSection({ children, slug }) {
                 bgColor="transparent"
               />
               <div className="child-qr-emoji-bubble">
-                {child.emoji}
+                <ChildIcon name={child.icon} size={20} color={child.color} />
               </div>
             </div>
           </div>

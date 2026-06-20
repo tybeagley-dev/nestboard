@@ -3,6 +3,7 @@ import { useScreenBalance, startChildTimer } from '../hooks/useScreenTime'
 import { useChorePoints } from '../hooks/useChores'
 import { useLabels } from '../FamilyContext'
 import TokenBadge from './TokenBadge'
+import ChildIcon from './ChildIcon'
 import { apiGet, apiPost } from '../utils/api'
 
 const PHASE          = { VIEW: 'view', BUY: 'buy' }
@@ -63,7 +64,7 @@ export default function ScreenTimeModal({ child, onClose }) {
 
         <div className="modal-child-header">
           <div className="modal-avatar" style={{ background: child.color }}>
-            {child.emoji}
+            <ChildIcon name={child.icon} size={22} />
           </div>
           <div>
             <h2 className="modal-title">{child.name}</h2>

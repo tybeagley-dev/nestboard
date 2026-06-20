@@ -3,6 +3,7 @@ import { useChorePoints } from '../hooks/useChores'
 import { useScreenBalance } from '../hooks/useScreenTime'
 import { useLabels } from '../FamilyContext'
 import TokenBadge from './TokenBadge'
+import ChildIcon from './ChildIcon'
 
 const TIME_PRESETS = [-30, -15, +15, +30]
 
@@ -44,7 +45,7 @@ function ChildRow({ child }) {
   return (
     <div className="parent-child-card">
       <div className="parent-child-hd">
-        <div className="parent-child-avatar" style={{ background: child.color }}>{child.emoji}</div>
+        <div className="parent-child-avatar" style={{ background: child.color }}><ChildIcon name={child.icon} size={22} /></div>
         <span className="parent-child-name">{child.name}</span>
       </div>
 

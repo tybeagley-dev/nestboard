@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { triggerChoreRefetch } from '../hooks/useAssignedChores'
 import TokenBadge from './TokenBadge'
+import ChildIcon from './ChildIcon'
 import { apiGet, apiPost } from '../utils/api'
 
 export default function ParentApprovalsTab({ children = [] }) {
@@ -96,7 +97,7 @@ export default function ParentApprovalsTab({ children = [] }) {
                 <div className="approval-info">
                   {child && (
                     <span className="approval-avatar" style={{ background: child.color }}>
-                      {child.emoji}
+                      <ChildIcon name={child.icon} size={16} />
                     </span>
                   )}
                   <div className="approval-meta">
@@ -130,7 +131,7 @@ export default function ParentApprovalsTab({ children = [] }) {
                 <div className="approval-info">
                   {child && (
                     <span className="approval-avatar" style={{ background: child.color }}>
-                      {child.emoji}
+                      <ChildIcon name={child.icon} size={16} />
                     </span>
                   )}
                   <div className="approval-meta">
@@ -166,7 +167,7 @@ export default function ParentApprovalsTab({ children = [] }) {
                 <div className="approval-info">
                   {child && (
                     <span className="approval-avatar" style={{ background: child.color }}>
-                      {child.emoji}
+                      <ChildIcon name={child.icon} size={16} />
                     </span>
                   )}
                   <div className="approval-meta">

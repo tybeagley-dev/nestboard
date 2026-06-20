@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS children (
   family_id  TEXT NOT NULL REFERENCES families(id),
   name       TEXT NOT NULL,
   color      TEXT NOT NULL DEFAULT '#888888',
-  emoji      TEXT NOT NULL DEFAULT '👤',
+  emoji      TEXT NOT NULL DEFAULT '👤',  -- legacy; superseded by icon
+  icon       TEXT NOT NULL DEFAULT 'user', -- lucide icon name for the avatar
   sort_order INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (family_id, name)

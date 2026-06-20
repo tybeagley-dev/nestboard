@@ -5,6 +5,7 @@ import {
   adminAddMicroZone, adminEditMicroZone, adminDeleteMicroZone,
   adminUpdateAssignment, adminAddManualAssignment, adminDeleteAssignment,
 } from '../hooks/useZone'
+import ChildIcon from './ChildIcon'
 import { apiGet } from '../utils/api'
 import { getTodayKey } from '../utils/dateUtils'
 
@@ -111,7 +112,7 @@ function ThisWeek({ children, defs, onChanged }) {
         return (
           <div key={child.id} className="zone-week-child">
             <div className="zone-week-child-name" style={{ color: child.color }}>
-              {child.emoji} {child.name}
+              <ChildIcon name={child.icon} size={15} color={child.color} style={{ verticalAlign: 'text-bottom' }} /> {child.name}
             </div>
 
             {auto ? (

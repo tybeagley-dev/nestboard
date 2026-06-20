@@ -4147,6 +4147,37 @@ button {
 }
 .weather-picker-result:hover { border-color: var(--text-muted); background: var(--surface); }
 
+/* Child avatar icon picker (ChildForm) */
+.icon-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+  gap: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+}
+.icon-picker-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+}
+.icon-picker-btn:hover { color: var(--text-primary); }
+.icon-picker-btn.selected {
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  background: var(--bg);
+}
+
 /* ── Calendar Modal ───────────────────────────────────────────────────── */
 .cal-modal {
   width: min(900px, 96vw);

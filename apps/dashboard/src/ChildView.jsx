@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
+import ChildIcon from './components/ChildIcon'
 import { setFamilySlug } from './utils/api'
 import { useChildren } from './hooks/useChildren'
 import { useClock } from './hooks/useClock'
@@ -116,7 +117,7 @@ export default function ChildView() {
     <div className="child-view" style={{ '--child-color': child.color }}>
       {/* Header */}
       <div className="child-view-header" style={{ background: child.color }}>
-        <div className="child-view-avatar">{child.emoji}</div>
+        <div className="child-view-avatar"><ChildIcon name={child.icon} size={48} /></div>
         <div className="child-view-name">{child.name}</div>
         <div className="child-view-progress">
           {assignedLoading ? 'Syncing…' : total === 0 ? 'Nothing yet' : done === total ? 'All done!' : `${done} of ${total} done`}

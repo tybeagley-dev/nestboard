@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import SpinningWheel from './SpinningWheel'
 import TokenBadge from './TokenBadge'
+import ChildIcon from './ChildIcon'
 import { assignChores, acceptChoresToApi, getClaimedChoreIds, triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { isChoreAvailableThisWeek } from '../hooks/useChoreFrequency'
 import { useLabels } from '../FamilyContext'
@@ -85,7 +86,7 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
       <div className="modal-card">
         <div className="modal-child-header">
           <div className="modal-avatar" style={{ background: child.color }}>
-            {child.emoji}
+            <ChildIcon name={child.icon} size={22} />
           </div>
           <div>
             <h2 className="modal-title">{isExtra ? 'Bonus Chore' : `${child.name}'s Chore`}</h2>

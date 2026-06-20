@@ -3,6 +3,7 @@ import { useChorePoints } from '../hooks/useChores'
 import { useRewards, usePurchases, buyReward } from '../hooks/useRewards'
 import { useLabels } from '../FamilyContext'
 import TokenBadge from './TokenBadge'
+import ChildIcon from './ChildIcon'
 
 const PHASE = { VIEW: 'view', STORE: 'store', CONFIRM: 'confirm' }
 
@@ -47,7 +48,7 @@ export default function TokensModal({ child, onClose }) {
 
         <div className="modal-child-header">
           <div className="modal-avatar" style={{ background: child.color }}>
-            {child.emoji}
+            <ChildIcon name={child.icon} size={22} />
           </div>
           <div>
             <h2 className="modal-title">{child.name}'s {labels.tokenName}</h2>

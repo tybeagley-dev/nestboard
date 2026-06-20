@@ -1,5 +1,6 @@
 import { useMemo, useEffect } from 'react'
 import { useCalendarEvents } from '../hooks/useCalendarEvents'
+import ChildIcon from './ChildIcon'
 import { isSameDay } from '../utils/dateUtils'
 
 function addDays(d, n) {
@@ -43,7 +44,7 @@ export default function UpcomingModal({ child, onClose }) {
         <button className="modal-close" onClick={onClose}>×</button>
 
         <div className="modal-child-header">
-          <div className="modal-avatar" style={{ background: child.color }}>{child.emoji}</div>
+          <div className="modal-avatar" style={{ background: child.color }}><ChildIcon name={child.icon} size={22} /></div>
           <div>
             <h2 className="modal-title">{child.name}'s Week</h2>
             <p className="modal-points-line">Upcoming events this week</p>
