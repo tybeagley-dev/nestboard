@@ -214,4 +214,170 @@ router.post('/family/complete-onboarding', async (req, res) => {
   }
 })
 
+// ── Family members & invites ────────────────────────────────────────────────
+
+// Resolve the caller's family_id from their membership; null if none.
+async function callerFamilyId(userId) {
+  const { rows } = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
+  return rows.length ? rows[0].family_id : null
+}
+
+// GET /auth/family/members → [{ user_id, email, role }]
+router.get('/family/members', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const familyId = await callerFamilyId(userId)
+    if (!familyId) return res.status(404).json({ error: 'No family' })
+    const { rows } = await db.query(
+      `SELECT fm.user_id, fm.role, u.email
+       FROM family_memberships fm JOIN users u ON u.id = fm.user_id
+       WHERE fm.family_id = $1
+       ORDER BY (fm.role = 'owner') DESC, u.email`,
+      [familyId]
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// DELETE /auth/family/members/:targetId → remove a member (never the owner)
+router.delete('/family/members/:targetId', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  const { targetId } = req.params
+  try {
+    const familyId = await callerFamilyId(userId)
+    if (!familyId) return res.status(404).json({ error: 'No family' })
+    const { rows } = await db.query(
+      'SELECT role FROM family_memberships WHERE user_id = $1 AND family_id = $2',
+      [targetId, familyId]
+    )
+    if (!rows.length) return res.status(404).json({ error: 'Not a member' })
+    if (rows[0].role === 'owner') return res.status(403).json({ error: 'Cannot remove the owner' })
+    await db.query('DELETE FROM family_memberships WHERE user_id = $1 AND family_id = $2', [targetId, familyId])
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST /auth/family/invites → { token } — single-use, 7-day invite for the caller's family
+router.post('/family/invites', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const familyId = await callerFamilyId(userId)
+    if (!familyId) return res.status(404).json({ error: 'No family' })
+    const token = nanoid(16)
+    await db.query(
+      `INSERT INTO family_invites (token, family_id, role, created_by, expires_at)
+       VALUES ($1, $2, 'parent', $3, NOW() + INTERVAL '7 days')`,
+      [token, familyId, userId]
+    )
+    res.status(201).json({ token })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// GET /auth/family/invites → active (unused, unexpired) invites for the caller's family
+router.get('/family/invites', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const familyId = await callerFamilyId(userId)
+    if (!familyId) return res.status(404).json({ error: 'No family' })
+    const { rows } = await db.query(
+      `SELECT token, role, created_at, expires_at, used_count, max_uses
+       FROM family_invites
+       WHERE family_id = $1 AND used_count < max_uses AND expires_at > NOW()
+       ORDER BY created_at DESC`,
+      [familyId]
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// DELETE /auth/family/invites/:token → revoke
+router.delete('/family/invites/:token', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const familyId = await callerFamilyId(userId)
+    if (!familyId) return res.status(404).json({ error: 'No family' })
+    await db.query('DELETE FROM family_invites WHERE token = $1 AND family_id = $2', [req.params.token, familyId])
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// GET /auth/invites/:token → preview an invite before accepting (authed, any user)
+router.get('/invites/:token', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const { rows } = await db.query(
+      `SELECT fi.role, fi.expires_at, fi.used_count, fi.max_uses, f.name AS family_name
+       FROM family_invites fi JOIN families f ON f.id = fi.family_id
+       WHERE fi.token = $1`,
+      [req.params.token]
+    )
+    if (!rows.length) return res.status(404).json({ error: 'Invite not found' })
+    const inv = rows[0]
+    const valid = inv.used_count < inv.max_uses && new Date(inv.expires_at) > new Date()
+    res.json({ familyName: inv.family_name, role: inv.role, valid })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST /auth/invites/:token/accept → join the invite's family
+router.post('/invites/:token/accept', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    // Mirror the Clerk user locally so the membership FK is satisfied.
+    const clerkUser = await clerkClient.users.getUser(userId)
+    const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
+    await db.query(
+      `INSERT INTO users (id, email) VALUES ($1, $2)
+       ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email`,
+      [userId, email]
+    )
+
+    const existing = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
+    if (existing.rows.length) return res.status(409).json({ error: 'Already in a family' })
+
+    const { rows } = await db.query(
+      `SELECT fi.family_id, fi.role, fi.used_count, fi.max_uses, fi.expires_at, f.name, f.slug
+       FROM family_invites fi JOIN families f ON f.id = fi.family_id
+       WHERE fi.token = $1`,
+      [req.params.token]
+    )
+    if (!rows.length) return res.status(404).json({ error: 'Invite not found' })
+    const inv = rows[0]
+    if (inv.used_count >= inv.max_uses || new Date(inv.expires_at) <= new Date()) {
+      return res.status(410).json({ error: 'Invite expired or already used' })
+    }
+
+    await db.query(
+      `INSERT INTO family_memberships (user_id, family_id, role) VALUES ($1, $2, $3)
+       ON CONFLICT DO NOTHING`,
+      [userId, inv.family_id, inv.role]
+    )
+    await db.query(
+      'UPDATE family_invites SET used_count = used_count + 1, used_at = NOW() WHERE token = $1',
+      [req.params.token]
+    )
+    res.json({ id: inv.family_id, name: inv.name, slug: inv.slug })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
 export default router

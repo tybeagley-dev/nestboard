@@ -6,9 +6,12 @@ import Dashboard from './Dashboard'
 import ParentPage from './ParentPage'
 import ChildView from './ChildView'
 import FamilySetup from './FamilySetup'
+import JoinInvite from './JoinInvite'
 import OnboardingWizard from './OnboardingWizard'
 import { FamilyProvider } from './FamilyContext'
 
+// Requires a signed-in Clerk user; does NOT gate on family membership (so the
+// invite-accept screen can render for a user who isn't in a family yet).
 function AuthGate({ children }) {
   const { isSignedIn, isLoaded, getToken } = useAuth()
 
@@ -25,7 +28,7 @@ function AuthGate({ children }) {
     )
   }
 
-  return <FamilyGate>{children}</FamilyGate>
+  return children
 }
 
 function FamilyGate({ children }) {
@@ -57,15 +60,18 @@ export default function App() {
   return (
     <Routes>
       <Route path="/:slug/child/:childId" element={<ChildView />} />
+      <Route path="/join/:token" element={<AuthGate><JoinInvite /></AuthGate>} />
       <Route
         path="*"
         element={
           <AuthGate>
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/parent" element={<ParentPage />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
+            <FamilyGate>
+              <Routes>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/parent" element={<ParentPage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </FamilyGate>
           </AuthGate>
         }
       />
