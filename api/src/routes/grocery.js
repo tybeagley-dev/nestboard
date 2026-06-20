@@ -22,13 +22,13 @@ router.post('/', async (req, res) => {
     `INSERT INTO grocery (id, family_id, item) VALUES ($1, $2, $3)`,
     [id, req.familyId, item]
   )
-  broadcast('grocery', {})
+  broadcast('grocery', {}, req.familyId)
   res.json({ success: true })
 })
 
 router.delete('/', async (req, res) => {
   await db.query(`DELETE FROM grocery WHERE family_id = $1`, [req.familyId])
-  broadcast('grocery', {})
+  broadcast('grocery', {}, req.familyId)
   res.json({ success: true })
 })
 
@@ -38,7 +38,7 @@ router.delete('/:id', async (req, res) => {
     [req.params.id, req.familyId]
   )
   if (!rowCount) return res.status(404).json({ error: 'Item not found' })
-  broadcast('grocery', {})
+  broadcast('grocery', {}, req.familyId)
   res.json({ success: true })
 })
 

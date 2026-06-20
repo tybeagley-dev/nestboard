@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
+import { requireParent } from '../middleware/requireParent.js'
 import { broadcast } from './events.js'
 import { resolveChildId } from '../db/resolveChild.js'
 import { notifyParent, notifyChild } from '../utils/push.js'
@@ -72,7 +73,7 @@ router.post('/:child/adjust', async (req, res) => {
   )
   const free = calcFreeAvailable(rows[0])
   const balance = Number(rows[0].purchased_balance) + free
-  broadcast('screen_time', { child: childName, balance })
+  broadcast('screen_time', { child: childName, balance }, req.familyId)
   res.json({ success: true, balance })
 })
 
@@ -109,7 +110,7 @@ router.post('/:child/request-purchase', async (req, res) => {
     [req.familyId, childId, tokensAmount, minutesAmount]
   )
 
-  broadcast('screen_time_requests', { type: 'purchase_requested', child: childName })
+  broadcast('screen_time_requests', { type: 'purchase_requested', child: childName }, req.familyId)
   notifyParent(req.familyId, { title: 'Screen time requested', body: `${childName} wants to trade ${tokensAmount} tokens for ${minutesAmount} minutes` })
   res.json({ success: true, requestId: rows[0].id, tokensAmount, minutesAmount })
 })
@@ -144,7 +145,7 @@ router.get('/purchase-requests', async (req, res) => {
 })
 
 // POST /screen-time/purchase-requests/:id/approve
-router.post('/purchase-requests/:id/approve', async (req, res) => {
+router.post('/purchase-requests/:id/approve', requireParent, async (req, res) => {
   const { rows: reqRows } = await db.query(
     `SELECT * FROM screentime_purchase_requests WHERE id = $1 AND family_id = $2 AND status = 'pending'`,
     [Number(req.params.id), req.familyId]
@@ -190,8 +191,8 @@ router.post('/purchase-requests/:id/approve', async (req, res) => {
 
     const { rows: childRows } = await db.query(`SELECT name FROM children WHERE id = $1`, [request.child_id])
     const childName = childRows[0]?.name
-    broadcast('tokens', { child: childName })
-    broadcast('screen_time', { child: childName })
+    broadcast('tokens', { child: childName }, req.familyId)
+    broadcast('screen_time', { child: childName }, req.familyId)
     notifyChild(req.familyId, request.child_id, { title: 'Screen time approved!', body: `${request.minutes_amount} minutes added to your balance` })
     res.json({ success: true })
   } catch (err) {
@@ -203,7 +204,7 @@ router.post('/purchase-requests/:id/approve', async (req, res) => {
 })
 
 // POST /screen-time/purchase-requests/:id/reject
-router.post('/purchase-requests/:id/reject', async (req, res) => {
+router.post('/purchase-requests/:id/reject', requireParent, async (req, res) => {
   const { rows } = await db.query(
     `UPDATE screentime_purchase_requests SET status = 'rejected'
      WHERE id = $1 AND family_id = $2 AND status = 'pending' RETURNING id`,
@@ -228,7 +229,7 @@ router.get('/abstinence-requests', async (req, res) => {
 })
 
 // POST /screen-time/abstinence-requests/:id/approve
-router.post('/abstinence-requests/:id/approve', async (req, res) => {
+router.post('/abstinence-requests/:id/approve', requireParent, async (req, res) => {
   const { rows: reqRows } = await db.query(
     `SELECT * FROM screentime_abstinence_requests WHERE id = $1 AND family_id = $2 AND status = 'pending'`,
     [Number(req.params.id), req.familyId]
@@ -251,12 +252,12 @@ router.post('/abstinence-requests/:id/approve', async (req, res) => {
   )
 
   const { rows: childRows } = await db.query(`SELECT name FROM children WHERE id = $1`, [request.child_id])
-  broadcast('tokens', { child: childRows[0]?.name })
+  broadcast('tokens', { child: childRows[0]?.name }, req.familyId)
   res.json({ success: true })
 })
 
 // POST /screen-time/abstinence-requests/:id/reject
-router.post('/abstinence-requests/:id/reject', async (req, res) => {
+router.post('/abstinence-requests/:id/reject', requireParent, async (req, res) => {
   const { rows } = await db.query(
     `UPDATE screentime_abstinence_requests SET status = 'rejected'
      WHERE id = $1 AND family_id = $2 AND status = 'pending' RETURNING id`,

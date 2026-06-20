@@ -22,7 +22,7 @@ router.post('/', async (req, res) => {
     `INSERT INTO notes (id, family_id, text) VALUES ($1, $2, $3)`,
     [id, req.familyId, text]
   )
-  broadcast('notes', {})
+  broadcast('notes', {}, req.familyId)
   res.json({ success: true })
 })
 
@@ -32,7 +32,7 @@ router.delete('/:id', async (req, res) => {
     [req.params.id, req.familyId]
   )
   if (!rowCount) return res.status(404).json({ error: 'Note not found' })
-  broadcast('notes', {})
+  broadcast('notes', {}, req.familyId)
   res.json({ success: true })
 })
 

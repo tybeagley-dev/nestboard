@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { triggerChoreRefetch } from '../hooks/useAssignedChores'
+import { useSseRefetch } from '../hooks/useLiveSync'
 import TokenBadge from './TokenBadge'
 import ChildIcon from './ChildIcon'
 import { apiGet, apiPost } from '../utils/api'
@@ -25,6 +26,10 @@ export default function ParentApprovalsTab({ children = [] }) {
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  // Live: a new request or chore submission elsewhere refreshes the approvals list
+  useSseRefetch('screen_time_requests', load)
+  useSseRefetch('chore_state', load)
 
   async function handleChoreApprove(item) {
     setActing(`chore-${item.chore_id}`)

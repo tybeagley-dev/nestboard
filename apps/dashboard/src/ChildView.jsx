@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams } from 'react-router-dom'
 import ChildIcon from './components/ChildIcon'
+import { useLiveSync } from './hooks/useLiveSync'
 import { setFamilySlug } from './utils/api'
 import { useChildren } from './hooks/useChildren'
 import { useClock } from './hooks/useClock'
@@ -55,6 +56,8 @@ export default function ChildView() {
 
   // Must be synchronous so the slug header is set before any hook fires its first fetch
   setFamilySlug(slug)
+
+  useLiveSync(slug)
 
   const now              = useClock()
   const { children }     = useChildren()

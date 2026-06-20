@@ -56,7 +56,7 @@ router.post('/toggle', async (req, res) => {
     completed[`${row.child}__${row.routine_id}`] = row.completed
   }
 
-  broadcast('routine_state', { date, completed })
+  broadcast('routine_state', { date, completed }, req.familyId)
   res.json({ date, completed })
 })
 

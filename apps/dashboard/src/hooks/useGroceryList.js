@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { apiGet, apiPost, apiDelete } from '../utils/api'
+import { useSseRefetch } from './useLiveSync'
 
 function genId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 5)
@@ -8,11 +9,14 @@ function genId() {
 export function useGroceryList() {
   const [items, setItems] = useState([])
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiGet('/grocery').then(data => {
       if (Array.isArray(data)) setItems(data)
     })
   }, [])
+
+  useEffect(() => { load() }, [load])
+  useSseRefetch('grocery', load)
 
   const addItem = useCallback((text) => {
     const trimmed = text.trim()

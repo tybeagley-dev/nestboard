@@ -49,7 +49,7 @@ router.post('/:id/buy', async (req, res) => {
     [req.familyId, childId, -item.cost]
   )
 
-  broadcast('tokens', { child })
+  broadcast('tokens', { child }, req.familyId)
   res.json({ success: true })
 })
 

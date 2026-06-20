@@ -23,7 +23,7 @@ router.post('/:day', async (req, res) => {
      ON CONFLICT (family_id, day) DO UPDATE SET main=$3, note=$4, lunch=$5`,
     [req.familyId, day, main ?? '', note ?? '', lunch ?? '']
   )
-  broadcast('meals', {})
+  broadcast('meals', {}, req.familyId)
   res.json({ success: true })
 })
 

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getTodayKey } from '../utils/dateUtils'
+import { useSseRefetch } from './useLiveSync'
 
 const TOKENS_KEY      = 'fam_dash_tokens'
 const CHORE_DONE_KEY = 'fam_dash_chore_done'
@@ -107,6 +108,9 @@ export function useChorePoints(childName) {
       saveLocalTokens(local)
     }
   }, [childName])
+
+  // Instant cross-device token updates (chore approved / screen-time traded elsewhere)
+  useSseRefetch('tokens', reloadTokens)
 
   return { tokens, recordCompletion, adjustTokens, reloadTokens }
 }

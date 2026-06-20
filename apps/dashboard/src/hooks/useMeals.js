@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { apiGet, apiPost } from '../utils/api'
+import { useSseRefetch } from './useLiveSync'
 
 const DAY_ORDER = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -11,12 +12,15 @@ export function useMeals() {
   const [meals,  setMeals]  = useState(emptyMealsToArray)
   const [loaded, setLoaded] = useState(false)
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiGet('/meals').then(data => {
       if (Array.isArray(data) && data.length > 0) setMeals(data)
       setLoaded(true)
     })
   }, [])
+
+  useEffect(() => { load() }, [load])
+  useSseRefetch('meals', load)
 
   const updateMeal = useCallback((day, main, note, lunch = '') => {
     setMeals(prev => prev.map(m => m.day === day ? { day, main, note, lunch } : m))

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { getTodayKey } from '../utils/dateUtils'
 import { getCurrentScheduleMode } from '../utils/scheduleUtils'
 import { apiGet, apiPost, apiPut, apiDelete } from '../utils/api'
+import { useSseRefetch } from './useLiveSync'
 
 const POLL_MS = 20 * 1000
 
@@ -29,18 +30,21 @@ export function useRoutines(now, children = [], scheduleConfig = {}) {
   const [loading,     setLoading]     = useState(true)
   const todayKey = getTodayKey(now)
 
-  // Completion state from API — poll every 20s for cross-device sync
+  // Completion state from API — SSE for instant cross-device sync, poll as fallback
+  const hydrate = useCallback(async () => {
+    const data = await apiGet(`/routines?date=${todayKey}`)
+    if (data?.completed) setCompleted(data.completed)
+    setLoading(false)
+  }, [todayKey])
+
   useEffect(() => {
-    async function hydrate() {
-      const data = await apiGet(`/routines?date=${todayKey}`)
-      if (data?.completed) setCompleted(data.completed)
-      setLoading(false)
-    }
     setLoading(true)
     hydrate()
     const id = setInterval(hydrate, POLL_MS)
     return () => clearInterval(id)
-  }, [todayKey])
+  }, [hydrate])
+
+  useSseRefetch('routine_state', hydrate)
 
   // Routine definitions — prefer DB, fall back to config.js
   useEffect(() => {

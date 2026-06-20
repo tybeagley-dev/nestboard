@@ -111,7 +111,7 @@ router.delete('/:id/assignment', requireParent, async (req, res) => {
       [req.familyId, childId, choreId]
     )
     if (!rowCount) return res.status(404).json({ error: 'No active assignment found' })
-    broadcast('chore_state', { child: childName })
+    broadcast('chore_state', { child: childName }, req.familyId)
     res.json({ success: true })
   } catch (err) {
     console.error('unassign error', err)
@@ -134,7 +134,7 @@ router.post('/:id/accept', async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, 'accepted', NOW())`,
       [req.familyId, childId, choreId, choreLabel, tokens]
     )
-    broadcast('chore_state', { child })
+    broadcast('chore_state', { child }, req.familyId)
     res.json({ success: true })
   } catch (err) {
     console.error('accept error', err)
@@ -164,7 +164,7 @@ router.post('/:id/request-approval', async (req, res) => {
   // Already pending or completed — nothing to do
   if (!rowCount) return res.json({ success: true, skipped: true })
 
-  broadcast('chore_state', { child })
+  broadcast('chore_state', { child }, req.familyId)
   notifyParent(req.familyId, { title: 'Chore submitted', body: `${child} submitted "${choreLabel}" for approval` })
   res.json({ success: true })
 })
@@ -191,8 +191,8 @@ router.post('/:id/approve', requireParent, async (req, res) => {
      WHERE family_id = $2 AND child_id = $3`,
     [tokensEarned, req.familyId, childId]
   )
-  broadcast('chore_state', { child })
-  broadcast('tokens', { child })
+  broadcast('chore_state', { child }, req.familyId)
+  broadcast('tokens', { child }, req.familyId)
   notifyChild(req.familyId, childId, { title: 'Chore approved!', body: `You earned ${tokensEarned} token${tokensEarned !== 1 ? 's' : ''}` })
   res.json({ success: true, tokensEarned })
 })
@@ -212,7 +212,7 @@ router.post('/:id/reject', requireParent, async (req, res) => {
   )
   if (!rowCount) return res.status(404).json({ error: 'No pending approval found' })
 
-  broadcast('chore_state', { child })
+  broadcast('chore_state', { child }, req.familyId)
   res.json({ success: true })
 })
 
@@ -281,7 +281,7 @@ router.patch('/events/:eventId', requireParent, async (req, res) => {
     [status, req.params.eventId, req.familyId]
   )
   if (!rows.length) return res.status(404).json({ error: 'Event not found' })
-  broadcast('chore_state', { child: rows[0].child })
+  broadcast('chore_state', { child: rows[0].child }, req.familyId)
   res.json({ success: true })
 })
 
@@ -294,7 +294,7 @@ router.delete('/events/:eventId', requireParent, async (req, res) => {
     [req.params.eventId, req.familyId]
   )
   if (!rows.length) return res.status(404).json({ error: 'Event not found' })
-  broadcast('chore_state', { child: rows[0].child })
+  broadcast('chore_state', { child: rows[0].child }, req.familyId)
   res.json({ success: true })
 })
 

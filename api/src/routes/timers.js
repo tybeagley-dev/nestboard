@@ -93,8 +93,8 @@ router.post('/:child/start', async (req, res) => {
     const newPurchased = purchased - purchToDeduct
     const newFreeAvail = freeAvail - freeToDeduct
     const newBalance   = newPurchased + newFreeAvail
-    broadcast('screen_time', { child: childName, balance: newBalance })
-    broadcast('timers', { child: childName })
+    broadcast('screen_time', { child: childName, balance: newBalance }, req.familyId)
+    broadcast('timers', { child: childName }, req.familyId)
     res.json({ success: true, deducted: totalToDeduct, newBalance, endTime })
   } catch (err) {
     await client.query('ROLLBACK')
@@ -152,7 +152,7 @@ router.post('/:child/stop', async (req, res) => {
            WHERE family_id = $3 AND child_id = $4`,
           [freeRefund, purchRefund, req.familyId, childId]
         )
-        broadcast('screen_time', { child: childName })
+        broadcast('screen_time', { child: childName }, req.familyId)
       }
     }
   }
@@ -161,7 +161,7 @@ router.post('/:child/stop', async (req, res) => {
     `DELETE FROM timers WHERE family_id = $1 AND child_id = $2`,
     [req.familyId, childId]
   )
-  broadcast('timers', { child: childName })
+  broadcast('timers', { child: childName }, req.familyId)
   res.json({ success: true })
 })
 
@@ -182,8 +182,8 @@ export function startExpiryJob() {
           `DELETE FROM timers WHERE family_id = $1 AND child_id = $2`,
           [family_id, child_id]
         )
-        broadcast('timers', { child })
-        broadcast('screen_time', { child })
+        broadcast('timers', { child }, family_id)
+        broadcast('screen_time', { child }, family_id)
       }
     } catch (err) {
       console.error('Timer expiry job error:', err.message)

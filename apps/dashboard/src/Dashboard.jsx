@@ -15,13 +15,18 @@ import { useClock } from './hooks/useClock'
 import { useWeather } from './hooks/useWeather'
 import { useChildren } from './hooks/useChildren'
 import { useScheduleConfig } from './hooks/useRoutines'
+import { useLiveSync } from './hooks/useLiveSync'
+import { useFamily } from './FamilyContext'
 import { unlockAudio } from './utils/chime'
 
 export default function Dashboard() {
   const now     = useClock()
   const weather = useWeather()
+  const family  = useFamily()
   const { children } = useChildren()
   const { scheduleConfig } = useScheduleConfig()
+
+  useLiveSync(family?.slug)
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has('clearcache')) {

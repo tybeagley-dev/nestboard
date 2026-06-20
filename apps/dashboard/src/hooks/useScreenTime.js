@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CONFIG } from '../config/config'
 import { apiGet, apiPost } from '../utils/api'
+import { useSseRefetch } from './useLiveSync'
 
 const POLL_MS = 20 * 1000
 
@@ -34,6 +35,10 @@ export function useScreenBalance(childName) {
     window.addEventListener('fam_balance_update', sync)
     return () => window.removeEventListener('fam_balance_update', sync)
   }, [sync])
+
+  // Instant cross-device balance updates (purchase approved / timer run elsewhere)
+  useSseRefetch('screen_time', sync)
+  useSseRefetch('timers', sync)
 
   const addMinutes = useCallback((minutes) => {
     setBalance(prev => Math.max(0, prev + minutes))

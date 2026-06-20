@@ -1,14 +1,18 @@
 import { useState, useEffect, useCallback } from 'react'
 import { apiGet, apiPost, apiDelete } from '../utils/api'
+import { useSseRefetch } from './useLiveSync'
 
 export function useAnnouncements() {
   const [announcements, setAnnouncements] = useState([])
 
-  useEffect(() => {
+  const load = useCallback(() => {
     apiGet('/announcements').then(data => {
       if (Array.isArray(data)) setAnnouncements(data)
     })
   }, [])
+
+  useEffect(() => { load() }, [load])
+  useSseRefetch('announcements', load)
 
   const addAnnouncement = useCallback((text) => {
     const id   = 'a' + Date.now()

@@ -40,7 +40,7 @@ router.post('/:child/adjust', requireParent, async (req, res) => {
     `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, $4)`,
     [req.familyId, childId, delta, type ?? 'adjustment']
   )
-  broadcast('tokens', { child: childName, balance: rows[0].balance })
+  broadcast('tokens', { child: childName, balance: rows[0].balance }, req.familyId)
   res.json({ success: true, balance: rows[0].balance })
 })
 

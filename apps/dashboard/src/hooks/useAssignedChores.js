@@ -202,10 +202,12 @@ export function useAssignedChores(childName, chores = []) {
     const poll    = setInterval(hydrate, POLL_MS)
     const onForce = () => hydrate()
     window.addEventListener(REFETCH_EVENT, onForce)
+    window.addEventListener('sse:chore_state', onForce) // instant cross-device sync
 
     return () => {
       clearInterval(poll)
       window.removeEventListener(REFETCH_EVENT, onForce)
+      window.removeEventListener('sse:chore_state', onForce)
     }
   }, [childName, chores.length]) // eslint-disable-line react-hooks/exhaustive-deps
 
