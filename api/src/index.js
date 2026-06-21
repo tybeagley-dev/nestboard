@@ -85,7 +85,8 @@ process.on('unhandledRejection', reason => console.error('Unhandled rejection:',
 process.on('uncaughtException',  err    => console.error('Uncaught exception:', err?.message ?? err))
 
 const PORT = process.env.PORT ?? 3001
-app.listen(PORT, () => console.log(`nestboard API running on port ${PORT}`))
+const adminCount = (process.env.ADMIN_USER_IDS ?? '').split(',').filter(s => s.trim()).length
+app.listen(PORT, () => console.log(`nestboard API running on port ${PORT} (${adminCount} admin id${adminCount === 1 ? '' : 's'})`))
 
 startExpiryJob()
 startAbstinenceJob()
