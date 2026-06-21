@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useChorePoints } from '../hooks/useChores'
 import { useScreenBalance } from '../hooks/useScreenTime'
 import { useLabels } from '../FamilyContext'
+import TabGuide from './TabGuide'
 import TokenBadge from './TokenBadge'
 import ChildIcon from './ChildIcon'
 
@@ -95,8 +96,16 @@ function ChildRow({ child }) {
 }
 
 export default function ParentTokensTab({ children = [] }) {
+  const labels = useLabels()
   return (
     <div className="parent-tokens-tab">
+      <TabGuide summary="How tokens & time work">
+        <p className="onboarding-guide-text">
+          A manual ledger for each kid — nudge their {labels.tokenName} or screen-time minutes up or
+          down by hand. Handy for one-off bonuses, corrections, or rewards that happen outside the
+          normal chore flow.
+        </p>
+      </TabGuide>
       {children.map(child => (
         <ChildRow key={child.name} child={child} />
       ))}

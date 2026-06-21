@@ -6,6 +6,7 @@ import {
   adminUpdateAssignment, adminAddManualAssignment, adminDeleteAssignment,
 } from '../hooks/useZone'
 import ChildIcon from './ChildIcon'
+import TabGuide from './TabGuide'
 import { apiGet } from '../utils/api'
 import { getTodayKey } from '../utils/dateUtils'
 
@@ -404,6 +405,24 @@ export default function ParentZonesTab({ children }) {
 
   return (
     <div className="parent-routines-tab">
+      <TabGuide summary="How zones work">
+        <p className="onboarding-guide-text">
+          Zones are the areas of your home — kitchen, bathroom, entryway. Each zone holds
+          a few <strong>micro-zones</strong>: small, specific weekly jobs like “wipe the counter”
+          or “hang up the coats.”
+        </p>
+        <p className="onboarding-guide-text">
+          Each week, every kid is <strong>automatically given</strong> one micro-zone. It shows on
+          their card and gets a light check-in morning, midday, and evening. The point isn’t another
+          chore — it’s building the habit of <em>noticing</em> what needs doing and handling it
+          without being asked.
+        </p>
+        <p className="onboarding-guide-text">
+          Open <strong>This Week</strong> to see who got what and swap anyone’s assignment if you’d
+          like, and <strong>Zone Definitions</strong> to add zones and their micro-zones.
+        </p>
+      </TabGuide>
+
       <div className="parent-child-tabs" style={{ marginBottom: 12 }}>
         <button className={`parent-child-tab ${view === 'week' ? 'active' : ''}`} onClick={() => setView('week')}>This Week</button>
         <button className={`parent-child-tab ${view === 'defs' ? 'active' : ''}`} onClick={() => setView('defs')}>Zone Definitions</button>

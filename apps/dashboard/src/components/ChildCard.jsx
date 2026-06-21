@@ -125,7 +125,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
         <div className="child-meta">
           <h3 className="child-name">{child.name}</h3>
           <span className="child-progress-text">
-            {isLoading ? 'Syncing…' : allDone ? 'All done! ✓' : `${done} of ${total}`}
+            {isLoading ? 'Syncing…' : total === 0 ? 'Nothing assigned yet' : allDone ? 'All done! ✓' : `${done} of ${total}`}
           </span>
         </div>
 

@@ -5503,6 +5503,21 @@ button {
   background: var(--surface-2);
 }
 
+.onboarding-guide-figure--img {
+  min-height: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  padding: 4px;
+  max-width: 360px;
+}
+
+.onboarding-guide-figure--img img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 7px;
+}
+
 /* ── Calendar guide (shared: onboarding + parent Calendar tab) ───────────────── */
 .calendar-guide {
   background: var(--bg);
@@ -5531,6 +5546,11 @@ button {
   gap: 1.25rem;
   margin-top: 1rem;
 }
+
+/* Prose-only guides (zones, chores) — tighter paragraph rhythm than the
+   stepped calendar guide. */
+.tab-guide .calendar-guide-body { gap: 0.6rem; }
+.tab-guide .onboarding-guide-text { margin: 0; line-height: 1.5; }
 .calendar-guide-heading {
   font-weight: 700;
   font-size: 0.95rem;

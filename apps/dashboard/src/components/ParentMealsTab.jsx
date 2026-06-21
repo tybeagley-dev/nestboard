@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useMeals } from '../hooks/useMeals'
 import { useAnnouncements } from '../hooks/useAnnouncements'
+import TabGuide from './TabGuide'
 
 const DAY_SHORT = { Sunday: 'Sun', Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat' }
 
@@ -45,6 +46,13 @@ export default function ParentMealsTab() {
 
   return (
     <div className="parent-meals-tab">
+
+      <TabGuide summary="How the meal plan works">
+        <p className="onboarding-guide-text">
+          Set each day’s dinner — plus a lunch line for summer days — and it shows on the dashboard
+          so everyone knows what’s for dinner. Family notes you add below appear on the dashboard too.
+        </p>
+      </TabGuide>
 
       {/* ── Meal Plan ── */}
       <p className="parent-section-label" style={{ marginBottom: 8 }}>MEAL PLAN</p>

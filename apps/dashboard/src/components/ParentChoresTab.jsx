@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminGetAllChores, adminAddChore, adminEditChore, adminDeleteChore } from '../hooks/useChores'
 import ChildIcon from './ChildIcon'
+import TabGuide from './TabGuide'
 import { apiGet, apiPost, apiDelete } from '../utils/api'
 import { unassignChore, triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { getTodayKey } from '../utils/dateUtils'
 import { useScheduleConfig } from '../hooks/useRoutines'
+import { useLabels } from '../FamilyContext'
 import TokenBadge from './TokenBadge'
 
 const WEEKDAYS = [
@@ -337,6 +339,7 @@ function TodayAssignments({ children }) {
 // ── Tab root ──────────────────────────────────────────────────────────────────
 
 export default function ParentChoresTab({ children = [] }) {
+  const labels = useLabels()
   const [chores,        setChores]        = useState([])
   const [loading,       setLoading]       = useState(true)
   const [form,          setForm]          = useState(null)
@@ -383,6 +386,22 @@ export default function ParentChoresTab({ children = [] }) {
 
   return (
     <div className="parent-chores-tab">
+      <TabGuide summary="How chores & tokens work">
+        <p className="onboarding-guide-text">
+          Add chores here, then kids spin the <strong>chore spinner</strong> on their card to get
+          assigned one. Finishing a chore earns {labels.tokenName}, which cash in at the {labels.rewardsName}.
+        </p>
+        <p className="onboarding-guide-text">
+          <strong>Spin days</strong> control which days the spinner is live — set it to weekdays only,
+          weekends, or whatever fits. <strong>Sub-tasks</strong> break a multi-part chore into a
+          checklist so nothing gets missed.
+        </p>
+        <p className="onboarding-guide-text">
+          Most chores are worth 1 {labels.tokenNameSingular}. Bump a tougher or longer one to 2 when
+          you add or edit it.
+        </p>
+      </TabGuide>
+
       <TodayAssignments children={children} />
 
       <SpinDaysPicker />

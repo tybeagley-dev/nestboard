@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminGetAllRewards, adminAddReward, adminEditReward, adminDeleteReward, usePurchases, redeemPurchase, buyReward } from '../hooks/useRewards'
+import { useLabels } from '../FamilyContext'
+import TabGuide from './TabGuide'
 import TokenBadge from './TokenBadge'
 
 function emptyItem() {
@@ -264,6 +266,7 @@ function PendingRedemptions({ items, children }) {
 // ── Tab root ──────────────────────────────────────────────────────────────────
 
 export default function ParentRewardsTab({ children = [] }) {
+  const labels = useLabels()
   const [items,         setItems]         = useState([])
   const [loading,       setLoading]       = useState(true)
   const [form,          setForm]          = useState(null)
@@ -311,6 +314,14 @@ export default function ParentRewardsTab({ children = [] }) {
 
   return (
     <div className="parent-chores-tab">
+      <TabGuide summary={`How the ${labels.rewardsName} works`}>
+        <p className="onboarding-guide-text">
+          The {labels.rewardsName} is what kids spend {labels.tokenName} on. Add the rewards you’ll
+          offer and set each one’s cost; they show up for kids to redeem from their card. Flag a
+          reward as needing approval if you want the final say before it’s cashed in.
+        </p>
+      </TabGuide>
+
       <div className="store-section-toggle">
         <button
           className={section === 'store' ? 'active' : ''}

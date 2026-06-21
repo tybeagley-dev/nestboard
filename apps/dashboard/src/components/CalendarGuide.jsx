@@ -1,10 +1,14 @@
+import { useState } from 'react'
+
 // Shared coaching for the buried "iCal / Secret address" calendar link, shown
 // both in onboarding (expanded) and the parent Calendar tab (collapsed — it's an
 // infrequent flow people forget). Google steps carry `figure` screenshot slots;
-// drop an image at the matching /onboarding path to replace the placeholder.
+// each maps to /onboarding/<figure>.png in public/. Missing image → dashed
+// placeholder fallback, so the guide is safe to ship before the assets land.
 const GOOGLE = [
   { text: 'On a computer, open Google Calendar (calendar.google.com) — it’s the same Google account as your Gmail.' },
-  { text: 'In the left sidebar, hover the calendar you want, click its ⋮ menu, and choose “Settings and sharing.”', figure: 'calendar-settings' },
+  { text: 'In the left sidebar, hover the calendar you want and click its ⋮ menu.', figure: 'calendar-kebab' },
+  { text: 'Choose “Settings and sharing.”', figure: 'calendar-settings' },
   { text: 'Scroll down to the “Integrate calendar” section.', figure: 'calendar-integrate' },
   { text: 'Copy the “Secret address in iCal format” — the long link ending in .ics. (Secret = keep it private; anyone with it can see your events.)', figure: 'calendar-ical' },
   { text: 'Add a calendar below and paste that link into the iCal URL field.' },
@@ -19,17 +23,25 @@ const APPLE = [
   { text: 'Tap “Share Link” and copy it — it starts with webcal://. Paste it below exactly as-is; we’ll handle the rest.' },
 ]
 
+function Figure({ slot, alt }) {
+  const [failed, setFailed] = useState(false)
+  if (failed) {
+    return <div className="onboarding-guide-figure" data-slot={slot}>screenshot: {slot}</div>
+  }
+  return (
+    <div className="onboarding-guide-figure onboarding-guide-figure--img">
+      <img src={`/onboarding/${slot}.png`} alt={alt} onError={() => setFailed(true)} />
+    </div>
+  )
+}
+
 function Steps({ steps }) {
   return (
     <ol className="onboarding-guide-steps">
       {steps.map((g, i) => (
         <li key={i}>
           <span className="onboarding-guide-text">{g.text}</span>
-          {g.figure && (
-            <div className="onboarding-guide-figure" data-slot={g.figure}>
-              screenshot: {g.figure}
-            </div>
-          )}
+          {g.figure && <Figure slot={g.figure} alt={g.text} />}
         </li>
       ))}
     </ol>

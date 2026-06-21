@@ -13,14 +13,14 @@ import ParentChoresTab from './components/ParentChoresTab'
 import ParentMealsTab from './components/ParentMealsTab'
 
 const STEPS = [
-  { key: 'children', title: 'Add your kids',     optional: false, blurb: 'Who lives here? Add each child — everything else builds on this.' },
-  { key: 'routines', title: 'Daily routines',    optional: true,  blurb: 'Morning and evening habits, per child.' },
-  { key: 'zones',    title: 'Zones',             optional: true,  blurb: 'Build a "notice-and-do" habit with bite-sized weekly responsibilities.' },
-  { key: 'chores',   title: 'Chores & tokens',   optional: true,  blurb: 'Set up the chore spinner, the token economy, and which days chores can be spun.' },
-  { key: 'meals',     title: 'Meal plan',         optional: true,  blurb: 'Optional — a weekly dinner plan on the dashboard.' },
-  { key: 'calendars', title: 'Connect calendars', optional: true,  blurb: 'Pull in Google Calendars so family events show on the dashboard.' },
+  { key: 'children', title: 'Add your kids',     optional: false, blurb: 'Who lives here? Add each child, give them an icon and a color, or let them pick their own.' },
+  { key: 'routines', title: 'Daily routines',    optional: true,  blurb: 'Routines that follow your family’s seasons — school days, weekends, summer, holidays — and switch on their own. Set morning and evening habits per child.' },
+  { key: 'zones',    title: 'Zones',             optional: true,  blurb: 'Bite-sized weekly responsibilities, one per kid. The goal: they start noticing small things that need doing and do them on their own, without being asked. We call these "notice-and-do’s."' },
+  { key: 'chores',   title: 'Chores & tokens',   optional: true,  blurb: 'Set up the chore spinner, the token economy, and which days chores can be spun. Break a big chore into sub-tasks so nothing gets missed, and bump tougher ones to 2 tokens (default is 1).' },
+  { key: 'meals',     title: 'Meal plan',         optional: true,  blurb: 'Show a weekly meal plan on the dashboard.' },
+  { key: 'calendars', title: 'Connect calendars', optional: true,  blurb: 'Pull in your calendars so family events show on the dashboard.' },
   { key: 'weather',   title: 'Local weather',     optional: true,  blurb: 'Show your city’s forecast on the dashboard.' },
-  { key: 'labels',    title: 'Name your rewards', optional: true,  blurb: 'Want custom names? Otherwise we’ll use "Tokens" and "Rewards Store."' },
+  { key: 'labels',    title: 'Name your rewards', optional: true,  blurb: 'Want your own name for the token economy? We call ours "Beagley Bucks." Otherwise we’ll use "Token," "Tokens," and "Rewards Store."' },
   { key: 'done',      title: 'You’re all set',    optional: false, blurb: 'A few finishing touches, then you’re off.' },
 ]
 
