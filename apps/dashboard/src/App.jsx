@@ -21,9 +21,12 @@ function AuthGate({ children }) {
   if (!isLoaded) return null
 
   if (!isSignedIn) {
+    // Return to the current path after auth (e.g. /join/<token>), not Clerk's
+    // default "/", so an invite link survives the sign-in/up redirect.
+    const redirect = window.location.pathname + window.location.search
     return (
       <div className="clerk-signin-wrap">
-        <SignIn routing="hash" />
+        <SignIn routing="hash" forceRedirectUrl={redirect} signUpForceRedirectUrl={redirect} />
       </div>
     )
   }
