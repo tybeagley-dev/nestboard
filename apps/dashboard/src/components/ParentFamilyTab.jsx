@@ -36,7 +36,7 @@ export default function ParentFamilyTab() {
             </button>
           </div>
           <p className="family-code-hint">
-            A fallback way to join: share this code and your parent PIN, and they enter both on the sign-in screen. For a private, PIN-free join, use an invite link below.
+            A fallback way to join: share this code and your parent PIN, and they enter both on the sign-in screen. The easier path is an invite link below.
           </p>
         </div>
       </div>

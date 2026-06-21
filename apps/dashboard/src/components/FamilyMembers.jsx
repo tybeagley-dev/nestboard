@@ -66,7 +66,7 @@ export default function FamilyMembers() {
         <div className="family-code-section">
           <span className="family-code-label">Invite a parent</span>
           <p className="family-code-hint">
-            Send a private link — no need to share your PIN. Links are single-use and expire in 7 days.
+            Send a private link to add another parent — they join in one tap, no family code to type. Single-use, expires in 7 days. (They'll use the family PIN as the adult unlock, same as you.)
           </p>
           <button className="parent-apply-btn" onClick={createInvite} disabled={creating}>
             {creating ? 'Creating…' : '+ Create invite link'}
