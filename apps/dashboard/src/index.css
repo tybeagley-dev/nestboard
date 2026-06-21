@@ -4959,6 +4959,39 @@ button {
   white-space: nowrap;
 }
 
+/* ── Admin ──────────────────────────────────────────────────────────────────── */
+.admin-page {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+.admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; }
+.admin-title { font-size: 1.4rem; font-weight: 700; margin: 0; color: var(--text-primary); }
+.admin-btn {
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.admin-btn-sm { padding: 0.3rem 0.7rem; font-size: 0.78rem; }
+.admin-btn-danger { border-color: #c0392b; color: #fff; background: #c0392b; }
+.admin-btn-danger:disabled { opacity: 0.5; cursor: not-allowed; }
+.admin-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.admin-table th, .admin-table td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--border-light); }
+.admin-table th { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-secondary); }
+.admin-table code { font-size: 0.8rem; color: var(--text-secondary); }
+.admin-detail { align-items: stretch; text-align: left; }
+.admin-detail-title { margin: 0; font-size: 1.2rem; font-weight: 700; }
+.admin-detail-sub { margin: 0.2rem 0 0.5rem; font-size: 0.82rem; color: var(--text-muted); }
+.admin-section-title { font-size: 0.95rem; font-weight: 700; margin: 1rem 0 0.4rem; }
+.admin-danger { color: #c0392b; }
+.admin-delete-row { display: flex; gap: 8px; }
+.admin-delete-row .chore-form-input { flex: 1; }
+
 /* ── Family Setup ───────────────────────────────────────────────────────────── */
 
 .family-setup-wrap {

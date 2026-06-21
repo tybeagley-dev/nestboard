@@ -22,6 +22,7 @@ import childrenRoutes from './routes/children.js'
 import zoneRoutes from './routes/zones.js'
 import pushRoutes from './routes/push.js'
 import scheduleRoutes from './routes/schedule.js'
+import adminRoutes from './routes/admin.js'
 
 const app = express()
 
@@ -69,6 +70,7 @@ app.use('/children',      childrenRoutes)
 app.use('/zones',         zoneRoutes)
 app.use('/push',          pushRoutes)
 app.use('/schedule',      scheduleRoutes)
+app.use('/admin',         adminRoutes)
 
 // Global error handler — any error surfaced to Express returns JSON instead of hanging.
 app.use((err, req, res, next) => {

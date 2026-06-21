@@ -7,6 +7,7 @@ import ParentPage from './ParentPage'
 import ChildView from './ChildView'
 import FamilySetup from './FamilySetup'
 import JoinInvite from './JoinInvite'
+import AdminPage from './AdminPage'
 import OnboardingWizard from './OnboardingWizard'
 import { FamilyProvider } from './FamilyContext'
 
@@ -64,6 +65,7 @@ export default function App() {
     <Routes>
       <Route path="/:slug/child/:childId" element={<ChildView />} />
       <Route path="/join/:token" element={<AuthGate><JoinInvite /></AuthGate>} />
+      <Route path="/admin" element={<AuthGate><AdminPage /></AuthGate>} />
       <Route
         path="*"
         element={
