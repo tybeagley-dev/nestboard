@@ -16,13 +16,14 @@ import { useWeather } from './hooks/useWeather'
 import { useChildren } from './hooks/useChildren'
 import { useScheduleConfig } from './hooks/useRoutines'
 import { useLiveSync } from './hooks/useLiveSync'
-import { useFamily } from './FamilyContext'
+import { useFamily, useSettings } from './FamilyContext'
 import { unlockAudio } from './utils/chime'
 
 export default function Dashboard() {
   const now     = useClock()
   const weather = useWeather()
   const family  = useFamily()
+  const { modules } = useSettings()
   const { children } = useChildren()
   const { scheduleConfig } = useScheduleConfig()
 
@@ -77,7 +78,7 @@ export default function Dashboard() {
         />
         <div className="center-stack">
           <WeatherCard weather={weather} />
-          <MealPlan now={now} scheduleConfig={scheduleConfig} />
+          {modules.meals && <MealPlan now={now} scheduleConfig={scheduleConfig} />}
         </div>
         <Calendar now={now} onExpand={() => setShowCalendar(true)} />
       </div>

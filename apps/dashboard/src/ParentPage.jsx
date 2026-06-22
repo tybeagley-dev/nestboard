@@ -15,6 +15,7 @@ import ParentCalendarTab from './components/ParentCalendarTab'
 import ParentNotificationsTab from './components/ParentNotificationsTab'
 import ParentFamilyTab from './components/ParentFamilyTab'
 import { useChildren } from './hooks/useChildren'
+import { useSettings } from './FamilyContext'
 
 const SESSION_KEY = 'parent_unlocked_at'
 const TIMEOUT_MS  = 3 * 60 * 1000
@@ -37,6 +38,7 @@ async function fetchPendingCount() {
 
 export default function ParentPage() {
   const navigate = useNavigate()
+  const { modules } = useSettings()
   const { children, reload: reloadChildren } = useChildren()
   const [unlocked, setUnlocked] = useState(isUnlocked)
   const [tab, setTab] = useState('approvals')
@@ -73,20 +75,21 @@ export default function ParentPage() {
     )
   }
 
+  // `show: false` hides a tab whose module is off. Core tabs have no gate.
   const TABS = [
     { id: 'approvals', label: 'Approvals', badge: pendingCount },
-    { id: 'tokens',     label: 'Tokens & Time' },
+    { id: 'tokens',     label: 'Tokens & Time', show: modules.tokens || modules.screenTime },
     { id: 'chores',    label: 'Chores'       },
     { id: 'routines',  label: 'Routines'     },
-    { id: 'zones',     label: 'Zones'        },
-    { id: 'meals',     label: 'Meals'        },
-    { id: 'store',     label: 'Rewards'    },
-    { id: 'grocery',   label: 'Grocery'      },
+    { id: 'zones',     label: 'Zones',  show: modules.zones },
+    { id: 'meals',     label: 'Meals',  show: modules.meals },
+    { id: 'store',     label: 'Rewards', show: modules.tokens },
+    { id: 'grocery',   label: 'Grocery', show: modules.grocery },
     { id: 'children',  label: 'Children'     },
     { id: 'calendars',     label: 'Calendars'      },
     { id: 'notifications', label: 'Notifications'  },
     { id: 'family',        label: 'Family'         },
-  ]
+  ].filter(t => t.show !== false)
 
   return (
     <div className="parent-page">

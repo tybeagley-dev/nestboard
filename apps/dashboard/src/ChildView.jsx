@@ -9,6 +9,7 @@ import { useRoutines, useScheduleConfig } from './hooks/useRoutines'
 import { useChores, useChorePoints } from './hooks/useChores'
 import { useAssignedChores, markChoreAsPending, submitApprovalRequest, triggerChoreRefetch } from './hooks/useAssignedChores'
 import { useScreenBalance } from './hooks/useScreenTime'
+import { useFamilySettings } from './hooks/useFamilySettings'
 import { useCalendarEvents } from './hooks/useCalendarEvents'
 import { useGroceryList } from './hooks/useGroceryList'
 import { useWeather } from './hooks/useWeather'
@@ -74,6 +75,7 @@ export default function ChildView() {
   const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child?.name ?? '', chores)
   const { balance }  = useScreenBalance(child?.name ?? '')
   const { tokens }    = useChorePoints(child?.name ?? '')
+  const { modules }   = useFamilySettings()
 
   const [showChoreModal,  setShowChoreModal]  = useState(false)
   const [showUpcoming,    setShowUpcoming]    = useState(false)
@@ -128,16 +130,22 @@ export default function ChildView() {
       </div>
 
       {/* Balance pills */}
-      <div className="child-view-balances">
-        <div className="child-view-balance-pill">
-          <Monitor size={16} strokeWidth={1.8} />
-          <span>{balance} min</span>
+      {(modules.screenTime || modules.tokens) && (
+        <div className="child-view-balances">
+          {modules.screenTime && (
+            <div className="child-view-balance-pill">
+              <Monitor size={16} strokeWidth={1.8} />
+              <span>{balance} min</span>
+            </div>
+          )}
+          {modules.tokens && (
+            <div className="child-view-balance-pill">
+              <Coins size={16} strokeWidth={1.8} />
+              <span>{tokens} tokens</span>
+            </div>
+          )}
         </div>
-        <div className="child-view-balance-pill">
-          <Coins size={16} strokeWidth={1.8} />
-          <span>{tokens} tokens</span>
-        </div>
-      </div>
+      )}
 
       {/* Routines + chores */}
       <div className="child-view-section">
@@ -180,14 +188,16 @@ export default function ChildView() {
       {/* Info cards */}
       <div className="child-view-section">
         <WeatherCard weather={weather} />
-        <MealPlan now={now} scheduleConfig={scheduleConfig} />
+        {modules.meals && <MealPlan now={now} scheduleConfig={scheduleConfig} />}
       </div>
 
       {/* Grocery */}
-      <div className="child-view-section">
-        <div className="child-view-section-title">Grocery List</div>
-        <GroceryAdd addItem={addItem} />
-      </div>
+      {modules.grocery && (
+        <div className="child-view-section">
+          <div className="child-view-section-title">Grocery List</div>
+          <GroceryAdd addItem={addItem} />
+        </div>
+      )}
 
       {/* Modals */}
       {showChoreModal && (

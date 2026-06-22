@@ -1,17 +1,18 @@
 import { useState, useEffect } from 'react'
 import { useScreenBalance, startChildTimer } from '../hooks/useScreenTime'
 import { useChorePoints } from '../hooks/useChores'
-import { useLabels } from '../FamilyContext'
+import { useLabels, useSettings } from '../FamilyContext'
 import TokenBadge from './TokenBadge'
 import ChildIcon from './ChildIcon'
 import { apiGet, apiPost } from '../utils/api'
 
-const PHASE          = { VIEW: 'view', BUY: 'buy' }
-const TOKENS_PER_STEP = 5    // tokens per 10-minute increment
-const MINS_PER_STEP  = 10   // minutes per stepper step
+const PHASE = { VIEW: 'view', BUY: 'buy' }
 
 export default function ScreenTimeModal({ child, onClose }) {
   const labels = useLabels()
+  const { screenTime } = useSettings()
+  const TOKENS_PER_STEP = screenTime.tokensPerBlock  // tokens per block
+  const MINS_PER_STEP   = screenTime.blockMinutes    // minutes per stepper step
   const { balance, purchasedBalance, dailyFreeAvailable } = useScreenBalance(child.name)
   const { tokens } = useChorePoints(child.name)
   const [phase,          setPhase]          = useState(PHASE.VIEW)

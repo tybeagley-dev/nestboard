@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useChorePoints } from '../hooks/useChores'
 import { useScreenBalance } from '../hooks/useScreenTime'
-import { useLabels } from '../FamilyContext'
+import { useLabels, useSettings } from '../FamilyContext'
 import TabGuide from './TabGuide'
 import TokenBadge from './TokenBadge'
 import ChildIcon from './ChildIcon'
@@ -10,6 +10,7 @@ const TIME_PRESETS = [-30, -15, +15, +30]
 
 function ChildRow({ child }) {
   const labels = useLabels()
+  const { modules } = useSettings()
   const { tokens, adjustTokens }  = useChorePoints(child.name)
   const { balance, purchasedBalance, addMinutes } = useScreenBalance(child.name)
   const [tokenDelta, setTokenDelta] = useState(0)
@@ -51,6 +52,7 @@ function ChildRow({ child }) {
       </div>
 
       {/* Tokens */}
+      {modules.tokens && (
       <div className="parent-section">
         <div className="parent-section-row">
           <span className="parent-section-label">{labels.tokenName}</span>
@@ -69,8 +71,10 @@ function ChildRow({ child }) {
           </button>
         </div>
       </div>
+      )}
 
       {/* Screen Time */}
+      {modules.screenTime && (
       <div className="parent-section">
         <div className="parent-section-row">
           <span className="parent-section-label">Screen Time</span>
@@ -91,6 +95,7 @@ function ChildRow({ child }) {
           ))}
         </div>
       </div>
+      )}
     </div>
   )
 }

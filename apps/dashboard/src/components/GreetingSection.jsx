@@ -1,9 +1,10 @@
 import { formatDate, formatTime, getGreeting } from '../utils/dateUtils'
 import { CONFIG } from '../config/config'
-import { useFamily } from '../FamilyContext'
+import { useFamily, useSettings } from '../FamilyContext'
 
 export default function GreetingSection({ now, onGrocery }) {
   const family = useFamily()
+  const { modules } = useSettings()
   return (
     <div className="greeting-section">
       <div className="greeting-body">
@@ -16,11 +17,13 @@ export default function GreetingSection({ now, onGrocery }) {
           <span className="greeting-date">{formatDate(now)}</span>
         </div>
       </div>
-      <div className="greeting-pills">
-        <button className="greeting-pill grocery-pill" onClick={onGrocery}>
-          grocery list
-        </button>
-      </div>
+      {modules.grocery && (
+        <div className="greeting-pills">
+          <button className="greeting-pill grocery-pill" onClick={onGrocery}>
+            grocery list
+          </button>
+        </div>
+      )}
     </div>
   )
 }

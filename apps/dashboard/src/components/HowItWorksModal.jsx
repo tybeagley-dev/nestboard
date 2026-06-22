@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { CheckCircle, Coins, Monitor, Timer, ShoppingCart, CalendarDays } from 'lucide-react'
-import { useLabels } from '../FamilyContext'
+import { useLabels, useSettings } from '../FamilyContext'
 
 // Draft copy — tune the voice later. Covers the *interactive* dashboard surfaces
 // that don't fit the parent onboarding wizard (timers, grocery, checking off,
@@ -20,7 +20,11 @@ function Section({ icon, title, children }) {
 
 export default function HowItWorksModal({ onClose }) {
   const labels = useLabels()
+  const { modules } = useSettings()
   const tokens = labels.tokenName.toLowerCase()
+
+  // "Finishing chores is how they earn ___" — only name the rewards in play.
+  const earns = [modules.tokens && tokens, modules.screenTime && 'screen time'].filter(Boolean)
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -41,34 +45,40 @@ export default function HowItWorksModal({ onClose }) {
         <div className="howto-sections">
           <Section icon={<CheckCircle size={20} strokeWidth={1.8} />} title="Checking things off">
             Each kid's card lists their routines and chores for the day. Tap a row to check it
-            off — the progress bar fills as they go. The weekly <strong>zone</strong> gets a light
-            check-in morning, midday, and evening.
+            off — the progress bar fills as they go.
+            {modules.zones && <> The weekly <strong>zone</strong> gets a light check-in morning, midday, and evening.</>}
           </Section>
 
           <Section icon={<span className="howto-emoji">🎡</span>} title="Chore spinner">
             Tap <strong>chore spinner</strong> on a kid's card to spin for a chore from the pool.
-            Finishing chores is how they earn {tokens} and screen time.
+            {earns.length > 0 && ` Finishing chores is how they earn ${earns.join(' and ')}.`}
           </Section>
 
-          <Section icon={<Coins size={20} strokeWidth={1.8} />} title={labels.tokenName}>
-            The coins button on each card shows that kid's {tokens} balance. Tap it to open the
-            {' '}{labels.rewardsName.toLowerCase()} and trade {tokens} for rewards.
-          </Section>
+          {modules.tokens && (
+            <Section icon={<Coins size={20} strokeWidth={1.8} />} title={labels.tokenName}>
+              The coins button on each card shows that kid's {tokens} balance. Tap it to open the
+              {' '}{labels.rewardsName.toLowerCase()} and trade {tokens} for rewards.
+            </Section>
+          )}
 
-          <Section icon={<Monitor size={20} strokeWidth={1.8} />} title="Screen time">
-            The screen button shows earned minutes. Kids trade {tokens} for screen time (a parent
-            approves the request), then start a timer when they sit down.
-          </Section>
+          {modules.screenTime && (
+            <Section icon={<Monitor size={20} strokeWidth={1.8} />} title="Screen time">
+              The screen button shows earned minutes. Kids trade {tokens} for screen time (a parent
+              approves the request), then start a timer when they sit down.
+            </Section>
+          )}
 
           <Section icon={<Timer size={20} strokeWidth={1.8} />} title="Timers (top bar)">
             Up top: a 2-minute <strong>toothbrush</strong> timer, a <strong>reading</strong> timer,
             and a whole-family <strong>tidy</strong> timer (with optional music if a speaker is set up).
           </Section>
 
-          <Section icon={<ShoppingCart size={20} strokeWidth={1.8} />} title="Grocery list">
-            Tap the <strong>grocery list</strong> pill by the greeting to add anything the family
-            is out of — it shows up for whoever does the shopping.
-          </Section>
+          {modules.grocery && (
+            <Section icon={<ShoppingCart size={20} strokeWidth={1.8} />} title="Grocery list">
+              Tap the <strong>grocery list</strong> pill by the greeting to add anything the family
+              is out of — it shows up for whoever does the shopping.
+            </Section>
+          )}
 
           <Section icon={<CalendarDays size={20} strokeWidth={1.8} />} title="What's coming up">
             Tap <strong>upcoming</strong> on a kid's card for their next 7 days, or tap the

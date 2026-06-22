@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS families (
   labels           JSONB NOT NULL DEFAULT '{}',  -- per-family display names rendered over the generic core
   onboarded        BOOLEAN NOT NULL DEFAULT false, -- false until the setup wizard is completed
   weather          JSONB,                          -- { lat, lon, label } for the forecast; NULL = no weather pill
+  settings         JSONB NOT NULL DEFAULT '{}',     -- feature flags + screen-time tuning; defaults applied in code
   created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

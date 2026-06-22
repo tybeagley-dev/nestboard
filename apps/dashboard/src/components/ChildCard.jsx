@@ -10,7 +10,7 @@ import { useAssignedChores, markChoreAsPending, submitApprovalRequest, triggerCh
 import { recordChoreCompletion } from '../hooks/useChoreFrequency'
 import { startChimeLoop, stopChimeLoop } from '../utils/chime'
 import { CONFIG } from '../config/config'
-import { useLabels } from '../FamilyContext'
+import { useLabels, useSettings } from '../FamilyContext'
 import ZoneCard from './ZoneCard'
 
 const COOLDOWN_MESSAGES = [
@@ -46,6 +46,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
   const { balance } = useScreenBalance(child.name)
   const { tokens }   = useChorePoints(child.name)
   const labels = useLabels()
+  const { modules } = useSettings()
   const choreDay = isChoreDay(scheduleConfig)
 
   const isLoading = routinesLoading || choresLoading || assignedLoading
@@ -150,23 +151,27 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
             </div>
           )}
 
-          <button
-            className={`child-icon-btn ${balance > 0 ? 'has-balance' : ''}`}
-            onClick={onScreenTime}
-            title={balance > 0 ? `${balance} min screen time` : 'Screen Time'}
-          >
-            <Monitor size={16} strokeWidth={1.8} />
-            {balance > 0 && <span className="child-icon-badge">{balance}m</span>}
-          </button>
+          {modules.screenTime && (
+            <button
+              className={`child-icon-btn ${balance > 0 ? 'has-balance' : ''}`}
+              onClick={onScreenTime}
+              title={balance > 0 ? `${balance} min screen time` : 'Screen Time'}
+            >
+              <Monitor size={16} strokeWidth={1.8} />
+              {balance > 0 && <span className="child-icon-badge">{balance}m</span>}
+            </button>
+          )}
 
-          <button
-            className="child-icon-btn tokens-icon-btn"
-            onClick={onTokens}
-            title={`${tokens} ${labels.tokenName}`}
-          >
-            <Coins size={16} strokeWidth={1.8} />
-            {tokens > 0 && <span className="child-icon-badge">{tokens}</span>}
-          </button>
+          {modules.tokens && (
+            <button
+              className="child-icon-btn tokens-icon-btn"
+              onClick={onTokens}
+              title={`${tokens} ${labels.tokenName}`}
+            >
+              <Coins size={16} strokeWidth={1.8} />
+              {tokens > 0 && <span className="child-icon-badge">{tokens}</span>}
+            </button>
+          )}
 
           <div className="child-avatar" style={{ background: child.color }}>
             <ChildIcon name={child.icon} size={26} />
@@ -178,7 +183,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
         <div className="progress-fill" style={{ width: `${progress}%`, background: child.color }} />
       </div>
 
-      <ZoneCard child={child} now={now} />
+      {modules.zones && <ZoneCard child={child} now={now} />}
 
       {/* Routine list */}
       <div className="routine-list">

@@ -1,7 +1,10 @@
 import { useState, useEffect } from 'react'
-import { apiGet } from '../utils/api'
+import { apiGet, apiPut } from '../utils/api'
+import { resolveSettings } from '../FamilyContext'
 import WeatherLocationPicker from './WeatherLocationPicker'
 import FamilyMembers from './FamilyMembers'
+import StepFeatures from '../onboarding/StepFeatures'
+import StepLabels from '../onboarding/StepLabels'
 
 export default function ParentFamilyTab() {
   const [family,  setFamily]  = useState(null)
@@ -10,6 +13,16 @@ export default function ParentFamilyTab() {
   useEffect(() => {
     apiGet('/auth/family').then(data => { if (data?.id) setFamily(data) })
   }, [])
+
+  const settings = resolveSettings(family?.settings)
+  function saveSettings(partial) {
+    const next = {
+      modules:    { ...settings.modules,    ...(partial.modules ?? {}) },
+      screenTime: { ...settings.screenTime, ...(partial.screenTime ?? {}) },
+    }
+    setFamily(f => ({ ...f, settings: next }))
+    apiPut('/auth/family/settings', next)
+  }
 
   function handleCopy() {
     if (!family?.slug) return
@@ -42,6 +55,26 @@ export default function ParentFamilyTab() {
       </div>
 
       <FamilyMembers />
+
+      <div className="family-code-card">
+        <div className="family-code-section">
+          <span className="family-code-label">Features</span>
+          <StepFeatures
+            modules={settings.modules}
+            screenTime={settings.screenTime}
+            onChange={saveSettings}
+          />
+        </div>
+      </div>
+
+      {settings.modules.tokens && (
+        <div className="family-code-card">
+          <div className="family-code-section">
+            <span className="family-code-label">Token economy names</span>
+            <StepLabels />
+          </div>
+        </div>
+      )}
 
       <div className="family-code-card">
         <div className="family-code-section">

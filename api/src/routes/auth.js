@@ -64,7 +64,7 @@ router.get('/family', async (req, res) => {
       )
 
       const { rows } = await db.query(
-        `SELECT f.id, f.name, f.slug, f.labels, f.onboarded, f.weather FROM families f
+        `SELECT f.id, f.name, f.slug, f.labels, f.onboarded, f.weather, f.settings FROM families f
          JOIN family_memberships fm ON fm.family_id = f.id
          WHERE fm.user_id = $1`,
         [userId]
@@ -81,7 +81,7 @@ router.get('/family', async (req, res) => {
   const slug = req.headers['x-family-slug'] ?? process.env.DEFAULT_FAMILY_SLUG
   if (!slug) return res.status(401).json({ error: 'Unauthorized' })
   try {
-    const { rows } = await db.query('SELECT id, name, slug, labels, onboarded, weather FROM families WHERE slug = $1', [slug])
+    const { rows } = await db.query('SELECT id, name, slug, labels, onboarded, weather, settings FROM families WHERE slug = $1', [slug])
     res.json(rows[0] ?? null)
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -192,6 +192,51 @@ router.put('/family/weather', async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'No family' })
     await db.query('UPDATE families SET weather = $1 WHERE id = $2', [JSON.stringify(weather), rows[0].family_id])
     res.json({ success: true, weather })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// Keep only known keys/types so the column can't accumulate junk. Partial input
+// is fine — the endpoint merges onto existing settings (defaults live in the UI).
+function sanitizeSettings(body) {
+  const out = {}
+  const m = body?.modules
+  if (m && typeof m === 'object') {
+    out.modules = {}
+    for (const k of ['screenTime', 'tokens', 'zones', 'meals', 'grocery']) {
+      if (typeof m[k] === 'boolean') out.modules[k] = m[k]
+    }
+  }
+  const st = body?.screenTime
+  if (st && typeof st === 'object') {
+    out.screenTime = {}
+    for (const k of ['dailyAllotmentMinutes', 'tokensPerBlock', 'blockMinutes']) {
+      if (typeof st[k] === 'number' && st[k] >= 0) out.screenTime[k] = Math.floor(st[k])
+    }
+  }
+  return out
+}
+
+// PUT /auth/family/settings  { modules?, screenTime? } → merges onto existing settings
+router.put('/family/settings', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  const clean = sanitizeSettings(req.body ?? {})
+  try {
+    const { rows } = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
+    if (!rows.length) return res.status(404).json({ error: 'No family' })
+    const familyId = rows[0].family_id
+    const { rows: cur } = await db.query('SELECT settings FROM families WHERE id = $1', [familyId])
+    const existing = cur[0]?.settings ?? {}
+    const merged = {
+      ...existing,
+      ...clean,
+      modules:    { ...(existing.modules ?? {}),    ...(clean.modules ?? {}) },
+      screenTime: { ...(existing.screenTime ?? {}), ...(clean.screenTime ?? {}) },
+    }
+    await db.query('UPDATE families SET settings = $1 WHERE id = $2', [JSON.stringify(merged), familyId])
+    res.json({ success: true, settings: merged })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
   }

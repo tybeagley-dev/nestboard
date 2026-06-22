@@ -8,23 +8,35 @@ import { notifyParent, notifyChild } from '../utils/push.js'
 
 const router = Router()
 
-const DAILY_FREE_MINS  = 30
-const TOKENS_PER_10_MIN = 5   // 5 tokens buys 10 minutes
 const ABSTINENCE_TOKENS = 15
 
 router.use(requireFamily)
 
-function calcFreeAvailable(row) {
-  if (!row) return DAILY_FREE_MINS
+// Per-family screen-time tuning lives in families.settings.screenTime. Defaults
+// mirror the generic core (FamilyContext.useSettings): 0 free daily minutes
+// (opt-in), 5 tokens / 10 min. Beagley is backfilled to 30 via migration 022.
+async function getScreenTimeConfig(familyId) {
+  const { rows } = await db.query('SELECT settings FROM families WHERE id = $1', [familyId])
+  const st = rows[0]?.settings?.screenTime ?? {}
+  return {
+    dailyAllotmentMinutes: Number.isFinite(st.dailyAllotmentMinutes) ? st.dailyAllotmentMinutes : 0,
+    tokensPerBlock: Number.isFinite(st.tokensPerBlock) ? st.tokensPerBlock : 5,
+    blockMinutes:   Number.isFinite(st.blockMinutes) && st.blockMinutes > 0 ? st.blockMinutes : 10,
+  }
+}
+
+function calcFreeAvailable(row, allotment) {
+  if (!row) return allotment
   const today = new Date().toISOString().split('T')[0]
   const rowDate = row.daily_free_date instanceof Date
     ? row.daily_free_date.toISOString().split('T')[0]
     : String(row.daily_free_date)
-  return rowDate === today ? Math.max(0, DAILY_FREE_MINS - Number(row.daily_free_used)) : DAILY_FREE_MINS
+  return rowDate === today ? Math.max(0, allotment - Number(row.daily_free_used)) : allotment
 }
 
 // GET /screen-time
 router.get('/', async (req, res) => {
+  const { dailyAllotmentMinutes } = await getScreenTimeConfig(req.familyId)
   const { rows } = await db.query(
     `SELECT stb.family_id, stb.purchased_balance, stb.daily_free_used, stb.daily_free_date,
             stb.updated_at, ch.name AS child
@@ -35,7 +47,7 @@ router.get('/', async (req, res) => {
     [req.familyId]
   )
   const result = rows.map(row => {
-    const dailyFreeAvailable = calcFreeAvailable(row)
+    const dailyFreeAvailable = calcFreeAvailable(row, dailyAllotmentMinutes)
     return {
       family_id:           row.family_id,
       child:               row.child,
@@ -57,6 +69,8 @@ router.post('/:child/adjust', async (req, res) => {
   const childId = await resolveChildId(req.familyId, childName)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
+  const { dailyAllotmentMinutes } = await getScreenTimeConfig(req.familyId)
+
   const { rows } = await db.query(
     `INSERT INTO screen_time_balance (family_id, child_id, daily_free_used, daily_free_date)
      VALUES ($1, $2, GREATEST(0, LEAST($3, -$4::integer)), CURRENT_DATE)
@@ -69,9 +83,9 @@ router.post('/:child/adjust', async (req, res) => {
            daily_free_date = CURRENT_DATE,
            updated_at = NOW()
      RETURNING purchased_balance, daily_free_used, daily_free_date`,
-    [req.familyId, childId, DAILY_FREE_MINS, delta]
+    [req.familyId, childId, dailyAllotmentMinutes, delta]
   )
-  const free = calcFreeAvailable(rows[0])
+  const free = calcFreeAvailable(rows[0], dailyAllotmentMinutes)
   const balance = Number(rows[0].purchased_balance) + free
   broadcast('screen_time', { child: childName, balance }, req.familyId)
   res.json({ success: true, balance })
@@ -82,14 +96,16 @@ router.post('/:child/request-purchase', async (req, res) => {
   const { minutesAmount } = req.body
   const childName = req.params.child
 
-  if (!minutesAmount || isNaN(minutesAmount) || minutesAmount <= 0 || minutesAmount % 10 !== 0) {
-    return res.status(400).json({ error: 'minutesAmount must be a positive multiple of 10' })
+  const { tokensPerBlock, blockMinutes } = await getScreenTimeConfig(req.familyId)
+
+  if (!minutesAmount || isNaN(minutesAmount) || minutesAmount <= 0 || minutesAmount % blockMinutes !== 0) {
+    return res.status(400).json({ error: `minutesAmount must be a positive multiple of ${blockMinutes}` })
   }
 
   const childId = await resolveChildId(req.familyId, childName)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
-  const tokensAmount = (minutesAmount / 10) * TOKENS_PER_10_MIN
+  const tokensAmount = (minutesAmount / blockMinutes) * tokensPerBlock
 
   const { rows: tokenRows } = await db.query(
     `SELECT balance FROM token_balance WHERE family_id = $1 AND child_id = $2`,
