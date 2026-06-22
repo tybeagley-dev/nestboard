@@ -1,13 +1,18 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings } from 'lucide-react'
+import { Settings, HelpCircle } from 'lucide-react'
 import TidyTimerButton from './TidyTimerButton'
 import TidyTimerPill from './TidyTimerPill'
 import ReadingTimerButton from './ReadingTimerButton'
+import HowItWorksModal from './HowItWorksModal'
 import { useTidyTimer } from '../hooks/useTidyTimer'
 import { useToothbrushTimer } from '../hooks/useToothbrushTimer'
 import { useReadingTimer } from '../hooks/useReadingTimer'
 import { startChimeLoop, stopChimeLoop } from '../utils/chime'
+
+// Per-device (kiosk), not per-family: auto-open the guide once on the first
+// session after onboarding, then leave it to the '?' button.
+const HOWTO_SEEN_KEY = 'nestboard_howto_seen'
 
 function ToothbrushIcon({ size = 18 }) {
   return (
@@ -26,6 +31,14 @@ export default function FloatingControls() {
   const tidy     = useTidyTimer()
   const tooth    = useToothbrushTimer()
   const reading  = useReadingTimer()
+  const [showHowto, setShowHowto] = useState(false)
+
+  useEffect(() => {
+    if (!localStorage.getItem(HOWTO_SEEN_KEY)) {
+      setShowHowto(true)
+      localStorage.setItem(HOWTO_SEEN_KEY, '1')
+    }
+  }, [])
 
   useEffect(() => {
     if (tooth.expired) startChimeLoop()
@@ -91,9 +104,15 @@ export default function FloatingControls() {
         <TidyTimerButton onStart={(mins, castSession) => tidy.startTimer(mins, castSession)} />
       )}
 
+      <button className="timer-icon-btn" onClick={() => setShowHowto(true)} title="How it works" aria-label="How it works">
+        <HelpCircle size={18} strokeWidth={1.8} />
+      </button>
+
       <button className="timer-icon-btn settings-btn" onClick={() => navigate('/parent')} title="Parent Panel" aria-label="Parent Panel">
         <Settings size={18} strokeWidth={1.8} />
       </button>
+
+      {showHowto && <HowItWorksModal onClose={() => setShowHowto(false)} />}
     </div>
   )
 }

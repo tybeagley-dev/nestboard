@@ -11,8 +11,8 @@ export default function CalendarCard({ now, onExpand }) {
 
   return (
     <button className="info-card calendar-card" onClick={onExpand}>
-      <span className="info-card-label">Today's Events</span>
       <span className="calendar-card-date">{formatDate(now)}</span>
+      <span className="info-card-label">Today's Events</span>
 
       <div className="calendar-card-events">
         {todaysEvents.length === 0 ? (

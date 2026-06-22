@@ -116,7 +116,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
   return (
     <div
       className={`child-card ${allDone ? 'all-done' : ''}`}
-      style={{ '--child-color': child.color, background: `color-mix(in srgb, ${child.color} 22%, #F2EDE4)`, position: 'relative' }}
+      style={{ '--child-color': child.color, background: `color-mix(in srgb, ${child.color} 30%, #F2EDE4)`, position: 'relative' }}
     >
       <Confetti triggerKey={confettiKey} />
 

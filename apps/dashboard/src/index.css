@@ -3970,8 +3970,8 @@ button {
 
 .calendar-card-date {
   font-family: var(--font-display);
-  font-size: 18px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 700;
   color: white;
 }
 
@@ -4356,6 +4356,30 @@ button {
   color: var(--text-muted);
 }
 
+/* Day view */
+.cal-day-view {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  overflow-y: auto;
+  flex: 1;
+  padding: 2px;
+}
+
+.cal-day-event {
+  padding: 12px 14px;
+}
+
+.cal-day-event .cal-event-title { font-size: 14px; }
+.cal-day-event .cal-event-time  { font-size: 12px; }
+
+.cal-day-empty {
+  text-align: center;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 32px 0;
+}
+
 /* Month view */
 .cal-month-grid {
   display: grid;
@@ -4453,6 +4477,51 @@ button {
   font-style: italic;
   text-align: center;
   padding: 24px 0;
+}
+
+/* How it works guide */
+.howto-modal {
+  align-items: stretch;
+  gap: 18px;
+  width: min(560px, 92vw);
+}
+
+.howto-header { align-self: stretch; }
+.howto-header .modal-title { font-size: 24px; font-weight: 700; }
+
+.howto-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.howto-section {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.howto-section-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-warm);
+}
+
+.howto-emoji { font-size: 20px; line-height: 1; }
+
+.howto-section-body { display: flex; flex-direction: column; gap: 3px; }
+
+.howto-section-title {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 .upcoming-days {

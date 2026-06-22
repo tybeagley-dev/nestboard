@@ -2,6 +2,11 @@ import { useState, useMemo, useEffect } from 'react'
 import { useCalendarEvents, useCalendars } from '../hooks/useCalendarEvents'
 import { isSameDay } from '../utils/dateUtils'
 
+const HIDDEN_KEY = 'nestboard_cal_hidden'
+function loadHidden() {
+  try { return new Set(JSON.parse(localStorage.getItem(HIDDEN_KEY) ?? '[]')) } catch { return new Set() }
+}
+
 function fmtMonthYear(d) {
   return d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
@@ -46,7 +51,12 @@ export default function CalendarModal({ onClose }) {
   const [view, setView]         = useState('week')
   const [weekStart, setWeekStart] = useState(() => getWeekStart(new Date()))
   const [monthRef, setMonthRef]   = useState(() => new Date())
-  const [hidden, setHidden]       = useState(new Set())
+  const [dayRef, setDayRef]       = useState(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d })
+  const [hidden, setHidden]       = useState(loadHidden)
+
+  useEffect(() => {
+    localStorage.setItem(HIDDEN_KEY, JSON.stringify([...hidden]))
+  }, [hidden])
 
   const visible = useMemo(
     () => events.filter(e => !e.calendarName || !hidden.has(e.calendarName)),
@@ -75,8 +85,13 @@ export default function CalendarModal({ onClose }) {
   function nextWeek() { setWeekStart(d => addDays(d, 7))  }
   function prevMonth() { setMonthRef(d => new Date(d.getFullYear(), d.getMonth() - 1, 1)) }
   function nextMonth() { setMonthRef(d => new Date(d.getFullYear(), d.getMonth() + 1, 1)) }
+  function prevDay()  { setDayRef(d => addDays(d, -1)) }
+  function nextDay()  { setDayRef(d => addDays(d, 1))  }
 
   const today = new Date()
+  const goPrev = view === 'day' ? prevDay : view === 'week' ? prevWeek : prevMonth
+  const goNext = view === 'day' ? nextDay : view === 'week' ? nextWeek : nextMonth
+  const dayEventsForDayView = eventsOnDay(dayRef)
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -86,16 +101,19 @@ export default function CalendarModal({ onClose }) {
         {/* Header */}
         <div className="cal-modal-header">
           <div className="cal-modal-nav">
-            <button className="cal-nav-btn" onClick={view === 'week' ? prevWeek : prevMonth}>‹</button>
+            <button className="cal-nav-btn" onClick={goPrev}>‹</button>
             <span className="cal-modal-title">
-              {view === 'week'
+              {view === 'day'
+                ? fmtDayFull(dayRef)
+                : view === 'week'
                 ? `${weekDays[0].toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${weekDays[6].toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
                 : fmtMonthYear(monthRef)
               }
             </span>
-            <button className="cal-nav-btn" onClick={view === 'week' ? nextWeek : nextMonth}>›</button>
+            <button className="cal-nav-btn" onClick={goNext}>›</button>
           </div>
           <div className="cal-view-toggle">
+            <button className={`cal-view-btn ${view === 'day' ? 'active' : ''}`} onClick={() => setView('day')}>Day</button>
             <button className={`cal-view-btn ${view === 'week' ? 'active' : ''}`} onClick={() => setView('week')}>Week</button>
             <button className={`cal-view-btn ${view === 'month' ? 'active' : ''}`} onClick={() => setView('month')}>Month</button>
           </div>
@@ -115,6 +133,28 @@ export default function CalendarModal({ onClose }) {
                 {cal.name}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Day view */}
+        {view === 'day' && (
+          <div className="cal-day-view">
+            {dayEventsForDayView.length === 0 ? (
+              <p className="cal-day-empty">Nothing scheduled.</p>
+            ) : (
+              dayEventsForDayView.map((evt, j) => (
+                <div key={j} className="cal-event-item cal-day-event" style={{ '--cal-color': evt.color }}>
+                  <div className="cal-event-text">
+                    <span className="cal-event-title">{evt.title}</span>
+                    {evt.time && (
+                      <span className="cal-event-time">
+                        {evt.time}{evt.endTime && evt.endTime !== evt.time ? ` – ${evt.endTime}` : ''}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         )}
 

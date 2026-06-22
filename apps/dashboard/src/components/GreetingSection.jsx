@@ -7,10 +7,10 @@ export default function GreetingSection({ now, onGrocery }) {
   return (
     <div className="greeting-section">
       <div className="greeting-body">
-        <p className="greeting-tagline">Do good, be kind, have fun!</p>
         <h1 className="greeting-headline">
           {getGreeting(now)},<br />{family?.name ?? CONFIG.familyName}!
         </h1>
+        <p className="greeting-tagline">Do good, be kind, have fun!</p>
         <div className="greeting-datetime">
           <span className="greeting-time">{formatTime(now)}</span>
           <span className="greeting-date">{formatDate(now)}</span>
