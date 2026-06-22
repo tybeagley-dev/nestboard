@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useRoutineDefs, adminAddRoutineDef, adminEditRoutineDef, adminDeleteRoutineDef, useScheduleConfig } from '../hooks/useRoutines'
+import EmojiPicker from './EmojiPicker'
 import { CALCULATED_HOLIDAYS } from '../utils/holidayUtils'
 
 const SCHEDULES     = ['school', 'weekend', 'summer', 'holiday']
@@ -71,7 +72,7 @@ function RoutineForm({ def, childNames, onSave, onCancel, saving }) {
         </div>
         <div className="chore-form-field">
           <label className="chore-form-label">Icon</label>
-          <input className="chore-form-input chore-form-icon-input" value={icon} onChange={e => setIcon(e.target.value)} placeholder="🛏️" />
+          <EmojiPicker value={icon} onChange={setIcon} placeholder="🛏️" />
         </div>
       </div>
 

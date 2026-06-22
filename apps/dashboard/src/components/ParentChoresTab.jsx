@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { adminGetAllChores, adminAddChore, adminEditChore, adminDeleteChore } from '../hooks/useChores'
 import ChildIcon from './ChildIcon'
+import EmojiPicker from './EmojiPicker'
 import TabGuide from './TabGuide'
 import { apiGet, apiPost, apiDelete } from '../utils/api'
 import { unassignChore, triggerChoreRefetch } from '../hooks/useAssignedChores'
@@ -166,12 +167,7 @@ function ChoreForm({ chore, onSave, onCancel, saving }) {
       <div className="chore-form-row">
         <div className="chore-form-field">
           <label className="chore-form-label">Icon</label>
-          <input
-            className="chore-form-input chore-form-icon-input"
-            value={icon}
-            onChange={e => setIcon(e.target.value)}
-            placeholder="🚿"
-          />
+          <EmojiPicker value={icon} onChange={setIcon} placeholder="🚿" />
         </div>
         <div className="chore-form-field">
           <label className="chore-form-label">Tokens</label>

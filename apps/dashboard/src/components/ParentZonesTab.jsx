@@ -6,6 +6,7 @@ import {
   adminUpdateAssignment, adminAddManualAssignment, adminDeleteAssignment,
 } from '../hooks/useZone'
 import ChildIcon from './ChildIcon'
+import EmojiPicker from './EmojiPicker'
 import TabGuide from './TabGuide'
 import { apiGet } from '../utils/api'
 import { getTodayKey } from '../utils/dateUtils'
@@ -338,7 +339,7 @@ function ZoneForm({ zone, children, onSave, onCancel, saving }) {
         </div>
         <div className="chore-form-field">
           <label className="chore-form-label">Icon</label>
-          <input className="chore-form-input chore-form-icon-input" value={icon} onChange={e => setIcon(e.target.value)} placeholder="📺" />
+          <EmojiPicker value={icon} onChange={setIcon} placeholder="📺" />
         </div>
       </div>
 
