@@ -153,7 +153,7 @@ router.post('/:id/request-approval', async (req, res) => {
 
   const today = new Date().toISOString().slice(0, 10)
 
-  // Promote the existing accepted row — no new row created, so unassign always sees one row
+  // Promote an existing accepted row (spin chores go through /accept first).
   const { rowCount } = await db.query(
     `UPDATE chore_events SET status = 'pending_approval'
      WHERE family_id = $1 AND child_id = $2 AND chore_id = $3
@@ -161,8 +161,25 @@ router.post('/:id/request-approval', async (req, res) => {
        AND status = 'accepted'`,
     [req.familyId, childId, choreId, today]
   )
-  // Already pending or completed — nothing to do
-  if (!rowCount) return res.json({ success: true, skipped: true })
+
+  // Required chores are submitted straight from the card — they never go through
+  // /accept, so there's nothing to promote. Create the pending row directly,
+  // unless this chore already has a row today (already pending/completed).
+  if (!rowCount) {
+    const { rows: existing } = await db.query(
+      `SELECT 1 FROM chore_events
+       WHERE family_id = $1 AND child_id = $2 AND chore_id = $3 AND created_at::date = $4
+       LIMIT 1`,
+      [req.familyId, childId, choreId, today]
+    )
+    if (existing.length) return res.json({ success: true, skipped: true })
+
+    await db.query(
+      `INSERT INTO chore_events (family_id, child_id, chore_id, chore_label, tokens, status, accepted_at)
+       VALUES ($1, $2, $3, $4, $5, 'pending_approval', now())`,
+      [req.familyId, childId, choreId, choreLabel, tokens ?? 0]
+    )
+  }
 
   broadcast('chore_state', { child }, req.familyId)
   notifyParent(req.familyId, { title: 'Chore submitted', body: `${child} submitted "${choreLabel}" for approval` })
