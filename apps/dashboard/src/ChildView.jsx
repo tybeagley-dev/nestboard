@@ -25,6 +25,7 @@ import WeatherCard from './components/WeatherCard'
 import MealPlan from './components/MealPlan'
 import { getDayName } from './utils/dateUtils'
 import { getCurrentScheduleMode } from './utils/scheduleUtils'
+import { CONFIG } from './config/config'
 import { Monitor, Coins } from 'lucide-react'
 
 function isChoreDay() {
@@ -96,6 +97,15 @@ export default function ChildView() {
   const spinChores     = assignedChores.filter(c => !c.required)
   const canSpin        = spinChores.length === 0 || spinChores.every(c => c.pending || c.completed)
 
+  // Spin chores can't be submitted until the cooldown since accepting them elapses
+  // (matches the kiosk card). Required chores have no cooldown.
+  const cooldownMs = (CONFIG.choreCooldownMinutes ?? 5) * 60 * 1000
+  function cooldownMinsRemaining(chore) {
+    if (chore.required || !chore.acceptedAt) return 0
+    const elapsed = Date.now() - new Date(chore.acceptedAt).getTime()
+    return Math.max(0, Math.ceil((cooldownMs - elapsed) / 60000))
+  }
+
   const allItems = [...routines, ...requiredChores, ...(isChoreDay() ? spinChores : [])]
   const done     = allItems.filter(r => r.completed).length
   const total    = allItems.length
@@ -116,6 +126,7 @@ export default function ChildView() {
 
   function handleChoreTap(chore) {
     if (chore.completed || chore.pending || submitting.has(chore.id)) return
+    if (cooldownMinsRemaining(chore) > 0) return
     if (chore.instructions?.length) setInstructionsChore(chore)
     else handleChoreRequest(chore)
   }
@@ -160,7 +171,11 @@ export default function ChildView() {
             <RoutineItem key={chore.id} routine={chore} onToggle={() => handleChoreTap(chore)} />
           ))}
           {isChoreDay() && spinChores.map(chore => (
-            <RoutineItem key={chore.id} routine={chore} onToggle={() => handleChoreTap(chore)} />
+            <RoutineItem
+              key={chore.id}
+              routine={{ ...chore, cooldownMins: cooldownMinsRemaining(chore) }}
+              onToggle={() => handleChoreTap(chore)}
+            />
           ))}
           {total === 0 && !assignedLoading && (
             <p className="child-view-empty">Nothing on the list yet.</p>
