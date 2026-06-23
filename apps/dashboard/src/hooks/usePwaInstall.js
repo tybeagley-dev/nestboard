@@ -37,8 +37,9 @@ export function getPlatform() {
 }
 
 // iOS (16.4+) launches a home-screen icon at the manifest's `start_url`, ignoring
-// which page you actually added. To let a child page install as its own icon (and
-// its own iOS push scope), swap in a per-page manifest while that page is mounted.
+// which page you actually added, and only honors a manifest served from a real
+// same-origin URL. Point the link at the service-worker-synthesized per-page
+// manifest (see sw.js) so a child page installs as its own icon / iOS push scope.
 export function useInstallManifest(startUrl, name) {
   useEffect(() => {
     if (!startUrl) return
@@ -47,32 +48,15 @@ export function useInstallManifest(startUrl, name) {
     const titleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]')
     const originalHref  = link.getAttribute('href')
     const originalTitle = titleMeta?.getAttribute('content')
-    let blobUrl, cancelled = false
 
-    fetch(originalHref)
-      .then(r => r.json())
-      .then(base => {
-        if (cancelled) return
-        const manifest = {
-          ...base,
-          start_url: startUrl,
-          scope: startUrl,
-          id: startUrl,
-          ...(name ? { name, short_name: name } : {}),
-        }
-        blobUrl = URL.createObjectURL(
-          new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' })
-        )
-        link.setAttribute('href', blobUrl)
-        if (name && titleMeta) titleMeta.setAttribute('content', name)
-      })
-      .catch(() => {})
+    const params = new URLSearchParams({ start_url: startUrl })
+    if (name) params.set('name', name)
+    link.setAttribute('href', `/page-manifest.webmanifest?${params}`)
+    if (name && titleMeta) titleMeta.setAttribute('content', name)
 
     return () => {
-      cancelled = true
       if (originalHref) link.setAttribute('href', originalHref)
       if (titleMeta && originalTitle != null) titleMeta.setAttribute('content', originalTitle)
-      if (blobUrl) URL.revokeObjectURL(blobUrl)
     }
   }, [startUrl, name])
 }
