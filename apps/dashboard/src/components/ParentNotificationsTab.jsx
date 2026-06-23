@@ -1,10 +1,20 @@
+import { useState } from 'react'
 import { usePushSubscription } from '../hooks/usePushSubscription'
+import DeviceSetupModal from './DeviceSetupModal'
 
 export default function ParentNotificationsTab({ children }) {
   const parent = usePushSubscription(null)
+  const [showSetup, setShowSetup] = useState(false)
 
   return (
     <div className="notif-tab">
+      <div className="notif-section">
+        <p className="notif-section-desc">
+          New device? Walk through home-screen install and notifications in one place.
+        </p>
+        <button className="devsetup-btn" onClick={() => setShowSetup(true)}>Set up this device</button>
+      </div>
+
       <div className="notif-section">
         <h3 className="notif-section-title">Parent notifications</h3>
         <p className="notif-section-desc">
@@ -24,6 +34,8 @@ export default function ParentNotificationsTab({ children }) {
           ))}
         </div>
       )}
+
+      {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} />}
     </div>
   )
 }

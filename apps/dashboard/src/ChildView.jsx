@@ -19,6 +19,7 @@ import { markChoreToday } from './hooks/useChores'
 import RoutineItem from './components/RoutineItem'
 import ChoreModal from './components/ChoreModal'
 import ChoreInstructionsModal from './components/ChoreInstructionsModal'
+import DeviceSetupModal from './components/DeviceSetupModal'
 import UpcomingModal from './components/UpcomingModal'
 import WeatherCard from './components/WeatherCard'
 import MealPlan from './components/MealPlan'
@@ -79,6 +80,7 @@ export default function ChildView() {
 
   const [showChoreModal,  setShowChoreModal]  = useState(false)
   const [showUpcoming,    setShowUpcoming]    = useState(false)
+  const [showSetup,       setShowSetup]       = useState(false)
   const [instructionsChore, setInstructionsChore] = useState(null)
   const [submitting,      setSubmitting]      = useState(new Set())
 
@@ -199,7 +201,21 @@ export default function ChildView() {
         </div>
       )}
 
+      {/* Device setup */}
+      <div className="child-view-footer">
+        <button className="child-view-setup-btn" onClick={() => setShowSetup(true)}>
+          📱 Set up this device
+        </button>
+      </div>
+
       {/* Modals */}
+      {showSetup && (
+        <DeviceSetupModal
+          onClose={() => setShowSetup(false)}
+          childId={child.id}
+          label={child.name}
+        />
+      )}
       {showChoreModal && (
         <ChoreModal
           child={child}

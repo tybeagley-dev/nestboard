@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings, HelpCircle } from 'lucide-react'
+import { Settings, HelpCircle, Smartphone } from 'lucide-react'
 import TidyTimerButton from './TidyTimerButton'
 import TidyTimerPill from './TidyTimerPill'
 import ReadingTimerButton from './ReadingTimerButton'
 import HowItWorksModal from './HowItWorksModal'
+import DeviceSetupModal from './DeviceSetupModal'
 import { useTidyTimer } from '../hooks/useTidyTimer'
 import { useToothbrushTimer } from '../hooks/useToothbrushTimer'
 import { useReadingTimer } from '../hooks/useReadingTimer'
@@ -32,6 +33,7 @@ export default function FloatingControls() {
   const tooth    = useToothbrushTimer()
   const reading  = useReadingTimer()
   const [showHowto, setShowHowto] = useState(false)
+  const [showSetup, setShowSetup] = useState(false)
 
   useEffect(() => {
     if (!localStorage.getItem(HOWTO_SEEN_KEY)) {
@@ -108,11 +110,16 @@ export default function FloatingControls() {
         <HelpCircle size={18} strokeWidth={1.8} />
       </button>
 
+      <button className="timer-icon-btn" onClick={() => setShowSetup(true)} title="Set up this device" aria-label="Set up this device">
+        <Smartphone size={18} strokeWidth={1.8} />
+      </button>
+
       <button className="timer-icon-btn settings-btn" onClick={() => navigate('/parent')} title="Parent Panel" aria-label="Parent Panel">
         <Settings size={18} strokeWidth={1.8} />
       </button>
 
       {showHowto && <HowItWorksModal onClose={() => setShowHowto(false)} />}
+      {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} />}
     </div>
   )
 }

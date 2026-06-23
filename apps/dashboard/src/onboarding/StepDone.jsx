@@ -1,10 +1,13 @@
+import { useState } from 'react'
 import { useFamily } from '../FamilyContext'
 import { ChildQRSection } from '../components/ParentChildrenTab'
+import DeviceSetupModal from '../components/DeviceSetupModal'
 
-// Final screen. Celebrates, surfaces the per-child links, and points at home-screen
-// install. (A full device-setup guide is a separate, reusable feature — later.)
+// Final screen. Celebrates, surfaces the per-child links, and opens the reusable
+// device-setup guide (home-screen install + notifications).
 export default function StepDone({ children }) {
   const family = useFamily()
+  const [showSetup, setShowSetup] = useState(false)
 
   return (
     <div className="onboarding-done">
@@ -26,12 +29,15 @@ export default function StepDone({ children }) {
       <div className="onboarding-done-section">
         <p className="onboarding-guide-title">Put it on the fridge</p>
         <p className="onboarding-help">
-          Open this dashboard on your tablet, then add it to the home screen for a full-screen view. (A step-by-step
-          device guide is coming soon.)
+          Add the dashboard to your tablet's home screen for a full-screen view, and turn on notifications
+          so you hear about approvals and screen-time requests.
         </p>
+        <button className="devsetup-btn" onClick={() => setShowSetup(true)}>Set up this device</button>
       </div>
 
       <p className="onboarding-help">Hit <strong>Finish</strong> below to head to your dashboard.</p>
+
+      {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} />}
     </div>
   )
 }

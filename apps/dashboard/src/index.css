@@ -4602,6 +4602,82 @@ button {
   color: var(--text-primary);
 }
 
+/* ── Device setup guide ──────────────────────────────────────────────────── */
+.devsetup-modal {
+  align-items: stretch;
+  gap: 18px;
+  width: min(480px, 92vw);
+}
+
+.devsetup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.devsetup-step {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+}
+
+.devsetup-step-icon {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent-warm);
+}
+
+.devsetup-step-icon.done {
+  background: var(--accent-warm);
+  color: #fff;
+}
+
+.devsetup-step-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.devsetup-btn {
+  align-self: flex-start;
+  padding: 8px 20px;
+  border-radius: 50px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--accent-warm);
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.devsetup-btn:hover { opacity: 0.9; }
+.devsetup-btn:disabled { opacity: 0.5; cursor: default; }
+
+.child-view-footer {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 24px;
+}
+
+.child-view-setup-btn {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 12px;
+}
+
+.child-view-setup-btn:hover { color: var(--text-primary); }
+
 .upcoming-days {
   display: flex;
   flex-direction: column;
