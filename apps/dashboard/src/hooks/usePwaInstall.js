@@ -36,31 +36,6 @@ export function getPlatform() {
   return 'desktop'
 }
 
-// iOS (16.4+) launches a home-screen icon at the manifest's `start_url`, ignoring
-// which page you actually added, and only honors a manifest served from a real
-// same-origin URL. Point the link at the service-worker-synthesized per-page
-// manifest (see sw.js) so a child page installs as its own icon / iOS push scope.
-export function useInstallManifest(startUrl, name) {
-  useEffect(() => {
-    if (!startUrl) return
-    const link = document.querySelector('link[rel="manifest"]')
-    if (!link) return
-    const titleMeta = document.querySelector('meta[name="apple-mobile-web-app-title"]')
-    const originalHref  = link.getAttribute('href')
-    const originalTitle = titleMeta?.getAttribute('content')
-
-    const params = new URLSearchParams({ start_url: startUrl })
-    if (name) params.set('name', name)
-    link.setAttribute('href', `/page-manifest.webmanifest?${params}`)
-    if (name && titleMeta) titleMeta.setAttribute('content', name)
-
-    return () => {
-      if (originalHref) link.setAttribute('href', originalHref)
-      if (titleMeta && originalTitle != null) titleMeta.setAttribute('content', originalTitle)
-    }
-  }, [startUrl, name])
-}
-
 export function usePwaInstall() {
   const [canInstall, setCanInstall]   = useState(!!deferredPrompt)
   const [isInstalled, setIsInstalled] = useState(installed || isStandalone())
