@@ -10,6 +10,7 @@ import { useChores, useChorePoints } from './hooks/useChores'
 import { useAssignedChores, markChoreAsPending, submitApprovalRequest, triggerChoreRefetch } from './hooks/useAssignedChores'
 import { useScreenBalance } from './hooks/useScreenTime'
 import { useFamilySettings } from './hooks/useFamilySettings'
+import { useInstallManifest } from './hooks/usePwaInstall'
 import { useCalendarEvents } from './hooks/useCalendarEvents'
 import { useGroceryList } from './hooks/useGroceryList'
 import { useWeather } from './hooks/useWeather'
@@ -77,6 +78,9 @@ export default function ChildView() {
   const { balance }  = useScreenBalance(child?.name ?? '')
   const { tokens }    = useChorePoints(child?.name ?? '')
   const { modules }   = useFamilySettings()
+
+  // Install this child's page as its own home-screen icon / iOS push scope.
+  useInstallManifest(`/${slug}/child/${childId}`, child?.name)
 
   const [showChoreModal,  setShowChoreModal]  = useState(false)
   const [showUpcoming,    setShowUpcoming]    = useState(false)
