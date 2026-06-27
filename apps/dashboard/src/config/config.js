@@ -66,21 +66,8 @@ export const CONFIG = {
 
   // ── Tidy Timer ─────────────────────────────────────────────────────────────
   // defaultMinutes: pre-selected duration when the popover opens
-  //
-  // castAppId: your Google Cast receiver App ID.
-  //   Leave empty to skip Cast (tidy timer still works, just no music).
-  //   Setup steps:
-  //     1. Go to cast.google.com/publish → New Application → Custom Receiver
-  //     2. Receiver URL: https://YOUR-USERNAME.github.io/kitchen-dashboard/cast-receiver.html
-  //     3. Copy the App ID and paste it below
-  //     4. Allow up to 15 min for it to propagate to your devices
-  //
-  // musicPlaylistUrl: a YouTube Music playlist URL
-  //   e.g. 'https://music.youtube.com/playlist?list=PLxxxxxx'
   tidyTimer: {
     defaultMinutes: 10,
-    castAppId: '',
-    musicPlaylistUrl: 'https://www.youtube.com/watch?v=xDK6RA65Rxw&list=RDxDK6RA65Rxw&start_radio=1',
   },
 
 }

@@ -103,7 +103,7 @@ export default function FloatingControls() {
           onStop={tidy.stopTimer}
         />
       ) : (
-        <TidyTimerButton onStart={(mins, castSession) => tidy.startTimer(mins, castSession)} />
+        <TidyTimerButton onStart={mins => tidy.startTimer(mins)} />
       )}
 
       <button className="timer-icon-btn" onClick={() => setShowHowto(true)} title="How it works" aria-label="How it works">

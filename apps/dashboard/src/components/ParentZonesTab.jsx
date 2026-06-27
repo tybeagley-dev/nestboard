@@ -219,7 +219,9 @@ function MicroZoneRow({ item, onUpdated, confirmDelete, onDeleteRequest, onConfi
 // ── Zone row ──────────────────────────────────────────────────────────────────
 
 function ZoneRow({ zone, children, onEdit, onUpdated, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
-  const [expanded,     setExpanded]     = useState(false)
+  // Start expanded when the zone has no micro-zones yet, so the next step
+  // (adding them) is visible immediately after creating the zone.
+  const [expanded,     setExpanded]     = useState(zone.micro_zones.length === 0)
   const [addingItem,   setAddingItem]   = useState(false)
   const [newItemLabel, setNewItemLabel] = useState('')
   const [savingItem,   setSavingItem]   = useState(false)
@@ -272,6 +274,11 @@ function ZoneRow({ zone, children, onEdit, onUpdated, confirmDelete, onDeleteReq
 
       {expanded && (
         <div className="zone-items-section">
+          {zone.micro_zones.length === 0 && (
+            <p className="chore-form-hint" style={{ paddingLeft: 24 }}>
+              Now add this zone’s micro-zones — the small weekly jobs inside it (e.g. “wipe the counter”).
+            </p>
+          )}
           {zone.micro_zones.map(item => (
             <MicroZoneRow
               key={item.id}
@@ -334,8 +341,8 @@ function ZoneForm({ zone, children, onSave, onCancel, saving }) {
     <div className="chore-form">
       <div className="chore-form-row">
         <div className="chore-form-field">
-          <label className="chore-form-label">Label</label>
-          <input className="chore-form-input" value={label} onChange={e => setLabel(e.target.value)} placeholder="TV Room" autoFocus />
+          <label className="chore-form-label">Zone (an area of your home)</label>
+          <input className="chore-form-input" value={label} onChange={e => setLabel(e.target.value)} placeholder="e.g. Kitchen, Bathroom, TV Room" autoFocus />
         </div>
         <div className="chore-form-field">
           <label className="chore-form-label">Icon</label>
@@ -376,6 +383,16 @@ export default function ParentZonesTab({ children }) {
   const [form,          setForm]          = useState(null)
   const [saving,        setSaving]        = useState(false)
   const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [autoRouted,    setAutoRouted]    = useState(false)
+
+  // First-run (no zones yet) lands on Zone Definitions — where setup happens —
+  // instead of the empty "This Week". Only nudges once; never fights the user.
+  useEffect(() => {
+    if (!autoRouted && !loading) {
+      if (defs.length === 0) setView('defs')
+      setAutoRouted(true)
+    }
+  }, [autoRouted, loading, defs.length])
 
   async function handleSave(data) {
     setSaving(true)

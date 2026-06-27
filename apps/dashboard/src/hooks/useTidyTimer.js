@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
 const TIDY_KEY = 'fam_dash_tidy_timer'
 
@@ -9,7 +9,6 @@ function loadTidy() {
 export function useTidyTimer() {
   const [timer, setTimer] = useState(loadTidy)
   const [now, setNow] = useState(Date.now)
-  const castSessionRef = useRef(null)
 
   // Cross-component sync within same tab
   useEffect(() => {
@@ -26,22 +25,16 @@ export function useTidyTimer() {
     return () => clearInterval(id)
   }, [timer])
 
-  const startTimer = useCallback((minutes, castSession = null) => {
+  const startTimer = useCallback((minutes) => {
     const endTime = Date.now() + minutes * 60 * 1000
     const data = { endTime }
     localStorage.setItem(TIDY_KEY, JSON.stringify(data))
-    castSessionRef.current = castSession
     window.dispatchEvent(new Event('fam_tidy_update'))
     setTimer(data)
   }, [])
 
   const stopTimer = useCallback(() => {
     localStorage.removeItem(TIDY_KEY)
-    // End Cast session if one is running
-    if (castSessionRef.current) {
-      try { castSessionRef.current.endSession(true) } catch { /* ignore */ }
-      castSessionRef.current = null
-    }
     window.dispatchEvent(new Event('fam_tidy_update'))
     setTimer(null)
   }, [])
