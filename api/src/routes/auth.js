@@ -4,6 +4,7 @@ import { nanoid } from 'nanoid'
 import { getAuth, clerkClient } from '@clerk/express'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
+import { requireParent } from '../middleware/requireParent.js'
 
 const router = Router()
 
@@ -242,6 +243,23 @@ router.put('/family/settings', async (req, res) => {
   }
 })
 
+// PUT /auth/family/pin  { newPin } → resets the family parent PIN. Gated by
+// requireParent: a Clerk-authed owner/parent (recovery path — no current PIN
+// needed) OR a no-login device that proves the current PIN via x-parent-token.
+router.put('/family/pin', requireParent, async (req, res) => {
+  const { newPin } = req.body ?? {}
+  if (!/^\d{6}$/.test(newPin ?? '')) {
+    return res.status(400).json({ error: 'PIN must be exactly 6 digits' })
+  }
+  try {
+    const hash = await bcrypt.hash(newPin, 12)
+    await db.query('UPDATE families SET parent_pin_hash = $1 WHERE id = $2', [hash, req.familyId])
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
 // POST /auth/family/complete-onboarding → mark the authed user's family onboarded
 router.post('/family/complete-onboarding', async (req, res) => {
   const { userId } = getAuth(req)
@@ -266,6 +284,26 @@ async function callerFamilyId(userId) {
   const { rows } = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
   return rows.length ? rows[0].family_id : null
 }
+
+// POST /auth/family/feedback  { type?, message } → records beta feedback or an
+// account-deletion request for the admin to action. type ∈ feedback|deletion_request.
+router.post('/family/feedback', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  const type    = req.body?.type === 'deletion_request' ? 'deletion_request' : 'feedback'
+  const message = (req.body?.message ?? '').trim()
+  if (type === 'feedback' && !message) return res.status(400).json({ error: 'Message required' })
+  try {
+    const familyId = await callerFamilyId(userId)
+    await db.query(
+      'INSERT INTO feedback (family_id, user_id, type, message) VALUES ($1, $2, $3, $4)',
+      [familyId, userId, type, message || null]
+    )
+    res.status(201).json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
 
 // GET /auth/family/members → [{ user_id, email, role }]
 router.get('/family/members', async (req, res) => {

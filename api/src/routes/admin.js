@@ -77,6 +77,13 @@ router.delete('/families/:id', async (req, res) => {
   const client = await db.connect()
   try {
     await client.query('BEGIN')
+    // Resolve any open deletion requests before the family row goes away — once
+    // it's deleted, feedback.family_id is SET NULL and we can't match them.
+    await client.query(
+      `UPDATE feedback SET status = 'resolved'
+       WHERE family_id = $1 AND type = 'deletion_request' AND status = 'open'`,
+      [id]
+    )
     for (const t of FAMILY_TABLES) {
       await client.query(`DELETE FROM ${t} WHERE family_id = $1`, [id])
     }
@@ -92,6 +99,38 @@ router.delete('/families/:id', async (req, res) => {
     res.status(500).json({ error: 'Server error' })
   } finally {
     client.release()
+  }
+})
+
+// GET /admin/feedback → all feedback + deletion requests, open first
+router.get('/feedback', async (req, res) => {
+  try {
+    const { rows } = await db.query(
+      `SELECT fb.id, fb.type, fb.message, fb.status, fb.created_at,
+              fb.family_id, f.name AS family_name, f.slug AS family_slug, u.email
+       FROM feedback fb
+       LEFT JOIN families f ON f.id = fb.family_id
+       LEFT JOIN users u    ON u.id = fb.user_id
+       ORDER BY (fb.status = 'open') DESC, fb.created_at DESC`
+    )
+    res.json(rows)
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// PUT /admin/feedback/:id  { status } → mark open|resolved
+router.put('/feedback/:id', async (req, res) => {
+  const status = req.body?.status === 'resolved' ? 'resolved' : 'open'
+  try {
+    const { rowCount } = await db.query(
+      'UPDATE feedback SET status = $1 WHERE id = $2',
+      [status, req.params.id]
+    )
+    if (!rowCount) return res.status(404).json({ error: 'Not found' })
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
   }
 })
 

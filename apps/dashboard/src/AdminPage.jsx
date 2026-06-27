@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiGet, apiDelete } from './utils/api'
+import { apiGet, apiDelete, apiPut } from './utils/api'
 
 // Internal super-admin surface (gated server-side by ADMIN_USER_IDS). Lists all
 // families and lets an admin drill in, remove members, or delete a whole family.
@@ -10,12 +10,23 @@ export default function AdminPage() {
   const [detail,   setDetail]   = useState(null)
   const [confirmName, setConfirmName] = useState('')   // type-to-confirm family delete
   const [busy, setBusy] = useState(false)
+  const [feedback, setFeedback] = useState([])
 
   const load = useCallback(() => {
     apiGet('/admin/families').then(d => setFamilies(Array.isArray(d) ? d : null))
+    apiGet('/admin/feedback').then(d => setFeedback(Array.isArray(d) ? d : []))
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  async function resolveFeedback(id, status) {
+    setBusy(true)
+    await apiPut(`/admin/feedback/${id}`, { status })
+    setBusy(false)
+    apiGet('/admin/feedback').then(d => setFeedback(Array.isArray(d) ? d : []))
+  }
+
+  const openCount = feedback.filter(f => f.status === 'open').length
 
   function openFamily(id) {
     setConfirmName('')
@@ -74,6 +85,49 @@ export default function AdminPage() {
           ))}
         </tbody>
       </table>
+
+      <h2 className="admin-section-title">
+        Feedback &amp; requests{openCount > 0 ? ` · ${openCount} open` : ''}
+      </h2>
+      {feedback.length === 0 ? (
+        <p className="family-code-hint">Nothing yet.</p>
+      ) : (
+        <table className="admin-table">
+          <thead>
+            <tr><th>Type</th><th>Family</th><th>From</th><th>Message</th><th>When</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody>
+            {feedback.map(fb => (
+              <tr key={fb.id} className={fb.status === 'open' ? '' : 'admin-row-muted'}>
+                <td>{fb.type === 'deletion_request' ? '🗑 Deletion' : '💬 Feedback'}</td>
+                <td>{fb.family_name ?? '—'}{fb.family_slug ? <> · <code>{fb.family_slug}</code></> : null}</td>
+                <td>{fb.email ?? '—'}</td>
+                <td className="admin-feedback-msg">{fb.message ?? '—'}</td>
+                <td>{new Date(fb.created_at).toLocaleDateString()}</td>
+                <td>{fb.status}</td>
+                <td className="admin-feedback-actions">
+                  {fb.type === 'deletion_request' && fb.family_id && (
+                    <button
+                      className="admin-btn admin-btn-sm admin-btn-danger"
+                      disabled={busy}
+                      onClick={() => openFamily(fb.family_id)}
+                    >
+                      Delete family
+                    </button>
+                  )}
+                  <button
+                    className="admin-btn admin-btn-sm"
+                    disabled={busy}
+                    onClick={() => resolveFeedback(fb.id, fb.status === 'open' ? 'resolved' : 'open')}
+                  >
+                    {fb.status === 'open' ? 'Resolve' : 'Reopen'}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
 
       {detail && (
         <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && setDetail(null)}>

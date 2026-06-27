@@ -5220,6 +5220,9 @@ button {
 .admin-danger { color: #c0392b; }
 .admin-delete-row { display: flex; gap: 8px; }
 .admin-delete-row .chore-form-input { flex: 1; }
+.admin-row-muted { opacity: 0.5; }
+.admin-feedback-msg { max-width: 22rem; white-space: pre-wrap; word-break: break-word; }
+.admin-feedback-actions { display: flex; gap: 6px; white-space: nowrap; }
 
 /* ── Family Setup ───────────────────────────────────────────────────────────── */
 

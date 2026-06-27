@@ -1,12 +1,15 @@
 import { useEffect } from 'react'
-import { Smartphone, Bell, CheckCircle2, Share, Plus } from 'lucide-react'
+import { Smartphone, Bell, CheckCircle2, Share, Plus, Lock } from 'lucide-react'
 import { usePushSubscription } from '../hooks/usePushSubscription'
 import { usePwaInstall } from '../hooks/usePwaInstall'
+import { untrustChild } from '../utils/childTrust'
 
 // Reusable per-device setup guide: add-to-home-screen + enable notifications.
 // `childId`/`label` make the push step context-aware — parent device when null,
-// a specific child's device when opened from that child's view.
-export default function DeviceSetupModal({ onClose, childId = null, label }) {
+// a specific child's device when opened from that child's view. When `familySlug`
+// is set (child view), a third "device access" beat reflects the PIN gate and
+// lets the parent re-lock the device.
+export default function DeviceSetupModal({ onClose, childId = null, label, familySlug = null }) {
   const { canInstall, isInstalled, promptInstall, platform } = usePwaInstall()
   const push = usePushSubscription(childId)
 
@@ -27,7 +30,7 @@ export default function DeviceSetupModal({ onClose, childId = null, label }) {
         <div className="howto-header">
           <h2 className="modal-title">Set up this device</h2>
           <p className="modal-points-line">
-            Two quick steps to make nestboard feel like an app{label ? ` on ${label}'s device` : ''}.
+            A few quick steps to make nestboard feel like an app{label ? ` on ${label}'s device` : ''}.
           </p>
         </div>
 
@@ -60,6 +63,27 @@ export default function DeviceSetupModal({ onClose, childId = null, label }) {
               <PushStep push={push} childId={childId} label={label} blocked={pushBlocked} />
             </div>
           </div>
+
+          {familySlug && (
+            <div className="devsetup-step">
+              <div className="devsetup-step-icon done">
+                <CheckCircle2 size={20} strokeWidth={2} />
+              </div>
+              <div className="devsetup-step-body">
+                <h3 className="howto-section-title">Device access</h3>
+                <p className="onboarding-guide-text">
+                  This device is trusted — it opens {label ? `${label}'s page` : 'this page'} without the family PIN.
+                </p>
+                <button
+                  className="devsetup-btn"
+                  onClick={() => { untrustChild(familySlug); window.location.reload() }}
+                >
+                  <Lock size={14} strokeWidth={2} style={{ verticalAlign: '-2px', marginRight: 4 }} />
+                  Lock this device
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
