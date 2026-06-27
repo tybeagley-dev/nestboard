@@ -22,17 +22,28 @@ export function setParentToken(token) {
 async function apiFetch(path, options = {}) {
   const token = _getToken ? await _getToken() : null
   const slugHeader = (!token && _familySlug) ? { 'x-family-slug': _familySlug } : {}
-  return fetch(`${CONFIG.apiUrl}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...slugHeader,
-      ...options.headers,
-    },
-  })
-    .then(r => r.json())
-    .catch(() => null)
+  const method = options.method ?? 'GET'
+  try {
+    const r = await fetch(`${CONFIG.apiUrl}${path}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...slugHeader,
+        ...options.headers,
+      },
+    })
+    // Non-2xx returns null (not the error body) so a failed request can't
+    // masquerade as data — callers already treat null as "no data / failed".
+    if (!r.ok) {
+      console.warn(`API ${method} ${path} → ${r.status}`)
+      return null
+    }
+    return await r.json().catch(() => null) // tolerate empty bodies
+  } catch (err) {
+    console.warn(`API ${method} ${path} failed:`, err)
+    return null
+  }
 }
 
 export function apiGet(path) {
