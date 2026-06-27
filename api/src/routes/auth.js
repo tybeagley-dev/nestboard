@@ -277,6 +277,52 @@ router.post('/family/complete-onboarding', async (req, res) => {
   }
 })
 
+// ── Consent (Terms of Service + Privacy Policy) ──────────────────────────────
+
+// Current document versions = their effective dates. The server is the source of
+// truth; the client compares the user's acceptance against `current` to decide
+// whether to show the consent gate (so the two can't drift into a loop).
+const CONSENT_VERSIONS = { privacyVersion: '2026-06-27', tosVersion: '2026-06-27' }
+
+// GET /auth/consent → { current, accepted|null } for the signed-in user.
+router.get('/consent', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const { rows } = await db.query(
+      `SELECT privacy_version AS "privacyVersion", tos_version AS "tosVersion", accepted_at AS "acceptedAt"
+       FROM user_consents WHERE user_id = $1 ORDER BY accepted_at DESC LIMIT 1`,
+      [userId]
+    )
+    res.json({ current: CONSENT_VERSIONS, accepted: rows[0] ?? null })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST /auth/consent → record acceptance of the current ToS + Privacy versions.
+router.post('/consent', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    // Consent precedes family setup, so the user row may not exist yet — mirror it.
+    const clerkUser = await clerkClient.users.getUser(userId)
+    const email = clerkUser.emailAddresses[0]?.emailAddress ?? ''
+    await db.query(
+      `INSERT INTO users (id, email) VALUES ($1, $2)
+       ON CONFLICT (id) DO UPDATE SET email = EXCLUDED.email`,
+      [userId, email]
+    )
+    await db.query(
+      'INSERT INTO user_consents (user_id, privacy_version, tos_version) VALUES ($1, $2, $3)',
+      [userId, CONSENT_VERSIONS.privacyVersion, CONSENT_VERSIONS.tosVersion]
+    )
+    res.status(201).json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
 // ── Family members & invites ────────────────────────────────────────────────
 
 // Resolve the caller's family_id from their membership; null if none.
