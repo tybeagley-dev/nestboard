@@ -26,10 +26,13 @@ function AuthGate({ children }) {
   if (!isSignedIn) {
     // Return to the current path after auth (e.g. /join/<token>), not Clerk's
     // default "/", so an invite link survives the sign-in/up redirect.
+    // `withSignUp` enables the combined sign-in-or-up flow so brand-new users
+    // (e.g. an invited partner) can create an account — including via OAuth —
+    // instead of hitting "External Account was not found".
     const redirect = window.location.pathname + window.location.search
     return (
       <div className="clerk-signin-wrap">
-        <SignIn routing="hash" forceRedirectUrl={redirect} signUpForceRedirectUrl={redirect} />
+        <SignIn routing="hash" withSignUp forceRedirectUrl={redirect} signUpForceRedirectUrl={redirect} />
       </div>
     )
   }
