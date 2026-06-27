@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useRoutineDefs, adminAddRoutineDef, adminEditRoutineDef, adminDeleteRoutineDef, useScheduleConfig } from '../hooks/useRoutines'
+import { useRoutineDefs, adminAddRoutineDefs, adminEditRoutineDef, adminDeleteRoutineDef, useScheduleConfig } from '../hooks/useRoutines'
 import EmojiPicker from './EmojiPicker'
 import { CALCULATED_HOLIDAYS } from '../utils/holidayUtils'
 
@@ -44,6 +44,10 @@ function RoutineRow({ def, onEdit, confirmDelete, onDeleteRequest, onConfirmDele
 // ── Routine form ──────────────────────────────────────────────────────────────
 
 function RoutineForm({ def, childNames, onSave, onCancel, saving }) {
+  // Creating applies the routine to one or more kids; editing targets the single
+  // child the existing routine belongs to.
+  const creating = !def.id
+  const [selected,  setSelected]  = useState(creating ? (def.child ? [def.child] : childNames.slice(0, 1)) : [])
   const [child,     setChild]     = useState(def.child || childNames[0] || '')
   const [label,     setLabel]     = useState(def.label || '')
   const [icon,      setIcon]      = useState(def.icon || '')
@@ -53,22 +57,38 @@ function RoutineForm({ def, childNames, onSave, onCancel, saving }) {
   function toggleSched(s) {
     setSchedules(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
   }
+  function toggleChild(c) {
+    setSelected(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c])
+  }
+
+  const canSave = label.trim() && (creating ? selected.length > 0 : !!child)
 
   function handleSave() {
-    if (!label.trim()) return
-    onSave({ ...def, child, label: label.trim(), icon, schedules, time })
+    if (!canSave) return
+    if (creating) onSave({ ...def, children: selected, label: label.trim(), icon, schedules, time })
+    else          onSave({ ...def, child, label: label.trim(), icon, schedules, time })
   }
 
   return (
     <div className="chore-form">
       <div className="chore-form-row">
         <div className="chore-form-field">
-          <label className="chore-form-label">Child</label>
+          <label className="chore-form-label">{creating ? 'Kids' : 'Child'}</label>
           <div className="chore-form-toggle">
-            {childNames.map(c => (
-              <button key={c} className={child === c ? 'active' : ''} onClick={() => setChild(c)}>{c}</button>
-            ))}
+            {childNames.map(c => {
+              const active = creating ? selected.includes(c) : child === c
+              return (
+                <button
+                  key={c}
+                  className={active ? 'active' : ''}
+                  onClick={() => (creating ? toggleChild(c) : setChild(c))}
+                >
+                  {c}
+                </button>
+              )
+            })}
           </div>
+          {creating && <p className="chore-form-hint">Tap each kid this routine should apply to.</p>}
         </div>
         <div className="chore-form-field">
           <label className="chore-form-label">Icon</label>
@@ -102,7 +122,7 @@ function RoutineForm({ def, childNames, onSave, onCancel, saving }) {
       </div>
 
       <div className="chore-form-actions">
-        <button className="parent-apply-btn" onClick={handleSave} disabled={saving || !label.trim()}>
+        <button className="parent-apply-btn" onClick={handleSave} disabled={saving || !canSave}>
           {saving ? 'Saving…' : (def.id ? 'Save Changes' : 'Add Routine')}
         </button>
         <button className="btn-cancel-spend" onClick={onCancel}>Cancel</button>
@@ -350,9 +370,8 @@ export default function ParentRoutinesTab({ children }) {
 
   async function handleSave(data) {
     setSaving(true)
-    const order = defs.filter(d => d.child === data.child).length
     if (data.id) await adminEditRoutineDef(data)
-    else         await adminAddRoutineDef({ ...data, sortOrder: order })
+    else         await adminAddRoutineDefs(data)
     setSaving(false)
     await reload()
     setForm(null)
@@ -411,7 +430,7 @@ export default function ParentRoutinesTab({ children }) {
       </div>
 
       <button className="parent-add-chore-btn" onClick={() => setForm(emptyDef(activeChild, childNames))}>
-        + Add Routine for {activeChild}
+        + Add Routine
       </button>
 
       {loading && <p className="parent-soon-msg">Loading…</p>}

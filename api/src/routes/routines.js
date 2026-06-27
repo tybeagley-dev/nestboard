@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { nanoid } from 'nanoid'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
@@ -86,6 +87,49 @@ router.post('/defs', requireParent, async (req, res) => {
     [id, req.familyId, childId, label, icon, schedules ?? [], time ?? null, sort_order ?? 0]
   )
   res.json({ success: true })
+})
+
+// POST /routines/defs/bulk  { children:[name], label, icon, schedules, time }
+// Creates one routine per child in a single transaction (all-or-nothing) with
+// server-generated ids and a per-child sort_order. Used by the create form for
+// both single- and multi-child routines.
+router.post('/defs/bulk', requireParent, async (req, res) => {
+  const { children, label, icon, schedules, time } = req.body ?? {}
+  if (!Array.isArray(children) || !children.length || !label?.trim()) {
+    return res.status(400).json({ error: 'children and label required' })
+  }
+  // Resolve every child up front; bail before touching the DB if any is unknown.
+  const childIds = []
+  for (const name of children) {
+    const cid = await resolveChildId(req.familyId, name)
+    if (!cid) return res.status(404).json({ error: `Unknown child: ${name}` })
+    childIds.push(cid)
+  }
+  const client = await db.connect()
+  try {
+    await client.query('BEGIN')
+    const ids = []
+    for (const childId of childIds) {
+      const { rows } = await client.query(
+        'SELECT COUNT(*)::int AS n FROM routine_defs WHERE family_id = $1 AND child_id = $2',
+        [req.familyId, childId]
+      )
+      const id = `rd_${nanoid(12)}`
+      await client.query(
+        `INSERT INTO routine_defs (id, family_id, child_id, label, icon, schedules, time, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [id, req.familyId, childId, label.trim(), icon ?? '', schedules ?? [], time || null, rows[0].n]
+      )
+      ids.push(id)
+    }
+    await client.query('COMMIT')
+    res.status(201).json({ success: true, ids })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    res.status(500).json({ error: 'Server error' })
+  } finally {
+    client.release()
+  }
 })
 
 router.put('/defs/:id', requireParent, async (req, res) => {

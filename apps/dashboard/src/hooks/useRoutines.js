@@ -104,15 +104,15 @@ export function useRoutineDefs() {
   return { defs, loading, reload: load }
 }
 
-export async function adminAddRoutineDef(data) {
-  return apiPost('/routines/defs', {
-    id:        data.id,
-    child:     data.child,
+// Create one routine per child in a single transaction (server generates ids
+// and per-child sort_order). children is an array of child names.
+export async function adminAddRoutineDefs(data) {
+  return apiPost('/routines/defs/bulk', {
+    children:  data.children,
     label:     data.label,
     icon:      data.icon,
     schedules: data.schedules,
     time:      data.time || null,
-    sort_order: data.sortOrder ?? 0,
   })
 }
 
