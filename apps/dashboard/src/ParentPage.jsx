@@ -63,6 +63,13 @@ export default function ParentPage() {
     setUnlocked(true)
   }
 
+  // Re-lock after a PIN change so the new PIN must be entered to continue. The
+  // active tab is preserved (ParentPage stays mounted), so they resume here.
+  function lock() {
+    sessionStorage.removeItem(SESSION_KEY)
+    setUnlocked(false)
+  }
+
   if (!unlocked) {
     return (
       <div className="parent-pin-page">
@@ -134,7 +141,7 @@ export default function ParentPage() {
           {tab === 'children'  && <ParentChildrenTab children={children} onReload={reloadChildren} />}
           {tab === 'calendars'     && <ParentCalendarTab children={children} />}
           {tab === 'notifications' && <ParentNotificationsTab children={children} />}
-          {tab === 'family'        && <ParentFamilyTab />}
+          {tab === 'family'        && <ParentFamilyTab onPinChanged={lock} />}
         </div>
       </main>
     </div>

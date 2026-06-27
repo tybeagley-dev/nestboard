@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { apiGet, apiPut } from '../utils/api'
+import ChangePinCard from './ChangePinCard'
+import FeedbackCard from './FeedbackCard'
 import { resolveSettings } from '../FamilyContext'
 import WeatherLocationPicker from './WeatherLocationPicker'
 import FamilyMembers from './FamilyMembers'
 import StepFeatures from '../onboarding/StepFeatures'
 import StepLabels from '../onboarding/StepLabels'
 
-export default function ParentFamilyTab() {
+export default function ParentFamilyTab({ onPinChanged }) {
   const [family,  setFamily]  = useState(null)
   const [copied,  setCopied]  = useState(false)
 
@@ -56,6 +58,8 @@ export default function ParentFamilyTab() {
 
       <FamilyMembers />
 
+      <ChangePinCard onPinChanged={onPinChanged} />
+
       <div className="family-code-card">
         <div className="family-code-section">
           <span className="family-code-label">Features</span>
@@ -85,6 +89,8 @@ export default function ParentFamilyTab() {
           />
         </div>
       </div>
+
+      <FeedbackCard />
     </div>
   )
 }

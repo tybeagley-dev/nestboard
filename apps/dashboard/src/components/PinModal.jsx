@@ -7,7 +7,7 @@ function isTouchDevice() {
 
 const PIN_LENGTH = 6
 
-export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN required' }) {
+export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN required', dismissable = true }) {
   const [pin,   setPin]   = useState('')
   const [error, setError] = useState(false)
   const [busy,  setBusy]  = useState(false)
@@ -25,13 +25,13 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
   useEffect(() => {
     if (touch) return
     function onKey(e) {
-      if (e.key === 'Escape')    { onCancel(); return }
+      if (e.key === 'Escape')    { if (dismissable) onCancel(); return }
       if (e.key === 'Backspace') { handleBackspace(); return }
       if (/^\d$/.test(e.key))   { handleDigit(e.key) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [pin, onCancel, touch])
+  }, [pin, onCancel, touch, dismissable])
 
   async function verify(candidate) {
     setBusy(true)
@@ -63,9 +63,9 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
   }
 
   return (
-    <div className="modal-backdrop" onMouseDown={e => e.target === e.currentTarget && onCancel()}>
+    <div className="modal-backdrop" onMouseDown={e => dismissable && e.target === e.currentTarget && onCancel()}>
       <div className="modal-card pin-modal" onClick={() => touch && inputRef.current?.focus()}>
-        <button className="modal-close" onClick={onCancel} aria-label="Close">×</button>
+        {dismissable && <button className="modal-close" onClick={onCancel} aria-label="Close">×</button>}
         <div
           className="tokens-pin-phase"
           onClick={() => touch && inputRef.current?.focus()}
