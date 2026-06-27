@@ -7,32 +7,7 @@ const DURATION_OPTIONS = [5, 10, 15, 20]
 export default function TidyTimerButton({ onStart }) {
   const [open, setOpen] = useState(false)
   const [duration, setDuration] = useState(CONFIG.tidyTimer?.defaultMinutes ?? 10)
-  const [castAvailable, setCastAvailable] = useState(false)
-  const castContextRef = useRef(null)
   const popoverRef = useRef(null)
-
-  // Initialize Cast SDK if app ID is configured
-  useEffect(() => {
-    const appId = CONFIG.tidyTimer?.castAppId
-    if (!appId || !window.__onGCastApiAvailable) return
-
-    window.__onGCastApiAvailable = (isAvailable) => {
-      if (!isAvailable) return
-      try {
-        const ctx = cast.framework.CastContext.getInstance()
-        ctx.setOptions({
-          receiverApplicationId: appId,
-          autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED,
-        })
-        castContextRef.current = ctx
-        ctx.addEventListener(
-          cast.framework.CastContextEventType.SESSION_STATE_CHANGED,
-          () => setCastAvailable(ctx.getCastState() !== cast.framework.CastState.NO_DEVICES_AVAILABLE)
-        )
-        setCastAvailable(ctx.getCastState() !== cast.framework.CastState.NO_DEVICES_AVAILABLE)
-      } catch { /* Cast SDK not fully loaded */ }
-    }
-  }, [])
 
   // Close popover on outside click
   useEffect(() => {
@@ -44,24 +19,9 @@ export default function TidyTimerButton({ onStart }) {
     return () => document.removeEventListener('mousedown', handler)
   }, [open])
 
-  async function handleStart() {
+  function handleStart() {
     setOpen(false)
-    let castSession = null
-
-    if (castAvailable && castContextRef.current) {
-      try {
-        await castContextRef.current.requestSession()
-        castSession = castContextRef.current.getCurrentSession()
-
-        // Send playlist URL to receiver via custom message channel
-        const playlistUrl = CONFIG.tidyTimer?.musicPlaylistUrl
-        if (playlistUrl && castSession) {
-          castSession.sendMessage('urn:x-cast:com.familydash.tidy', { playlistUrl })
-        }
-      } catch { /* user cancelled cast or no device */ }
-    }
-
-    onStart(duration, castSession)
+    onStart(duration)
   }
 
   return (
@@ -89,10 +49,6 @@ export default function TidyTimerButton({ onStart }) {
               </button>
             ))}
           </div>
-
-          {castAvailable && (
-            <p className="tidy-cast-note">🔊 Will play music on Google Home</p>
-          )}
 
           <button className="tidy-start-btn" onClick={handleStart}>
             Start!

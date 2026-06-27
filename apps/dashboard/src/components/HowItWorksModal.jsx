@@ -68,9 +68,14 @@ export default function HowItWorksModal({ onClose }) {
             </Section>
           )}
 
-          <Section icon={<Timer size={20} strokeWidth={1.8} />} title="Timers (top bar)">
+          <Section icon={<Timer size={20} strokeWidth={1.8} />} title="Timers">
             Up top: a 2-minute <strong>toothbrush</strong> timer, a <strong>reading</strong> timer,
-            and a whole-family <strong>tidy</strong> timer (with optional music if a speaker is set up).
+            and a whole-family <strong>tidy</strong> timer for quick clean-ups.
+            {modules.screenTime && (
+              <> There's also a <strong>screen-time timer</strong>: once a kid trades for screen
+              time, tapping the screen button starts a countdown of their earned minutes — plus a
+              couple extra to get the device set up — and when it hits zero, time's up.</>
+            )}
           </Section>
 
           {modules.grocery && (

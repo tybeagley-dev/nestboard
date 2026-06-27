@@ -1346,11 +1346,6 @@ button {
   color: white;
 }
 
-.tidy-cast-note {
-  font-size: 12px;
-  color: var(--accent-sage);
-  text-align: center;
-}
 
 .tidy-start-btn {
   padding: 10px;
