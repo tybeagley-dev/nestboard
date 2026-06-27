@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { CheckCircle, Coins, Monitor, Timer, ShoppingCart, CalendarDays } from 'lucide-react'
+import { CheckCircle, Coins, Monitor, Timer, ShoppingCart, CalendarDays, BadgeCheck } from 'lucide-react'
 import { useLabels, useSettings } from '../FamilyContext'
 
 // Draft copy — tune the voice later. Covers the *interactive* dashboard surfaces
@@ -26,6 +26,9 @@ export default function HowItWorksModal({ onClose }) {
   // "Finishing chores is how they earn ___" — only name the rewards in play.
   const earns = [modules.tokens && tokens, modules.screenTime && 'screen time'].filter(Boolean)
 
+  // What actually flows through the Approvals queue, by enabled module.
+  const approvalKinds = ['chore', modules.screenTime && 'screen-time', modules.tokens && 'reward'].filter(Boolean)
+
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
     window.addEventListener('keydown', onKey)
@@ -50,14 +53,21 @@ export default function HowItWorksModal({ onClose }) {
           </Section>
 
           <Section icon={<span className="howto-emoji">🎡</span>} title="Chore spinner">
-            Tap <strong>chore spinner</strong> on a kid's card to spin for a chore from the pool.
-            {earns.length > 0 && ` Finishing chores is how they earn ${earns.join(' and ')}.`}
+            Tap <strong>chore spinner</strong> on a kid's card and spin the wheel. Sometimes you
+            land on one bigger chore, sometimes two smaller ones — about the same amount of work
+            either way.{earns.length > 0 && ` Finishing them is how they earn ${earns.join(' and ')}.`}
+            {' '}Don't love your spin? Tap <strong>Spin Again</strong> and keep whichever you prefer.
+            After you pick, there's a short <strong>cooldown</strong> before a chore can be checked
+            off — that's your cue to go actually do it. Finish your chores and you get one
+            {' '}<strong>bonus spin</strong> for a little extra.
           </Section>
 
           {modules.tokens && (
             <Section icon={<Coins size={20} strokeWidth={1.8} />} title={labels.tokenName}>
               The coins button on each card shows that kid's {tokens} balance. Tap it to open the
-              {' '}{labels.rewardsName.toLowerCase()} and trade {tokens} for rewards.
+              {' '}{labels.rewardsName.toLowerCase()} and trade {tokens} for rewards. A reward goes
+              to a parent to approve, then lands in the kid's <strong>Wallet</strong> — to cash it
+              in, show a parent and they'll mark it used.
             </Section>
           )}
 
@@ -67,6 +77,13 @@ export default function HowItWorksModal({ onClose }) {
               approves the request), then start a timer when they sit down.
             </Section>
           )}
+
+          <Section icon={<BadgeCheck size={20} strokeWidth={1.8} />} title="Parent approvals">
+            Checking off a chore doesn't finish it right away — it goes to a parent to approve
+            first, and shows as <strong>pending</strong> until they do. Parents handle these in the
+            Parent panel under <strong>Approvals</strong>, where {approvalKinds.join(', ')} requests
+            all land.
+          </Section>
 
           <Section icon={<Timer size={20} strokeWidth={1.8} />} title="Timers">
             Up top: a 2-minute <strong>toothbrush</strong> timer, a <strong>reading</strong> timer,

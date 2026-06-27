@@ -7,7 +7,6 @@ import { isChoreAvailableThisWeek } from '../hooks/useChoreFrequency'
 import { useLabels } from '../FamilyContext'
 
 const PHASE = { READY: 'ready', RESULT: 'result', RESPIN: 'respin', CHOOSE: 'choose' }
-const MODE  = { TWO_ONE: '2x1', ONE_TWO: '1x2' }
 
 function todayName() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long' })
@@ -16,18 +15,15 @@ function todayName() {
 export default function ChoreModal({ child, chores = [], onClose, isExtra = false }) {
   const labels = useLabels()
   const [phase,        setPhase]        = useState(PHASE.READY)
-  const [mode,         setMode]         = useState(MODE.TWO_ONE)
   const [firstBundle,  setFirstBundle]  = useState([])
   const [secondBundle, setSecondBundle] = useState([])
   const [spinning,     setSpinning]     = useState(false)
 
   function filteredPool(excludeIds = []) {
-    const targetTokens = mode === MODE.TWO_ONE ? 1 : 2
-    const claimed     = getClaimedChoreIds(child.name)
-    const today       = todayName()
+    const claimed = getClaimedChoreIds(child.name)
+    const today   = todayName()
     return chores.filter(c =>
       c.active !== false &&
-      c.tokens === targetTokens &&
       !c.required &&
       (c.days.length === 0 || c.days.includes(today)) &&
       isChoreAvailableThisWeek(c, child.name) &&
@@ -36,13 +32,13 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
     )
   }
 
+  // Outcome-driven: a 2-token chore wins the spin on its own; a 1-token chore
+  // brings along a second 1-token chore — so every spin is ~2 tokens of work.
   function buildBundle(firstChore, excludeIds = []) {
-    if (mode === MODE.TWO_ONE) {
-      const pool   = filteredPool(excludeIds).filter(c => c.id !== firstChore.id)
-      const second = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null
-      return second ? [firstChore, second] : [firstChore]
-    }
-    return [firstChore]
+    if (firstChore.tokens >= 2) return [firstChore]
+    const pool   = filteredPool([...excludeIds, firstChore.id]).filter(c => c.tokens === 1)
+    const second = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null
+    return second ? [firstChore, second] : [firstChore]
   }
 
   function handleSpinEnd(firstChore) {
@@ -67,15 +63,6 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
     setPhase(PHASE.RESPIN)
   }
 
-  function switchMode(newMode) {
-    setMode(newMode)
-    if (phase !== PHASE.RESPIN) {
-      setPhase(PHASE.READY)
-      setFirstBundle([])
-    }
-    setSecondBundle([])
-  }
-
   const firstPool   = filteredPool()
   const respinPool  = filteredPool(firstBundle.map(c => c.id))
   const activePool  = phase === PHASE.RESPIN ? respinPool : firstPool
@@ -93,23 +80,6 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
             {isExtra && <p className="modal-subtitle">Earns {labels.tokenName} only</p>}
           </div>
         </div>
-
-        {!spinning && (phase === PHASE.READY || phase === PHASE.RESPIN) && (
-          <div className="chore-mode-toggle">
-            <button
-              className={`chore-mode-btn ${mode === MODE.TWO_ONE ? 'active' : ''}`}
-              onClick={() => switchMode(MODE.TWO_ONE)}
-            >
-              <TokenBadge amount={1} /> × 2 chores
-            </button>
-            <button
-              className={`chore-mode-btn ${mode === MODE.ONE_TWO ? 'active' : ''}`}
-              onClick={() => switchMode(MODE.ONE_TWO)}
-            >
-              <TokenBadge amount={2} /> × 1 chore
-            </button>
-          </div>
-        )}
 
         {/* ── CHOOSE phase: pick one of two bundles ── */}
         {phase === PHASE.CHOOSE && (
@@ -136,7 +106,7 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
           <>
             {activePool.length === 0 ? (
               <div className="modal-loading">
-                No {mode === MODE.TWO_ONE ? '1-token' : '2-token'} chores available today
+                No chores available today
               </div>
             ) : (
               <div className={`modal-wheel-wrap ${!isSpinPhase ? 'dimmed' : ''}`}>
