@@ -74,7 +74,7 @@ export default function ChildView() {
   const { routinesByChild, toggleRoutine } = useRoutines(now, child ? [child] : [], scheduleConfig)
   const routines = child ? (routinesByChild[child.name] ?? []) : []
 
-  const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child?.name ?? '', chores)
+  const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child?.name ?? '', chores, child?.id ?? null)
   const { balance }  = useScreenBalance(child?.name ?? '')
   const { tokens }    = useChorePoints(child?.name ?? '')
   const { modules }   = useFamilySettings()

@@ -236,22 +236,22 @@ router.post('/:id/reject', requireParent, async (req, res) => {
 // ── Admin (parent only) ───────────────────────────────────────────────────────
 
 router.post('/', requireParent, async (req, res) => {
-  const { id, label, tokens, icon, active, required, days, instructions, max_per_week } = req.body
+  const { id, label, tokens, icon, active, required, days, instructions, max_per_week, child_ids } = req.body
   await db.query(
-    `INSERT INTO chores (id, family_id, label, tokens, icon, active, required, days, instructions, max_per_week)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`,
-    [id, req.familyId, label, tokens, icon, active ?? true, required ?? false, days ?? [], instructions ?? [], max_per_week ?? null]
+    `INSERT INTO chores (id, family_id, label, tokens, icon, active, required, days, instructions, max_per_week, child_ids)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+    [id, req.familyId, label, tokens, icon, active ?? true, required ?? false, days ?? [], instructions ?? [], max_per_week ?? null, child_ids ?? []]
   )
   res.json({ success: true })
 })
 
 router.put('/:id', requireParent, async (req, res) => {
-  const { label, tokens, icon, active, required, days, instructions, max_per_week } = req.body
+  const { label, tokens, icon, active, required, days, instructions, max_per_week, child_ids } = req.body
   await db.query(
     `UPDATE chores SET label=$1, tokens=$2, icon=$3, active=$4, required=$5,
-     days=$6, instructions=$7, max_per_week=$8
-     WHERE id=$9 AND family_id=$10`,
-    [label, tokens, icon, active, required, days, instructions, max_per_week, req.params.id, req.familyId]
+     days=$6, instructions=$7, max_per_week=$8, child_ids=$9
+     WHERE id=$10 AND family_id=$11`,
+    [label, tokens, icon, active, required, days, instructions, max_per_week, child_ids ?? [], req.params.id, req.familyId]
   )
   res.json({ success: true })
 })

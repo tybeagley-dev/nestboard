@@ -161,6 +161,7 @@ export async function adminAddChore(data) {
     days:         data.days ?? [],
     instructions: data.instructions?.filter(Boolean) ?? [],
     max_per_week: data.frequency === 'weekly' ? 1 : null,
+    child_ids:    data.required ? (data.child_ids ?? []) : [],
   })
 }
 
@@ -181,6 +182,7 @@ export async function adminEditChore(data) {
     days:         data.days ?? [],
     instructions: data.instructions?.filter(Boolean) ?? [],
     max_per_week: data.frequency === 'weekly' ? 1 : null,
+    child_ids:    data.required ? (data.child_ids ?? []) : [],
   })
 }
 

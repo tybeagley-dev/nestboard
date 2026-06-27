@@ -2992,6 +2992,10 @@ button {
   gap: 6px;
 }
 
+/* Sit the "Assign to" picker directly under the Required toggle (right column)
+   on wide screens; span full width on mobile (unchanged from the old layout). */
+.chore-form-assign { grid-column: 2; }
+
 .chore-form-label {
   font-size: 11px;
   font-weight: 600;
@@ -3262,6 +3266,8 @@ button {
   .parent-page {
     grid-template-columns: 1fr;
   }
+
+  .chore-form-assign { grid-column: 1 / -1; }
 
   .parent-nav-toggle {
     display: flex;

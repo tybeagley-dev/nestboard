@@ -96,6 +96,8 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
         <span className="chore-admin-meta">
           {chore.days.length ? chore.days.map(d => DAY_SHORT[d] ?? d).join(' · ') : 'Any day'}
           {chore.required && ' · Required'}
+          {chore.required && chore.child_ids?.length > 0 &&
+            ` · ${chore.child_ids.map(id => children.find(c => c.id === id)?.name ?? '?').join(', ')} only`}
           {chore.frequency === 'weekly' && ' · Weekly'}
         </span>
         {assigning && (
@@ -122,7 +124,7 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
 
 // ── Add / Edit form ───────────────────────────────────────────────────────────
 
-function ChoreForm({ chore, onSave, onCancel, saving }) {
+function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
   const [label,        setLabel]        = useState(chore.label || '')
   const [icon,         setIcon]         = useState(chore.icon || '')
   const [tokens,        setTokens]        = useState(chore.tokens || 1)
@@ -130,12 +132,17 @@ function ChoreForm({ chore, onSave, onCancel, saving }) {
   const [days,         setDays]         = useState(chore.days || [])
   const [frequency,    setFrequency]    = useState(chore.frequency || 'daily')
   const [required,     setRequired]     = useState(chore.required || false)
+  const [childIds,     setChildIds]     = useState(chore.child_ids || [])
   const [instructions, setInstructions] = useState(
     chore.instructions?.length ? chore.instructions : []
   )
 
   function toggleDay(day) {
     setDays(d => d.includes(day) ? d.filter(x => x !== day) : [...d, day])
+  }
+
+  function toggleChild(id) {
+    setChildIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id])
   }
 
   function setInstruction(i, val) {
@@ -148,7 +155,7 @@ function ChoreForm({ chore, onSave, onCancel, saving }) {
 
   function handleSave() {
     if (!label.trim()) return
-    onSave({ ...chore, label: label.trim(), icon, tokens, active, days, frequency, required, instructions })
+    onSave({ ...chore, label: label.trim(), icon, tokens, active, days, frequency, required, instructions, child_ids: required ? childIds : [] })
   }
 
   return (
@@ -210,6 +217,23 @@ function ChoreForm({ chore, onSave, onCancel, saving }) {
             {required ? 'Yes — auto-adds' : 'No — spin only'}
           </button>
         </div>
+
+        {required && children.length > 0 && (
+          <div className="chore-form-field chore-form-assign">
+            <label className="chore-form-label">Assign to <span className="chore-form-hint">— none = all kids</span></label>
+            <div className="chore-form-days">
+              {children.map(c => (
+                <button
+                  key={c.id}
+                  className={`chore-day-chip ${childIds.includes(c.id) ? 'active' : ''}`}
+                  onClick={() => toggleChild(c.id)}
+                >
+                  {c.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {chore.id && (
@@ -370,6 +394,7 @@ export default function ParentChoresTab({ children = [] }) {
     return (
       <ChoreForm
         chore={form}
+        children={children}
         onSave={handleSave}
         onCancel={() => setForm(null)}
         saving={saving}

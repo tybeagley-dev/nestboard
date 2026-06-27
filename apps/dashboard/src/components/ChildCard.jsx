@@ -42,7 +42,7 @@ function SkeletonList() {
 }
 
 export default function ChildCard({ child, now, routines, routinesLoading, chores, choresLoading, onToggle, onSpin, onExtraSpin, onScreenTime, onTokens, onUpcoming, timer, scheduleConfig }) {
-  const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child.name, chores)
+  const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child.name, chores, child.id)
   const { balance } = useScreenBalance(child.name)
   const { tokens }   = useChorePoints(child.name)
   const labels = useLabels()

@@ -34,7 +34,7 @@ function saveAssignments(assignments) {
   window.dispatchEvent(new CustomEvent(EVENT))
 }
 
-function buildFromApi(childName, todayEntries, weekCompleted, chores) {
+function buildFromApi(childName, todayEntries, weekCompleted, chores, childId) {
   const weekDone    = new Set(weekCompleted[childName] ?? [])
   const todayLocal  = getTodayKey(new Date())
 
@@ -43,6 +43,8 @@ function buildFromApi(childName, todayEntries, weekCompleted, chores) {
       c.required &&
       c.active !== false &&
       (c.days.length === 0 || choreStartedThisWeek(c.days)) &&
+      // Empty child_ids = every kid; otherwise only the listed children.
+      (!c.child_ids?.length || c.child_ids.includes(childId)) &&
       !weekDone.has(c.id)
     )
     .map(c => ({
@@ -147,7 +149,7 @@ export function triggerChoreRefetch() {
   window.dispatchEvent(new Event(REFETCH_EVENT))
 }
 
-export function useAssignedChores(childName, chores = []) {
+export function useAssignedChores(childName, chores = [], childId = null) {
   const [assignedChores, setAssignedChores] = useState([])
   const [loading, setLoading]               = useState(true)
 
@@ -168,7 +170,7 @@ export function useAssignedChores(childName, chores = []) {
       const data = await apiGet(`/chores/state?date=${getToday()}`)
       if (!data) { setLoading(false); return }
       hydrateWeeklyFromHistory(data.weekCompleted ?? {}, chores)
-      const built = buildFromApi(childName, data.today?.[childName] ?? {}, data.weekCompleted ?? {}, chores)
+      const built = buildFromApi(childName, data.today?.[childName] ?? {}, data.weekCompleted ?? {}, chores, childId)
       const all = loadAssignments()
       const localChores  = all[childName] ?? []
       const localPending = new Set(localChores.filter(c => c.pending && !c.completed).map(c => c.id))
@@ -209,7 +211,7 @@ export function useAssignedChores(childName, chores = []) {
       window.removeEventListener(REFETCH_EVENT, onForce)
       window.removeEventListener('sse:chore_state', onForce)
     }
-  }, [childName, chores.length]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [childName, chores.length, childId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { chores: assignedChores, loading }
 }
