@@ -9,6 +9,8 @@ import FamilySetup from './FamilySetup'
 import JoinInvite from './JoinInvite'
 import AdminPage from './AdminPage'
 import OnboardingWizard from './OnboardingWizard'
+import ConsentGate from './components/ConsentGate'
+import LegalDoc from './components/LegalDoc'
 import { FamilyProvider } from './FamilyContext'
 
 // Requires a signed-in Clerk user; does NOT gate on family membership (so the
@@ -64,12 +66,15 @@ export default function App() {
   return (
     <Routes>
       <Route path="/:slug/child/:childId" element={<ChildView />} />
-      <Route path="/join/:token" element={<AuthGate><JoinInvite /></AuthGate>} />
+      <Route path="/privacy" element={<LegalDoc which="privacy" />} />
+      <Route path="/terms" element={<LegalDoc which="terms" />} />
+      <Route path="/join/:token" element={<AuthGate><ConsentGate><JoinInvite /></ConsentGate></AuthGate>} />
       <Route path="/admin" element={<AuthGate><AdminPage /></AuthGate>} />
       <Route
         path="*"
         element={
           <AuthGate>
+            <ConsentGate>
             <FamilyGate>
               <Routes>
                 <Route path="/" element={<Dashboard />} />
@@ -77,6 +82,7 @@ export default function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </FamilyGate>
+            </ConsentGate>
           </AuthGate>
         }
       />
