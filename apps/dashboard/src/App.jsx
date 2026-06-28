@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { useAuth, SignIn } from '@clerk/react'
+import { useAuth, SignIn, SignUp } from '@clerk/react'
 import { setTokenGetter, apiGet } from './utils/api'
+import Landing from './Landing'
 import Dashboard from './Dashboard'
 import ParentPage from './ParentPage'
 import ChildView from './ChildView'
@@ -24,6 +25,11 @@ function AuthGate({ children }) {
   if (!isLoaded) return null
 
   if (!isSignedIn) {
+    // Logged-out visitors landing on "/" get the marketing page, not a bare
+    // sign-in form. Deep links (e.g. /parent, /join/<token>) still go straight
+    // to auth so the destination survives the redirect.
+    if (window.location.pathname === '/') return <Landing />
+
     // Return to the current path after auth (e.g. /join/<token>), not Clerk's
     // default "/", so an invite link survives the sign-in/up redirect.
     // `withSignUp` enables the combined sign-in-or-up flow so brand-new users
@@ -71,6 +77,22 @@ export default function App() {
       <Route path="/:slug/child/:childId" element={<ChildView />} />
       <Route path="/privacy" element={<LegalDoc which="privacy" />} />
       <Route path="/terms" element={<LegalDoc which="terms" />} />
+      <Route
+        path="/sign-in"
+        element={
+          <div className="clerk-signin-wrap">
+            <SignIn routing="hash" withSignUp forceRedirectUrl="/" signUpForceRedirectUrl="/" signUpUrl="/sign-up" />
+          </div>
+        }
+      />
+      <Route
+        path="/sign-up"
+        element={
+          <div className="clerk-signin-wrap">
+            <SignUp routing="hash" forceRedirectUrl="/" signInUrl="/sign-in" />
+          </div>
+        }
+      />
       <Route path="/join/:token" element={<AuthGate><ConsentGate><JoinInvite /></ConsentGate></AuthGate>} />
       <Route path="/admin" element={<AuthGate><AdminPage /></AuthGate>} />
       <Route
