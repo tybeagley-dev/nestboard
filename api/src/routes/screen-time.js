@@ -19,8 +19,8 @@ router.get('/', async (req, res) => {
   const { dailyAllotmentMinutes } = await getScreenTimeConfig(req.familyId)
   const today = await familyToday(req.familyId)
   const { rows } = await db.query(
-    `SELECT stb.family_id, stb.purchased_balance, stb.daily_free_used, stb.daily_free_date,
-            stb.updated_at, ch.name AS child
+    `SELECT stb.family_id, stb.purchased_balance, stb.bonus_balance,
+            stb.daily_free_used, stb.daily_free_date, stb.updated_at, ch.name AS child
      FROM screen_time_balance stb
      JOIN children ch ON ch.id = stb.child_id
      WHERE stb.family_id = $1
@@ -33,8 +33,9 @@ router.get('/', async (req, res) => {
       family_id:           row.family_id,
       child:               row.child,
       purchased_balance:   Number(row.purchased_balance),
+      bonus_balance:       Number(row.bonus_balance),
       daily_free_available: dailyFreeAvailable,
-      balance:             Number(row.purchased_balance) + dailyFreeAvailable,
+      balance:             Number(row.purchased_balance) + Number(row.bonus_balance) + dailyFreeAvailable,
       updated_at:          row.updated_at,
     }
   })
@@ -42,9 +43,9 @@ router.get('/', async (req, res) => {
 })
 
 // POST /screen-time/:child/adjust  { delta }  — parent manual adjustment.
-// Asymmetric on purpose: granting time adds to purchased_balance (so a bonus can
-// exceed today's allotment and isn't wiped at midnight), while taking time away
-// only consumes today's free allotment (never claws back token-purchased minutes).
+// Grants land in bonus_balance; deductions walk free-then-bonus. Both are the
+// parent's own money, so a grant is always reversible. purchased_balance is the
+// kid's — bought with tokens — and a deduction never touches it.
 router.post('/:child/adjust', async (req, res) => {
   const delta = Number(req.body?.delta)
   const childName = req.params.child
@@ -56,36 +57,65 @@ router.post('/:child/adjust', async (req, res) => {
   const { dailyAllotmentMinutes } = await getScreenTimeConfig(req.familyId)
   const today = await familyToday(req.familyId)
 
-  const { rows } = delta > 0
-    ? await db.query(
-        `INSERT INTO screen_time_balance (family_id, child_id, purchased_balance, daily_free_used, daily_free_date)
-         VALUES ($1, $2, $3, 0, $4::date)
-         ON CONFLICT (family_id, child_id) DO UPDATE
-           SET purchased_balance = screen_time_balance.purchased_balance + $3,
-               updated_at = NOW()
-         RETURNING purchased_balance, daily_free_used, daily_free_date`,
-        [req.familyId, childId, delta, today]
-      )
-    : await db.query(
-        `INSERT INTO screen_time_balance (family_id, child_id, daily_free_used, daily_free_date)
-         VALUES ($1, $2, GREATEST(0, LEAST($3, -$4::integer)), $5::date)
-         ON CONFLICT (family_id, child_id) DO UPDATE
-           SET daily_free_used = GREATEST(0, LEAST($3,
-                 CASE WHEN screen_time_balance.daily_free_date = $5::date
-                      THEN screen_time_balance.daily_free_used - $4::integer
-                      ELSE -$4::integer
-                 END)),
-               daily_free_date = $5::date,
-               updated_at = NOW()
-         RETURNING purchased_balance, daily_free_used, daily_free_date`,
-        [req.familyId, childId, dailyAllotmentMinutes, delta, today]
-      )
+  const client = await db.connect()
+  try {
+    await client.query('BEGIN')
 
-  const free = calcFreeAvailable(rows[0], dailyAllotmentMinutes, today)
-  const purchased = Number(rows[0].purchased_balance)
-  const balance = purchased + free
-  broadcast('screen_time', { child: childName, balance }, req.familyId)
-  res.json({ success: true, balance, purchased_balance: purchased, daily_free_available: free })
+    const { rows: cur } = await client.query(
+      `INSERT INTO screen_time_balance (family_id, child_id, daily_free_date)
+       VALUES ($1, $2, $3::date)
+       ON CONFLICT (family_id, child_id) DO UPDATE SET updated_at = NOW()
+       RETURNING purchased_balance, bonus_balance, daily_free_used, daily_free_date`,
+      [req.familyId, childId, today]
+    )
+
+    const freeAvail = calcFreeAvailable(cur[0], dailyAllotmentMinutes, today)
+    const freeUsed  = dailyAllotmentMinutes - freeAvail
+
+    let newFreeUsed = freeUsed
+    let bonusDelta  = 0
+
+    if (delta > 0) {
+      bonusDelta = delta
+    } else {
+      // Take from today's free allotment first, then the bonus bucket.
+      const wanted    = -delta
+      const fromFree  = Math.min(wanted, freeAvail)
+      const fromBonus = Math.min(wanted - fromFree, Number(cur[0].bonus_balance))
+      newFreeUsed = freeUsed + fromFree
+      bonusDelta  = -fromBonus
+    }
+
+    const { rows } = await client.query(
+      `UPDATE screen_time_balance
+         SET bonus_balance   = GREATEST(0, bonus_balance + $3),
+             daily_free_used = $4,
+             daily_free_date = $5::date,
+             updated_at      = NOW()
+       WHERE family_id = $1 AND child_id = $2
+       RETURNING purchased_balance, bonus_balance, daily_free_used, daily_free_date`,
+      [req.familyId, childId, bonusDelta, newFreeUsed, today]
+    )
+
+    await client.query('COMMIT')
+
+    const free      = calcFreeAvailable(rows[0], dailyAllotmentMinutes, today)
+    const purchased = Number(rows[0].purchased_balance)
+    const bonus     = Number(rows[0].bonus_balance)
+    const balance   = purchased + bonus + free
+    broadcast('screen_time', { child: childName, balance }, req.familyId)
+    res.json({
+      success: true, balance,
+      purchased_balance: purchased,
+      bonus_balance: bonus,
+      daily_free_available: free,
+    })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    throw err
+  } finally {
+    client.release()
+  }
 })
 
 // POST /screen-time/:child/request-purchase  { minutesAmount }

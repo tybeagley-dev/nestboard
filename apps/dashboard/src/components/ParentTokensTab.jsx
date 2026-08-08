@@ -12,7 +12,8 @@ function ChildRow({ child }) {
   const labels = useLabels()
   const { modules } = useSettings()
   const { tokens, adjustTokens }  = useChorePoints(child.name)
-  const { balance, dailyFreeAvailable, addMinutes } = useScreenBalance(child.name)
+  const { balance, bonusBalance, dailyFreeAvailable, addMinutes } = useScreenBalance(child.name)
+  const deductible = dailyFreeAvailable + bonusBalance
   const [tokenDelta, setTokenDelta] = useState(0)
   const [flash, setFlash]         = useState('')
 
@@ -28,9 +29,10 @@ function ChildRow({ child }) {
     pulse('tokens')
   }
 
-  // Deductions only eat today's free allotment — token-purchased minutes are safe.
+  // Deductions eat the free allotment then parent-granted bonus minutes;
+  // token-purchased minutes are the kid's and stay untouched.
   function applyTime(delta) {
-    const actual = delta < 0 ? Math.max(delta, -dailyFreeAvailable) : delta
+    const actual = delta < 0 ? Math.max(delta, -deductible) : delta
     if (actual === 0) return
     addMinutes(actual)
     pulse('time')
@@ -89,7 +91,7 @@ function ChildRow({ child }) {
               key={d}
               className={`parent-time-btn ${d < 0 ? 'deduct' : 'add'}`}
               onClick={() => applyTime(d)}
-              disabled={d < 0 && dailyFreeAvailable === 0}
+              disabled={d < 0 && deductible === 0}
             >
               {d > 0 ? `+${d}` : d}m
             </button>

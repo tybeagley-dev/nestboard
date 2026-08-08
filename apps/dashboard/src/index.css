@@ -1654,6 +1654,11 @@ button {
   color: color-mix(in srgb, var(--accent-green, #4caf50) 90%, var(--text-primary));
 }
 
+.st-bucket-bonus {
+  background: color-mix(in srgb, var(--accent-blue, #4a90d9) 15%, transparent);
+  color: color-mix(in srgb, var(--accent-blue, #4a90d9) 90%, var(--text-primary));
+}
+
 .st-bucket-banked {
   background: color-mix(in srgb, var(--accent-warm) 15%, transparent);
   color: color-mix(in srgb, var(--accent-warm) 90%, var(--text-primary));

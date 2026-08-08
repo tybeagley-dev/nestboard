@@ -31,12 +31,12 @@ export function dateStr(value) {
 
 // One row per timer that actually consumed minutes. Parent adjustments never
 // land here, which is what keeps "watched TV" distinct from "lost time".
-export async function recordSession(client, { familyId, childId, date, freeMinutes, purchasedMinutes, startedAt }) {
-  if (freeMinutes + purchasedMinutes <= 0) return
+export async function recordSession(client, { familyId, childId, date, freeMinutes, bonusMinutes = 0, purchasedMinutes, startedAt }) {
+  if (freeMinutes + bonusMinutes + purchasedMinutes <= 0) return
   await client.query(
     `INSERT INTO screen_time_sessions
-       (family_id, child_id, date, free_minutes, purchased_minutes, started_at)
-     VALUES ($1, $2, $3, $4, $5, $6)`,
-    [familyId, childId, date, freeMinutes, purchasedMinutes, startedAt ?? null]
+       (family_id, child_id, date, free_minutes, bonus_minutes, purchased_minutes, started_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+    [familyId, childId, date, freeMinutes, bonusMinutes, purchasedMinutes, startedAt ?? null]
   )
 }

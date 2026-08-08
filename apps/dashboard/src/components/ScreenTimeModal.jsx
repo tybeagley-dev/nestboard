@@ -13,7 +13,7 @@ export default function ScreenTimeModal({ child, onClose }) {
   const { screenTime } = useSettings()
   const TOKENS_PER_STEP = screenTime.tokensPerBlock  // tokens per block
   const MINS_PER_STEP   = screenTime.blockMinutes    // minutes per stepper step
-  const { balance, purchasedBalance, dailyFreeAvailable } = useScreenBalance(child.name)
+  const { balance, purchasedBalance, bonusBalance, dailyFreeAvailable } = useScreenBalance(child.name)
   const { tokens } = useChorePoints(child.name)
   const [phase,          setPhase]          = useState(PHASE.VIEW)
   const [steps,          setSteps]          = useState(1)   // stepper unit: 1 step = 10 min = 5 tokens
@@ -80,10 +80,13 @@ export default function ScreenTimeModal({ child, onClose }) {
               <span className="st-balance-unit">min available</span>
             </div>
 
-            {(dailyFreeAvailable > 0 || purchasedBalance > 0) && (
+            {(dailyFreeAvailable > 0 || bonusBalance > 0 || purchasedBalance > 0) && (
               <div className="st-balance-breakdown">
                 {dailyFreeAvailable > 0 && (
                   <span className="st-bucket st-bucket-free">{dailyFreeAvailable}m free today</span>
+                )}
+                {bonusBalance > 0 && (
+                  <span className="st-bucket st-bucket-bonus">{bonusBalance}m granted</span>
                 )}
                 {purchasedBalance > 0 && (
                   <span className="st-bucket st-bucket-banked">{purchasedBalance}m banked</span>

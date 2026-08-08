@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS screen_time_balance (
   family_id         TEXT NOT NULL REFERENCES families(id),
   child_id          TEXT NOT NULL REFERENCES children(id),
   purchased_balance INTEGER NOT NULL DEFAULT 0,
+  bonus_balance     INTEGER NOT NULL DEFAULT 0,
   daily_free_used   INTEGER NOT NULL DEFAULT 0,
   daily_free_date   DATE    NOT NULL DEFAULT CURRENT_DATE,
   updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -139,6 +140,7 @@ CREATE TABLE IF NOT EXISTS timers (
   duration_minutes  INTEGER NOT NULL DEFAULT 0,
   buffer_minutes    INTEGER NOT NULL DEFAULT 5,
   free_minutes      INTEGER NOT NULL DEFAULT 0,
+  bonus_minutes     INTEGER NOT NULL DEFAULT 0,
   purchased_minutes INTEGER NOT NULL DEFAULT 0,
   started_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (family_id, child_id)
@@ -175,6 +177,7 @@ CREATE TABLE IF NOT EXISTS screen_time_sessions (
   child_id          TEXT NOT NULL REFERENCES children(id),
   date              DATE NOT NULL,          -- family-local date the session started
   free_minutes      INTEGER NOT NULL DEFAULT 0,
+  bonus_minutes     INTEGER NOT NULL DEFAULT 0,
   purchased_minutes INTEGER NOT NULL DEFAULT 0,
   started_at        TIMESTAMPTZ,
   ended_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
