@@ -43,7 +43,7 @@ function buildFromApi(childName, todayEntries, weekCompleted, chores, childId) {
       c.required &&
       c.active !== false &&
       (c.days.length === 0 || choreStartedThisWeek(c.days)) &&
-      // Empty child_ids = every kid; otherwise only the listed children.
+      // Empty child_ids = every child; otherwise only the listed children.
       (!c.child_ids?.length || c.child_ids.includes(childId)) &&
       !weekDone.has(c.id)
     )

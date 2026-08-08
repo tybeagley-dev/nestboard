@@ -80,7 +80,7 @@ button {
   gap: 10px;
   flex: 1 0 auto;
 }
-/* One kid: center a constrained card instead of stretching it full width. */
+/* One child: center a constrained card instead of stretching it full width. */
 .dashboard-children.solo {
   grid-template-columns: minmax(320px, 560px);
   justify-content: center;
@@ -1792,7 +1792,7 @@ button {
 
 .btn-spend:active { filter: brightness(0.9); }
 
-/* ── Rewards (kid-facing) ──────────────────────────────────────────────── */
+/* ── Rewards (child-facing) ──────────────────────────────────────────────── */
 .store-phase {
   display: flex;
   flex-direction: column;
@@ -1881,7 +1881,7 @@ button {
 .store-confirm-icon  { font-size: 36px; }
 .store-confirm-label { font-size: 16px; font-weight: 600; color: var(--text-primary); }
 
-/* ── Kid wallet ──────────────────────────────────────────────────────────── */
+/* ── Child wallet ──────────────────────────────────────────────────────────── */
 .wallet-section {
   margin-top: 16px;
   border-top: 1px solid var(--border);

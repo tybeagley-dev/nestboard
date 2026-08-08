@@ -124,6 +124,52 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
 
 // ── Add / Edit form ───────────────────────────────────────────────────────────
 
+// Field-by-field reference, collapsed by default. Two things here are genuinely
+// non-obvious and are the reason this exists: Required chores skip the spinner
+// entirely, and `days` means "only these days" for spin chores but "from this
+// day until it's done" for required ones (useAssignedChores.choreStartedThisWeek).
+function ChoreFieldGuide() {
+  const labels = useLabels()
+  const tokens = labels.tokenName.toLowerCase()
+  return (
+    <TabGuide summary="What do these fields do?">
+      <p className="onboarding-guide-text">
+        <strong>Tokens</strong> — what finishing it earns. Most chores are 1; bump a longer or
+        nastier job to 2.
+      </p>
+      <p className="onboarding-guide-text">
+        <strong>Required</strong> — the big one. A required chore is assigned automatically and
+        appears on the child's card every day until it's done. A chore that is <em>not</em> required
+        only ever shows up if the child lands on it in the <strong>chore spinner</strong>.
+      </p>
+      <p className="onboarding-guide-text">
+        <strong>Days</strong> — for spinner chores, the only days it can be spun. For
+        {' '}<em>required</em> chores it's a start day instead: the chore appears from that day
+        onward and stays until it's finished, so setting Monday means it sits there all week.
+        Leave blank for every day.
+      </p>
+      <p className="onboarding-guide-text">
+        <strong>Frequency</strong> — <em>Daily</em> can come up again and again.
+        {' '}<em>Weekly</em> means once per week: a required weekly chore disappears for that child
+        once they finish it, and a weekly spinner chore leaves the pool for
+        {' '}<em>everyone</em> once any child does it.
+      </p>
+      <p className="onboarding-guide-text">
+        <strong>Assign to</strong> (required chores only) — pick specific children, or leave it empty
+        to give it to all of them.
+      </p>
+      <p className="onboarding-guide-text">
+        <strong>Steps</strong> — an optional checklist shown to the child when they open the chore.
+        Good for anything with a "did you also…" attached to it.
+      </p>
+      <p className="onboarding-guide-text">
+        <strong>Status</strong> — set a chore Inactive to retire it without deleting it or losing
+        the {tokens} history. It stops being assigned or spun.
+      </p>
+    </TabGuide>
+  )
+}
+
 function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
   const [label,        setLabel]        = useState(chore.label || '')
   const [icon,         setIcon]         = useState(chore.icon || '')
@@ -160,6 +206,8 @@ function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
 
   return (
     <div className="chore-form">
+      <ChoreFieldGuide />
+
       <div className="chore-form-field">
         <label className="chore-form-label">Label</label>
         <input
@@ -186,7 +234,11 @@ function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
       </div>
 
       <div className="chore-form-field">
-        <label className="chore-form-label">Days <span className="chore-form-hint">— leave blank for any day</span></label>
+        <label className="chore-form-label">
+          Days <span className="chore-form-hint">
+            — {required ? 'starts this day, stays until done' : 'spinnable on these days'}; blank = any day
+          </span>
+        </label>
         <div className="chore-form-days">
           {DAYS.map(d => (
             <button
@@ -220,7 +272,7 @@ function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
 
         {required && children.length > 0 && (
           <div className="chore-form-field chore-form-assign">
-            <label className="chore-form-label">Assign to <span className="chore-form-hint">— none = all kids</span></label>
+            <label className="chore-form-label">Assign to <span className="chore-form-hint">— none = all children</span></label>
             <div className="chore-form-days">
               {children.map(c => (
                 <button
@@ -249,7 +301,7 @@ function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
       )}
 
       <div className="chore-form-field">
-        <label className="chore-form-label">Steps <span className="chore-form-hint">— optional instructions shown to kids</span></label>
+        <label className="chore-form-label">Steps <span className="chore-form-hint">— optional instructions shown to children</span></label>
         {instructions.map((step, i) => (
           <div key={i} className="chore-step-row">
             <input
@@ -409,7 +461,7 @@ export default function ParentChoresTab({ children = [] }) {
     <div className="parent-chores-tab">
       <TabGuide summary="How chores & tokens work">
         <p className="onboarding-guide-text">
-          Add chores here, then kids spin the <strong>chore spinner</strong> on their card to get
+          Add chores here, then children spin the <strong>chore spinner</strong> on their card to get
           assigned one. Finishing a chore earns {labels.tokenName}, which cash in at the {labels.rewardsName}.
         </p>
         <p className="onboarding-guide-text">

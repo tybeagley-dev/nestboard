@@ -5,7 +5,7 @@ import { useLabels, useSettings } from '../FamilyContext'
 // Draft copy — tune the voice later. Covers the *interactive* dashboard surfaces
 // that don't fit the parent onboarding wizard (timers, grocery, checking off,
 // spinner, tokens, screen time, upcoming). Lives on the kiosk because that's the
-// view the kids actually use.
+// view the children actually use.
 function Section({ icon, title, children }) {
   return (
     <div className="howto-section">
@@ -27,7 +27,13 @@ export default function HowItWorksModal({ onClose }) {
   const earns = [modules.tokens && tokens, modules.screenTime && 'screen time'].filter(Boolean)
 
   // What actually flows through the Approvals queue, by enabled module.
-  const approvalKinds = ['chore', modules.screenTime && 'screen-time', modules.tokens && 'reward'].filter(Boolean)
+  // Reward-store buys are NOT in this list: `requires_approval` only tells the child
+  // to go ask a parent, it never creates an Approvals request.
+  const approvalKinds = [
+    'chore',
+    modules.screenTime && 'screen-time',
+    modules.screenTime && modules.tokens && 'screen-free day',
+  ].filter(Boolean)
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -42,18 +48,22 @@ export default function HowItWorksModal({ onClose }) {
 
         <div className="howto-header">
           <h2 className="modal-title">How the dashboard works</h2>
-          <p className="modal-points-line">The tap-to-use bits that aren't in setup. Anyone can open this again from the <strong>?</strong> up top.</p>
+          <p className="modal-points-line">
+            The tap-to-use bits that aren't in setup. Anyone can open this again from the
+            {' '}<strong>?</strong> up top. Everything here is shared — check something off on one
+            device and it updates on every screen your family uses.
+          </p>
         </div>
 
         <div className="howto-sections">
           <Section icon={<CheckCircle size={20} strokeWidth={1.8} />} title="Checking things off">
-            Each kid's card lists their routines and chores for the day. Tap a row to check it
+            Each child's card lists their routines and chores for the day. Tap a row to check it
             off — the progress bar fills as they go.
             {modules.zones && <> The weekly <strong>zone</strong> gets a light check-in morning, midday, and evening.</>}
           </Section>
 
           <Section icon={<span className="howto-emoji">🎡</span>} title="Chore spinner">
-            Tap <strong>chore spinner</strong> on a kid's card and spin the wheel. Sometimes you
+            Tap <strong>chore spinner</strong> on a child's card and spin the wheel. Sometimes you
             land on one bigger chore, sometimes two smaller ones — about the same amount of work
             either way.{earns.length > 0 && ` Finishing them is how they earn ${earns.join(' and ')}.`}
             {' '}Don't love your spin? Tap <strong>Spin Again</strong> and keep whichever you prefer.
@@ -64,16 +74,17 @@ export default function HowItWorksModal({ onClose }) {
 
           {modules.tokens && (
             <Section icon={<Coins size={20} strokeWidth={1.8} />} title={labels.tokenName}>
-              The coins button on each card shows that kid's {tokens} balance. Tap it to open the
-              {' '}{labels.rewardsName.toLowerCase()} and trade {tokens} for rewards. A reward goes
-              to a parent to approve, then lands in the kid's <strong>Wallet</strong> — to cash it
-              in, show a parent and they'll mark it used.
+              The coins button on each card shows that child's {tokens} balance, what they've
+              recently earned and spent, and the {labels.rewardsName.toLowerCase()} to spend it in.
+              Some rewards are bought outright; others say <em>ask a grown up</em> first.
+              {' '}Once bought, a reward moves to the <strong>Wallet</strong> — it's paid for, but
+              you haven't had it yet. Show a parent to cash one in and they'll mark it redeemed.
             </Section>
           )}
 
           {modules.screenTime && (
             <Section icon={<Monitor size={20} strokeWidth={1.8} />} title="Screen time">
-              The screen button shows earned minutes. Kids trade {tokens} for screen time (a parent
+              The screen button shows earned minutes. Children trade {tokens} for screen time (a parent
               approves the request), then start a timer when they sit down.
               {modules.tokens && screenTime.abstinenceEnabled && (
                 <> Go a whole day without using any screen time and you can earn{' '}
@@ -94,7 +105,7 @@ export default function HowItWorksModal({ onClose }) {
             Up top: a 2-minute <strong>toothbrush</strong> timer, a <strong>reading</strong> timer,
             and a whole-family <strong>tidy</strong> timer for quick clean-ups.
             {modules.screenTime && (
-              <> There's also a <strong>screen-time timer</strong>: once a kid trades for screen
+              <> There's also a <strong>screen-time timer</strong>: once a child trades for screen
               time, tapping the screen button starts a countdown of their earned minutes — plus a
               couple extra to get the device set up — and when it hits zero, time's up.</>
             )}
@@ -108,7 +119,7 @@ export default function HowItWorksModal({ onClose }) {
           )}
 
           <Section icon={<CalendarDays size={20} strokeWidth={1.8} />} title="What's coming up">
-            Tap <strong>upcoming</strong> on a kid's card for their next 7 days, or tap the
+            Tap <strong>upcoming</strong> on a child's card for their next 7 days, or tap the
             {' '}<strong>Today's Events</strong> card to see the whole family's day, week, or month.
           </Section>
         </div>

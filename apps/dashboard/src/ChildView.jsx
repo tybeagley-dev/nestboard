@@ -68,7 +68,7 @@ export default function ChildView() {
   const [trusted, setTrusted] = useState(() => isChildTrusted(slug))
 
   if (!trusted) {
-    // Non-dismissable: there's no "escape" past the gate on a kid device.
+    // Non-dismissable: there's no "escape" past the gate on a child device.
     return (
       <div className="child-view-loading">
         <PinModal

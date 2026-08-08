@@ -30,7 +30,7 @@ function ChildRow({ child }) {
   }
 
   // Deductions eat the free allotment then parent-granted bonus minutes;
-  // token-purchased minutes are the kid's and stay untouched.
+  // token-purchased minutes are the child's and stay untouched.
   function applyTime(delta) {
     const actual = delta < 0 ? Math.max(delta, -deductible) : delta
     if (actual === 0) return
@@ -109,7 +109,7 @@ export default function ParentTokensTab({ children = [] }) {
     <div className="parent-tokens-tab">
       <TabGuide summary="How tokens & time work">
         <p className="onboarding-guide-text">
-          A manual ledger for each kid — nudge their {labels.tokenName} or screen-time minutes up or
+          A manual ledger for each child — nudge their {labels.tokenName} or screen-time minutes up or
           down by hand. Handy for one-off bonuses, corrections, or rewards that happen outside the
           normal chore flow.
         </p>

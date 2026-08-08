@@ -103,8 +103,8 @@ function StoreForm({ item, onSave, onCancel, saving }) {
         </div>
         <p className="chore-form-hint" style={{ marginTop: 4 }}>
           {requiresApproval
-            ? 'Kids see the item and are prompted to ask a parent. No automatic deduction.'
-            : 'Kids can purchase this on their own. Tokens deducted immediately.'}
+            ? 'Children see the item and are prompted to ask a parent. No automatic deduction.'
+            : 'Children can purchase this on their own. Tokens deducted immediately.'}
         </p>
       </div>
 
@@ -115,7 +115,7 @@ function StoreForm({ item, onSave, onCancel, saving }) {
             className={`chore-form-toggle-single ${active ? 'active' : ''}`}
             onClick={() => setActive(a => !a)}
           >
-            {active ? 'Active — visible in store' : 'Inactive — hidden from kids'}
+            {active ? 'Active — visible in store' : 'Inactive — hidden from children'}
           </button>
         </div>
       )}
@@ -312,9 +312,20 @@ export default function ParentRewardsTab({ children = [] }) {
     <div className="parent-chores-tab">
       <TabGuide summary={`How the ${labels.rewardsName} works`}>
         <p className="onboarding-guide-text">
-          The {labels.rewardsName} is what kids spend {labels.tokenName} on. Add the rewards you’ll
-          offer and set each one’s cost; they show up for kids to redeem from their card. Flag a
+          The {labels.rewardsName} is what children spend {labels.tokenName} on. Add the rewards you’ll
+          offer and set each one’s cost; they show up for children to redeem from their card. Flag a
           reward as needing approval if you want the final say before it’s cashed in.
+        </p>
+        <p className="onboarding-guide-text">
+          <strong>Buying isn’t the same as using.</strong> When a child buys something the
+          {' '}{labels.tokenName} come out straight away and the item moves to their
+          {' '}<strong>Wallet</strong> — a list of things they’ve paid for but not yet had. It sits
+          there until you hand it over.
+        </p>
+        <p className="onboarding-guide-text">
+          <strong>Pending Redemptions</strong> below is that same list, for every child at once.
+          When they actually get the reward, hit <strong>Redeem</strong> and it clears from their
+          Wallet. Nothing expires on its own, so an unredeemed item is a promise you still owe.
         </p>
       </TabGuide>
 

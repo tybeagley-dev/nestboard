@@ -1,4 +1,4 @@
-// Curated kid-friendly icon set for child avatars. DB stores the kebab `name`;
+// Curated child-friendly icon set for child avatars. DB stores the kebab `name`;
 // ChildIcon and the picker both read from here. Keep names stable — they're
 // persisted in children.icon.
 import {

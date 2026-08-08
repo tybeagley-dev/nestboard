@@ -124,7 +124,7 @@ function PushStep({ push, childId, label, blocked }) {
 
   const desc = childId
     ? `Get reminders and updates on ${label || 'this'}'s device.`
-    : 'Get a ping when a kid submits a chore for approval or asks for screen time.'
+    : 'Get a ping when a child submits a chore for approval or asks for screen time.'
 
   if (blocked) {
     return (

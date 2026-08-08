@@ -69,7 +69,7 @@ export default function AdminPage() {
 
       <table className="admin-table">
         <thead>
-          <tr><th>Family</th><th>Slug</th><th>Members</th><th>Kids</th><th>Onboarded</th><th>Created</th><th></th></tr>
+          <tr><th>Family</th><th>Slug</th><th>Members</th><th>Children</th><th>Onboarded</th><th>Created</th><th></th></tr>
         </thead>
         <tbody>
           {families.map(f => (

@@ -80,7 +80,9 @@ export default function TokensModal({ child, onClose }) {
                     <span className="wallet-cost"><TokenBadge amount={p.cost} /></span>
                   </div>
                 ))}
-                <p className="wallet-hint">Show this to a parent to use it!</p>
+                <p className="wallet-hint">
+                  Already paid for — show a parent when you want to use one.
+                </p>
               </div>
             )}
 

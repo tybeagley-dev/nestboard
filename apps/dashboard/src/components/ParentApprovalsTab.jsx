@@ -3,7 +3,53 @@ import { triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { useSseRefetch } from '../hooks/useLiveSync'
 import TokenBadge from './TokenBadge'
 import ChildIcon from './ChildIcon'
+import TabGuide from './TabGuide'
+import { useLabels, useSettings } from '../FamilyContext'
 import { apiGet, apiPost } from '../utils/api'
+
+// What actually reaches this queue, by enabled module. Reward-store purchases
+// deliberately aren't listed: `requires_approval` on a reward is a UI flag that
+// tells the child to go ask, it never creates a request here.
+function ApprovalsGuide({ modules, labels }) {
+  const tokens = labels.tokenName.toLowerCase()
+  return (
+    <TabGuide summary="How approvals work">
+      <p className="onboarding-guide-text">
+        Nothing a child submits counts until you say so. Checking a chore off marks it
+        {' '}<strong>pending</strong> on their card and sends it here — approving is what actually
+        pays out the {tokens}. Rejecting sends it back unfinished, so use it for "not done yet"
+        rather than as a punishment.
+      </p>
+      <p className="onboarding-guide-text">
+        <strong>Chores</strong> — a finished chore waiting on you. The badge shows what it pays.
+      </p>
+      {modules.screenTime && (
+        <p className="onboarding-guide-text">
+          <strong>Screen time</strong> — a child asking to trade {tokens} for minutes. Approving
+          deducts the {tokens} and banks the minutes; rejecting costs them nothing.
+        </p>
+      )}
+      {modules.screenTime && modules.tokens && (
+        <p className="onboarding-guide-text">
+          <strong>Screen-free day</strong> — filed automatically each morning for any child who used
+          no screen time the day before. Approve if they were home and genuinely chose not to;
+          reject if they were away or it wasn't a fair test.
+        </p>
+      )}
+      <p className="onboarding-guide-text">
+        Everything in nestboard is shared across every device signed in to your family, and this
+        list updates live — a request made on the family screen, your phone, or a child's own page
+        shows up here within seconds, and approving it updates everywhere at once.
+      </p>
+      <p className="onboarding-guide-text">
+        Buying something in the {labels.rewardsName.toLowerCase()} doesn't come here — those are
+        paid for instantly and land in the child's <strong>Wallet</strong> — things they've bought
+        but not yet used. You'll find the same list as <strong>Pending Redemptions</strong> on the
+        {' '}{labels.rewardsName} tab, where you mark one redeemed once they've had it.
+      </p>
+    </TabGuide>
+  )
+}
 
 export default function ParentApprovalsTab({ children = [] }) {
   const [pending,          setPending]          = useState([])
@@ -11,6 +57,8 @@ export default function ParentApprovalsTab({ children = [] }) {
   const [abstinenceRequests, setAbstinenceRequests] = useState([])
   const [loading,          setLoading]          = useState(true)
   const [acting,           setActing]           = useState(null)
+  const labels    = useLabels()
+  const { modules } = useSettings()
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -79,17 +127,23 @@ export default function ParentApprovalsTab({ children = [] }) {
 
   if (loading) return <p className="parent-soon-msg">Loading…</p>
 
+  // The guide sits above the empty state on purpose — an empty queue is exactly
+  // when a new parent first opens this tab and needs to know what lands here.
   if (totalPending === 0) {
     return (
-      <div className="approvals-empty">
-        <span className="approvals-empty-icon">✅</span>
-        <p>No pending approvals.</p>
+      <div className="parent-approvals-tab">
+        <ApprovalsGuide modules={modules} labels={labels} />
+        <div className="approvals-empty">
+          <span className="approvals-empty-icon">✅</span>
+          <p>No pending approvals.</p>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="parent-approvals-tab">
+      <ApprovalsGuide modules={modules} labels={labels} />
 
       {pending.length > 0 && (
         <section>

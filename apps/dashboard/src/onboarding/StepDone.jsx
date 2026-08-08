@@ -18,7 +18,7 @@ export default function StepDone({ children }) {
 
       {children.length > 0 && (
         <div className="onboarding-done-section">
-          <p className="onboarding-guide-title">Each kid’s own view</p>
+          <p className="onboarding-guide-title">Each child’s own view</p>
           <p className="onboarding-help">
             Every child has a personal page showing just their stuff. Scan or copy a link onto their device to bookmark it.
           </p>

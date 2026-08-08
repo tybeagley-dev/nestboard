@@ -57,7 +57,7 @@ export const CONFIG = {
 
   // ── Screen Time ────────────────────────────────────────────────────────────
   // minutesPerChore: how much screen time is awarded per completed chore
-  // timerBufferMinutes: countdown duration when kids choose "Start Timer"
+  // timerBufferMinutes: countdown duration when children choose "Start Timer"
   //   (slightly more than minutesPerChore to give them time to get set up)
   screenTime: {
     minutesPerChore: 30,

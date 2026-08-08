@@ -44,7 +44,7 @@ function RoutineRow({ def, onEdit, confirmDelete, onDeleteRequest, onConfirmDele
 // ── Routine form ──────────────────────────────────────────────────────────────
 
 function RoutineForm({ def, childNames, onSave, onCancel, saving }) {
-  // Creating applies the routine to one or more kids; editing targets the single
+  // Creating applies the routine to one or more children; editing targets the single
   // child the existing routine belongs to.
   const creating = !def.id
   const [selected,  setSelected]  = useState(creating ? (def.child ? [def.child] : childNames.slice(0, 1)) : [])
@@ -73,7 +73,7 @@ function RoutineForm({ def, childNames, onSave, onCancel, saving }) {
     <div className="chore-form">
       <div className="chore-form-row">
         <div className="chore-form-field">
-          <label className="chore-form-label">{creating ? 'Kids' : 'Child'}</label>
+          <label className="chore-form-label">{creating ? 'Children' : 'Child'}</label>
           <div className="chore-form-toggle">
             {childNames.map(c => {
               const active = creating ? selected.includes(c) : child === c
@@ -88,7 +88,7 @@ function RoutineForm({ def, childNames, onSave, onCancel, saving }) {
               )
             })}
           </div>
-          {creating && <p className="chore-form-hint">Tap each kid this routine should apply to.</p>}
+          {creating && <p className="chore-form-hint">Tap each child this routine should apply to.</p>}
         </div>
         <div className="chore-form-field">
           <label className="chore-form-label">Icon</label>

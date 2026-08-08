@@ -430,7 +430,7 @@ export default function ParentZonesTab({ children }) {
           or “hang up the coats.”
         </p>
         <p className="onboarding-guide-text">
-          Each week, every kid is <strong>automatically given</strong> one micro-zone. It shows on
+          Each week, every child is <strong>automatically given</strong> one micro-zone. It shows on
           their card and gets a light check-in morning, midday, and evening. The point isn’t another
           chore — it’s building the habit of <em>noticing</em> what needs doing and handling it
           without being asked.

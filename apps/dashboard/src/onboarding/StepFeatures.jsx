@@ -4,8 +4,8 @@
 // is on. Controlled by OnboardingWizard, which persists via PUT /auth/family/settings.
 const MODULE_ROWS = [
   { key: 'screenTime', title: 'Screen time',     desc: 'Earn and spend screen-time minutes, with timers.' },
-  { key: 'tokens',     title: 'Tokens & rewards', desc: 'A token economy with a rewards store kids spend in.' },
-  { key: 'zones',      title: 'Zones',            desc: 'Weekly notice-and-do responsibilities, one per kid.' },
+  { key: 'tokens',     title: 'Tokens & rewards', desc: 'A token economy with a rewards store children spend in.' },
+  { key: 'zones',      title: 'Zones',            desc: 'Weekly notice-and-do responsibilities, one per child.' },
   { key: 'meals',      title: 'Meals & grocery',  desc: 'Weekly meal plan and a shared grocery list.' },
 ]
 
