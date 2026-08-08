@@ -13,6 +13,7 @@ function dispatchTimerUpdate()   { window.dispatchEvent(new Event('fam_timer_upd
 export function useScreenBalance(childName) {
   const [balance,           setBalance]           = useState(0)
   const [purchasedBalance,  setPurchasedBalance]  = useState(0)
+  const [bonusBalance,      setBonusBalance]      = useState(0)
   const [dailyFreeAvailable, setDailyFreeAvailable] = useState(0)
 
   const sync = useCallback(async () => {
@@ -22,6 +23,7 @@ export function useScreenBalance(childName) {
     if (!row) return
     setBalance(Number(row.balance ?? 0))
     setPurchasedBalance(Number(row.purchased_balance ?? 0))
+    setBonusBalance(Number(row.bonus_balance ?? 0))
     setDailyFreeAvailable(Number(row.daily_free_available ?? 0))
   }, [childName])
 
@@ -47,12 +49,13 @@ export function useScreenBalance(childName) {
         if (data?.balance == null) return
         setBalance(Number(data.balance))
         setPurchasedBalance(Number(data.purchased_balance ?? 0))
+        setBonusBalance(Number(data.bonus_balance ?? 0))
         setDailyFreeAvailable(Number(data.daily_free_available ?? 0))
       })
     dispatchBalanceUpdate()
   }, [childName])
 
-  return { balance, purchasedBalance, dailyFreeAvailable, addMinutes }
+  return { balance, purchasedBalance, bonusBalance, dailyFreeAvailable, addMinutes }
 }
 
 // ── Timer ─────────────────────────────────────────────────────────────────────

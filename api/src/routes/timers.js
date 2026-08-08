@@ -41,7 +41,7 @@ router.post('/:child/start', async (req, res) => {
     await client.query('BEGIN')
 
     const { rows: balRows } = await client.query(
-      `SELECT purchased_balance, daily_free_used, daily_free_date,
+      `SELECT purchased_balance, bonus_balance, daily_free_used, daily_free_date,
               CASE WHEN daily_free_date = $4::date
                    THEN GREATEST(0, $3 - daily_free_used)
                    ELSE $3
@@ -51,17 +51,22 @@ router.post('/:child/start', async (req, res) => {
     )
 
     const purchased  = balRows.length ? Number(balRows[0].purchased_balance) : 0
+    const bonus      = balRows.length ? Number(balRows[0].bonus_balance)     : 0
     const freeAvail  = balRows.length ? Number(balRows[0].free_available)    : dailyAllotmentMinutes
-    const totalAvail = purchased + freeAvail
+    const totalAvail = purchased + bonus + freeAvail
 
+    // Spend the perishable and the parent's own first; the kid's token-bought
+    // minutes are the last to go.
     const totalToDeduct = Math.min(totalAvail, durationMinutes)
     const freeToDeduct  = Math.min(freeAvail, totalToDeduct)
-    const purchToDeduct = totalToDeduct - freeToDeduct
+    const bonusToDeduct = Math.min(bonus, totalToDeduct - freeToDeduct)
+    const purchToDeduct = totalToDeduct - freeToDeduct - bonusToDeduct
 
     if (balRows.length) {
       await client.query(
         `UPDATE screen_time_balance SET
            purchased_balance = GREATEST(0, purchased_balance - $1),
+           bonus_balance     = GREATEST(0, bonus_balance - $6),
            daily_free_used   = CASE WHEN daily_free_date = $5::date
                                     THEN daily_free_used + $2
                                     ELSE $2
@@ -69,7 +74,7 @@ router.post('/:child/start', async (req, res) => {
            daily_free_date   = $5::date,
            updated_at        = NOW()
          WHERE family_id = $3 AND child_id = $4`,
-        [purchToDeduct, freeToDeduct, req.familyId, childId, today]
+        [purchToDeduct, freeToDeduct, req.familyId, childId, today, bonusToDeduct]
       )
     } else {
       await client.query(
@@ -83,19 +88,17 @@ router.post('/:child/start', async (req, res) => {
     const endTime      = Date.now() + (totalToDeduct + storedBuffer) * 60 * 1000
 
     await client.query(
-      `INSERT INTO timers (family_id, child_id, end_time, duration_minutes, buffer_minutes, free_minutes, purchased_minutes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO timers (family_id, child_id, end_time, duration_minutes, buffer_minutes, free_minutes, bonus_minutes, purchased_minutes)
+       VALUES ($1, $2, $3, $4, $5, $6, $8, $7)
        ON CONFLICT (family_id, child_id) DO UPDATE
          SET end_time = $3, duration_minutes = $4, buffer_minutes = $5,
-             free_minutes = $6, purchased_minutes = $7, started_at = NOW()`,
-      [req.familyId, childId, endTime, totalToDeduct, storedBuffer, freeToDeduct, purchToDeduct]
+             free_minutes = $6, bonus_minutes = $8, purchased_minutes = $7, started_at = NOW()`,
+      [req.familyId, childId, endTime, totalToDeduct, storedBuffer, freeToDeduct, purchToDeduct, bonusToDeduct]
     )
 
     await client.query('COMMIT')
 
-    const newPurchased = purchased - purchToDeduct
-    const newFreeAvail = freeAvail - freeToDeduct
-    const newBalance   = newPurchased + newFreeAvail
+    const newBalance = (purchased - purchToDeduct) + (bonus - bonusToDeduct) + (freeAvail - freeToDeduct)
     broadcast('screen_time', { child: childName, balance: newBalance }, req.familyId)
     broadcast('timers', { child: childName }, req.familyId)
     res.json({ success: true, deducted: totalToDeduct, newBalance, endTime })
@@ -124,11 +127,13 @@ router.post('/:child/stop', async (req, res) => {
   const timer = rows[0]
 
   const freeMin  = Number(timer.free_minutes  ?? 0)
+  const bonusMin = Number(timer.bonus_minutes ?? 0)
   const purchMin = Number(timer.purchased_minutes ?? timer.duration_minutes ?? 0)
-  const totalMin = freeMin + purchMin
+  const totalMin = freeMin + bonusMin + purchMin
 
   // An expired timer ran its full length; a manual stop refunds the unused tail.
   let freeConsumed  = freeMin
+  let bonusConsumed = bonusMin
   let purchConsumed = purchMin
 
   if (!expired && totalMin > 0) {
@@ -143,18 +148,21 @@ router.post('/:child/stop', async (req, res) => {
     }
 
     if (refundTotal > 0) {
-      // Free was consumed first, so refund in reverse: free refunded last consumed first
+      // Consumption ran free → bonus → purchased, so the unused tail refunds in
+      // reverse: purchased comes back first, free last.
       const minutesConsumed = totalMin - refundTotal
       freeConsumed  = Math.min(minutesConsumed, freeMin)
-      purchConsumed = minutesConsumed - freeConsumed
+      bonusConsumed = Math.min(minutesConsumed - freeConsumed, bonusMin)
+      purchConsumed = minutesConsumed - freeConsumed - bonusConsumed
 
       await db.query(
         `UPDATE screen_time_balance SET
            daily_free_used   = GREATEST(0, daily_free_used - $1),
+           bonus_balance     = bonus_balance + $5,
            purchased_balance = purchased_balance + $2,
            updated_at        = NOW()
          WHERE family_id = $3 AND child_id = $4`,
-        [freeMin - freeConsumed, purchMin - purchConsumed, req.familyId, childId]
+        [freeMin - freeConsumed, purchMin - purchConsumed, req.familyId, childId, bonusMin - bonusConsumed]
       )
       broadcast('screen_time', { child: childName }, req.familyId)
     }
@@ -167,6 +175,7 @@ router.post('/:child/stop', async (req, res) => {
     childId,
     date: localDate(await getFamilyTimezone(req.familyId), timer.started_at ?? undefined),
     freeMinutes: freeConsumed,
+    bonusMinutes: bonusConsumed,
     purchasedMinutes: purchConsumed,
     startedAt: timer.started_at,
   })
@@ -185,7 +194,7 @@ export function startExpiryJob() {
   setInterval(async () => {
     try {
       const { rows } = await db.query(
-        `SELECT t.family_id, t.child_id, t.free_minutes, t.purchased_minutes,
+        `SELECT t.family_id, t.child_id, t.free_minutes, t.bonus_minutes, t.purchased_minutes,
                 t.duration_minutes, t.started_at, ch.name AS child
          FROM timers t
          JOIN children ch ON ch.id = t.child_id
@@ -199,6 +208,7 @@ export function startExpiryJob() {
           childId:  t.child_id,
           date: localDate(await getFamilyTimezone(t.family_id), t.started_at ?? undefined),
           freeMinutes:      Number(t.free_minutes ?? 0),
+          bonusMinutes:     Number(t.bonus_minutes ?? 0),
           purchasedMinutes: Number(t.purchased_minutes ?? t.duration_minutes ?? 0),
           startedAt: t.started_at,
         })
