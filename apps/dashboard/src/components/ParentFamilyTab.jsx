@@ -20,6 +20,7 @@ export default function ParentFamilyTab({ onPinChanged }) {
     const next = {
       modules:    { ...settings.modules,    ...(partial.modules ?? {}) },
       screenTime: { ...settings.screenTime, ...(partial.screenTime ?? {}) },
+      chores:     { ...settings.chores,     ...(partial.chores ?? {}) },
     }
     setFamily(f => ({ ...f, settings: next }))
     apiPut('/auth/family/settings', next)
@@ -45,6 +46,7 @@ export default function ParentFamilyTab({ onPinChanged }) {
           <StepFeatures
             modules={settings.modules}
             screenTime={settings.screenTime}
+            chores={settings.chores}
             onChange={saveSettings}
           />
         </div>

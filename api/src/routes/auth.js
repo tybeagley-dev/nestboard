@@ -218,8 +218,18 @@ function sanitizeSettings(body) {
   const st = body?.screenTime
   if (st && typeof st === 'object') {
     out.screenTime = {}
-    for (const k of ['dailyAllotmentMinutes', 'tokensPerBlock', 'blockMinutes']) {
+    for (const k of ['dailyAllotmentMinutes', 'tokensPerBlock', 'blockMinutes', 'abstinenceTokens']) {
       if (typeof st[k] === 'number' && st[k] >= 0) out.screenTime[k] = Math.floor(st[k])
+    }
+    // Every other screenTime key is numeric; this one is a flag, so it needs its
+    // own branch or it gets silently dropped on the way through.
+    if (typeof st.abstinenceEnabled === 'boolean') out.screenTime.abstinenceEnabled = st.abstinenceEnabled
+  }
+  const ch = body?.chores
+  if (ch && typeof ch === 'object') {
+    out.chores = {}
+    if (typeof ch.dailyTokenTarget === 'number' && ch.dailyTokenTarget > 0) {
+      out.chores.dailyTokenTarget = Math.floor(ch.dailyTokenTarget)
     }
   }
   return out
@@ -241,6 +251,7 @@ router.put('/family/settings', async (req, res) => {
       ...clean,
       modules:    { ...(existing.modules ?? {}),    ...(clean.modules ?? {}) },
       screenTime: { ...(existing.screenTime ?? {}), ...(clean.screenTime ?? {}) },
+      chores:     { ...(existing.chores ?? {}),     ...(clean.chores ?? {}) },
     }
     await db.query('UPDATE families SET settings = $1 WHERE id = $2', [JSON.stringify(merged), familyId])
     res.json({ success: true, settings: merged })

@@ -1,3 +1,5 @@
+import { useLabels } from '../FamilyContext'
+
 // Dedicated feature picker. Turning a module off here hides its dashboard
 // surfaces AND skips its later onboarding step (the wizard gates on this state).
 // Screen-time tuning (daily allotment, token cost) shows only when screen time
@@ -18,13 +20,15 @@ function Toggle({ on, onChange }) {
   )
 }
 
-export default function StepFeatures({ modules, screenTime, onChange }) {
+export default function StepFeatures({ modules, screenTime, chores, onChange }) {
+  const labels = useLabels()
   // Meals & grocery are one choice here but two flags under the hood.
   function setModule(key, val) {
     if (key === 'meals') onChange({ modules: { meals: val, grocery: val } })
     else onChange({ modules: { [key]: val } })
   }
   const setST = patch => onChange({ screenTime: patch })
+  const setChores = patch => onChange({ chores: patch })
 
   return (
     <div className="onboarding-features">
@@ -42,6 +46,21 @@ export default function StepFeatures({ modules, screenTime, onChange }) {
         </div>
       ))}
 
+      {modules.tokens && (
+        <div className="feature-subsettings">
+          <label className="feature-num-row">
+            <span>
+              Daily chore target <em>(in {labels.tokenName.toLowerCase()} — one spin adds up to this much)</em>
+            </span>
+            <input
+              type="number" min="1" step="1"
+              value={chores?.dailyTokenTarget ?? 2}
+              onChange={e => setChores({ dailyTokenTarget: Math.max(1, parseInt(e.target.value || '1', 10)) })}
+            />
+          </label>
+        </div>
+      )}
+
       {modules.screenTime && (
         <div className="feature-subsettings">
           <label className="feature-num-row">
@@ -54,7 +73,7 @@ export default function StepFeatures({ modules, screenTime, onChange }) {
           </label>
           {modules.tokens && (
             <label className="feature-num-row">
-              <span>Tokens to buy 10 minutes</span>
+              <span>{labels.tokenName} to buy {screenTime.blockMinutes} minutes</span>
               <input
                 type="number" min="1" step="1"
                 value={screenTime.tokensPerBlock}
@@ -68,7 +87,8 @@ export default function StepFeatures({ modules, screenTime, onChange }) {
                 <div className="feature-row-text">
                   <span className="feature-row-title">Screen-free day reward</span>
                   <span className="feature-row-desc">
-                    Use no screen time all day and a parent can award bonus tokens the next morning.
+                    Use no screen time all day and a parent can award bonus
+                    {' '}{labels.tokenName.toLowerCase()} the next morning.
                   </span>
                 </div>
                 <Toggle
@@ -78,7 +98,7 @@ export default function StepFeatures({ modules, screenTime, onChange }) {
               </div>
               {screenTime.abstinenceEnabled && (
                 <label className="feature-num-row">
-                  <span>Tokens for a screen-free day</span>
+                  <span>{labels.tokenName} for a screen-free day</span>
                   <input
                     type="number" min="1" step="1"
                     value={screenTime.abstinenceTokens}

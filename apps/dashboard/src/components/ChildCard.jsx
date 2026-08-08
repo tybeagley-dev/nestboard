@@ -65,18 +65,28 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
   const canExtraSpin   = spinChores.length > 0 && spinChores.every(c => c.pending || c.completed)
   const spinBlocked    = spinChores.length > 0 && !spinChores.every(c => c.pending || c.completed)
 
-  const allItems = [...routines, ...requiredChores, ...(choreDay ? spinChores : [])]
-  const done     = allItems.filter(r => r.completed).length
-  const total    = allItems.length
-  const allDone  = total > 0 && done === total
-  const progress = total > 0 ? (done / total) * 100 : 0
+  // Progress tracks chores only — routines carry their own checkmarks, so
+  // folding them in here made the number measure two different things at once.
+  const choreItems = [...requiredChores, ...(choreDay ? spinChores : [])]
+  const total      = choreItems.length
+  const done       = choreItems.filter(c => c.completed).length
+  const awaiting   = choreItems.filter(c => !c.completed && c.pending).length
+  const allDone    = total > 0 && done === total
+  const progress   = total > 0 ? (done / total) * 100 : 0
+  // The bar measures chores, but "done for the day" means the routines too — so
+  // the celebration is deliberately not tied to the bar filling.
+  const dayItems     = [...routines, ...choreItems]
+  const everythingDone = dayItems.length > 0 && dayItems.every(i => i.completed)
+  // Submitted-but-unapproved work shows as a lighter segment past the fill, so a
+  // child sees it registered without the card claiming it's finished.
+  const pendingPct = total > 0 ? (awaiting / total) * 100 : 0
 
-  const prevAllDone = useRef(allDone)
+  const prevAllDone = useRef(everythingDone)
   const [confettiKey, setConfettiKey] = useState(0)
   useEffect(() => {
-    if (!prevAllDone.current && allDone) setConfettiKey(k => k + 1)
-    prevAllDone.current = allDone
-  }, [allDone])
+    if (!prevAllDone.current && everythingDone) setConfettiKey(k => k + 1)
+    prevAllDone.current = everythingDone
+  }, [everythingDone])
 
   useEffect(() => {
     if (timer?.expired) startChimeLoop()
@@ -116,7 +126,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
 
   return (
     <div
-      className={`child-card ${allDone ? 'all-done' : ''}`}
+      className={`child-card ${everythingDone ? 'all-done' : ''}`}
       style={{ '--child-color': child.color, background: `color-mix(in srgb, ${child.color} 30%, #F2EDE4)`, position: 'relative' }}
     >
       <Confetti triggerKey={confettiKey} />
@@ -126,7 +136,12 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
         <div className="child-meta">
           <h3 className="child-name">{child.name}</h3>
           <span className="child-progress-text">
-            {isLoading ? 'Syncing…' : total === 0 ? 'Nothing assigned yet' : allDone ? 'All done! ✓' : `${done} of ${total}`}
+            {isLoading
+              ? 'Syncing…'
+              : total === 0 ? 'No chores yet'
+              : everythingDone ? 'All done! ✓'
+              : allDone ? 'Chores done ✓'
+              : `${done} of ${total}${awaiting > 0 ? ` · ${awaiting} waiting` : ''}`}
           </span>
         </div>
 
@@ -181,6 +196,10 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
 
       <div className="progress-track">
         <div className="progress-fill" style={{ width: `${progress}%`, background: child.color }} />
+        <div
+          className="progress-pending"
+          style={{ width: `${pendingPct}%`, background: child.color }}
+        />
       </div>
 
       {modules.zones && <ZoneCard child={child} now={now} />}

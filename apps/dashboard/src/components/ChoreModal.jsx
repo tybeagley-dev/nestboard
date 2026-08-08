@@ -4,16 +4,29 @@ import TokenBadge from './TokenBadge'
 import ChildIcon from './ChildIcon'
 import { assignChores, acceptChoresToApi, getClaimedChoreIds, triggerChoreRefetch } from '../hooks/useAssignedChores'
 import { isChoreAvailableThisWeek } from '../hooks/useChoreFrequency'
-import { useLabels } from '../FamilyContext'
+import { useLabels, useSettings } from '../FamilyContext'
 
-const PHASE = { READY: 'ready', RESULT: 'result', RESPIN: 'respin', CHOOSE: 'choose' }
+const PHASE = { READY: 'ready', CHOOSE: 'choose' }
 
 function todayName() {
   return new Date().toLocaleDateString('en-US', { weekday: 'long' })
 }
 
-export default function ChoreModal({ child, chores = [], onClose, isExtra = false }) {
-  const labels = useLabels()
+// Floor of 1 so a chore saved with 0 tokens can't pad a bundle for free.
+function tokenValue(chore) {
+  return Math.max(1, chore.tokens ?? 1)
+}
+
+function pickRandom(pool) {
+  return pool[Math.floor(Math.random() * pool.length)]
+}
+
+// `tokenTarget` is passed explicitly by ChildView, which renders outside the
+// FamilyProvider and so can't read settings from context.
+export default function ChoreModal({ child, chores = [], onClose, isExtra = false, tokenTarget }) {
+  const labels   = useLabels()
+  const settings = useSettings()
+  const target   = tokenTarget ?? settings.chores.dailyTokenTarget
   const [phase,        setPhase]        = useState(PHASE.READY)
   const [firstBundle,  setFirstBundle]  = useState([])
   const [secondBundle, setSecondBundle] = useState([])
@@ -32,24 +45,36 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
     )
   }
 
-  // Outcome-driven: a 2-token chore wins the spin on its own; a 1-token chore
-  // brings along a second 1-token chore — so every spin is ~2 tokens of work.
+  // Outcome-driven: a bundle is topped up with more chores until it's worth the
+  // family's daily target, so every option on offer is the same amount of work.
   function buildBundle(firstChore, excludeIds = []) {
-    if (firstChore.tokens >= 2) return [firstChore]
-    const pool   = filteredPool([...excludeIds, firstChore.id]).filter(c => c.tokens === 1)
-    const second = pool.length > 0 ? pool[Math.floor(Math.random() * pool.length)] : null
-    return second ? [firstChore, second] : [firstChore]
+    const bundle  = [firstChore]
+    const exclude = [...excludeIds, firstChore.id]
+    let total     = tokenValue(firstChore)
+
+    while (total < target) {
+      // Only chores that fit the remaining gap, so a bundle can't overshoot.
+      const pool = filteredPool(exclude).filter(c => tokenValue(c) <= target - total)
+      if (!pool.length) break
+      const next = pickRandom(pool)
+      bundle.push(next)
+      exclude.push(next.id)
+      total += tokenValue(next)
+    }
+    return bundle
   }
 
+  // One spin produces both options: the wheel picks bundle A's opener, and B is
+  // built from whatever's left. A pool too small for a second bundle just yields
+  // one option rather than blocking the spin.
   function handleSpinEnd(firstChore) {
     setSpinning(false)
-    if (phase === PHASE.READY) {
-      setFirstBundle(buildBundle(firstChore))
-      setPhase(PHASE.RESULT)
-    } else if (phase === PHASE.RESPIN) {
-      setSecondBundle(buildBundle(firstChore, firstBundle.map(c => c.id)))
-      setPhase(PHASE.CHOOSE)
-    }
+    const a    = buildBundle(firstChore)
+    const rest = filteredPool(a.map(c => c.id))
+    const b    = rest.length ? buildBundle(pickRandom(rest), a.map(c => c.id)) : []
+    setFirstBundle(a)
+    setSecondBundle(b)
+    setPhase(PHASE.CHOOSE)
   }
 
   function handleAccept(bundle) {
@@ -59,14 +84,13 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
     acceptChoresToApi(child, mapped).then(() => triggerChoreRefetch())
   }
 
-  function handleSpinAgain() {
-    setPhase(PHASE.RESPIN)
-  }
-
-  const firstPool   = filteredPool()
-  const respinPool  = filteredPool(firstBundle.map(c => c.id))
-  const activePool  = phase === PHASE.RESPIN ? respinPool : firstPool
-  const isSpinPhase = phase === PHASE.READY || phase === PHASE.RESPIN
+  const activePool  = filteredPool()
+  const isSpinPhase = phase === PHASE.READY
+  const bundles     = [firstBundle, secondBundle].filter(b => b.length > 0)
+  const totals      = bundles.map(b => b.reduce((sum, c) => sum + tokenValue(c), 0))
+  // A bundle falls short of the target when the pool runs dry, so the options
+  // aren't always equal — only claim they are when they actually are.
+  const sameValue   = totals.length > 1 && totals.every(t => t === totals[0])
 
   return (
     <div className="modal-backdrop">
@@ -84,9 +108,15 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
         {/* ── CHOOSE phase: pick one of two bundles ── */}
         {phase === PHASE.CHOOSE && (
           <div className="chore-choose-panel">
-            <p className="chore-choose-label">Pick your bundle:</p>
+            <p className="chore-choose-label">
+              {bundles.length < 2
+                ? 'Your chores:'
+                : sameValue
+                  ? `Pick one — both are worth the same number of ${labels.tokenName.toLowerCase()}:`
+                  : 'Pick one:'}
+            </p>
             <div className="chore-choose-bundles">
-              {[firstBundle, secondBundle].map((bundle, i) => (
+              {bundles.map((bundle, i) => (
                 <button key={i} className="chore-bundle-btn" onClick={() => handleAccept(bundle)}>
                   {bundle.map(c => (
                     <div key={c.id} className="chore-bundle-item">
@@ -95,13 +125,18 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
                       <TokenBadge amount={c.tokens} />
                     </div>
                   ))}
+                  {bundle.length > 1 && (
+                    <span className="chore-bundle-total">
+                      {totals[i]} {labels.tokenName.toLowerCase()} total
+                    </span>
+                  )}
                 </button>
               ))}
             </div>
           </div>
         )}
 
-        {/* ── READY / RESULT / RESPIN phases: wheel + result ── */}
+        {/* ── READY phase: the wheel ── */}
         {phase !== PHASE.CHOOSE && (
           <>
             {activePool.length === 0 ? (
@@ -116,34 +151,6 @@ export default function ChoreModal({ child, chores = [], onClose, isExtra = fals
                   onSpinStart={() => setSpinning(true)}
                   onSpinEnd={handleSpinEnd}
                 />
-              </div>
-            )}
-
-            {phase === PHASE.RESPIN && (
-              <p className="chore-respin-hint">Spin #2 — then choose your favorite!</p>
-            )}
-
-            {phase === PHASE.RESULT && firstBundle.length > 0 && (
-              <div className="chore-result-panel">
-                <div className="chore-result-cards">
-                  {firstBundle.map(chore => (
-                    <div key={chore.id} className="chore-result-card">
-                      <span className="chore-result-icon">{chore.icon}</span>
-                      <span className="chore-result-name">{chore.label}</span>
-                      <TokenBadge amount={chore.tokens} />
-                    </div>
-                  ))}
-                </div>
-                <div className="chore-result-actions">
-                  <button className="btn-complete" onClick={() => handleAccept(firstBundle)}>
-                    ✓ These are my chores!
-                  </button>
-                  {respinPool.length > 0 && (
-                    <button className="btn-spin-again" onClick={handleSpinAgain}>
-                      Spin Again
-                    </button>
-                  )}
-                </div>
               </div>
             )}
           </>

@@ -36,14 +36,17 @@ export default function OnboardingWizard({ onComplete }) {
   const initial = resolveSettings(family?.settings)
   const [modules, setModules]       = useState(initial.modules)
   const [screenTime, setScreenTime] = useState(initial.screenTime)
+  const [choreCfg,   setChoreCfg]   = useState(initial.chores)
 
   // Persist feature choices as they change so the dashboard reflects them immediately.
   function saveSettings(partial) {
     const nextModules = { ...modules, ...(partial.modules ?? {}) }
     const nextST      = { ...screenTime, ...(partial.screenTime ?? {}) }
+    const nextChores  = { ...choreCfg,   ...(partial.chores ?? {}) }
     setModules(nextModules)
     setScreenTime(nextST)
-    apiPut('/auth/family/settings', { modules: nextModules, screenTime: nextST })
+    setChoreCfg(nextChores)
+    apiPut('/auth/family/settings', { modules: nextModules, screenTime: nextST, chores: nextChores })
   }
 
   const visibleSteps = STEPS.filter(s => !s.module || modules[s.module])
@@ -65,7 +68,7 @@ export default function OnboardingWizard({ onComplete }) {
   function renderBody() {
     switch (step.key) {
       case 'children': return <StepChildren children={children} reload={reloadChildren} />
-      case 'features': return <StepFeatures modules={modules} screenTime={screenTime} onChange={saveSettings} />
+      case 'features': return <StepFeatures modules={modules} screenTime={screenTime} chores={choreCfg} onChange={saveSettings} />
       case 'routines': return <ParentRoutinesTab children={children} />
       case 'zones':    return <ParentZonesTab children={children} />
       case 'chores':   return <ParentChoresTab children={children} />

@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import ChildIcon from './components/ChildIcon'
+import Confetti from './components/Confetti'
 import PinModal from './components/PinModal'
 import { isChildTrusted, trustChild } from './utils/childTrust'
 import { useLiveSync } from './hooks/useLiveSync'
@@ -107,13 +108,33 @@ function ChildViewInner() {
   const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child?.name ?? '', chores, child?.id ?? null)
   const { balance }  = useScreenBalance(child?.name ?? '')
   const { tokens }    = useChorePoints(child?.name ?? '')
-  const { modules }   = useFamilySettings()
+  const familySettings = useFamilySettings()
+  const { modules }   = familySettings
 
   const [showChoreModal,  setShowChoreModal]  = useState(false)
   const [showUpcoming,    setShowUpcoming]    = useState(false)
   const [showSetup,       setShowSetup]       = useState(false)
   const [instructionsChore, setInstructionsChore] = useState(null)
   const [submitting,      setSubmitting]      = useState(new Set())
+
+  const requiredChores = assignedChores.filter(c => c.required)
+  const spinChores     = assignedChores.filter(c => !c.required)
+
+  // Chores only, matching the kiosk card — routines carry their own checkmarks.
+  const choreItems = [...requiredChores, ...(isChoreDay() ? spinChores : [])]
+  const total      = choreItems.length
+  const done       = choreItems.filter(c => c.completed).length
+  const awaiting   = choreItems.filter(c => !c.completed && c.pending).length
+  const dayItems   = [...routines, ...choreItems]
+  const everythingDone = dayItems.length > 0 && dayItems.every(i => i.completed)
+
+  // Same rule as the kiosk card: chores *and* routines, not the progress number.
+  const prevAllDone = useRef(everythingDone)
+  const [confettiKey, setConfettiKey] = useState(0)
+  useEffect(() => {
+    if (!prevAllDone.current && everythingDone) setConfettiKey(k => k + 1)
+    prevAllDone.current = everythingDone
+  }, [everythingDone])
 
   if (!child) {
     return (
@@ -123,9 +144,7 @@ function ChildViewInner() {
     )
   }
 
-  const requiredChores = assignedChores.filter(c => c.required)
-  const spinChores     = assignedChores.filter(c => !c.required)
-  const canSpin        = spinChores.length === 0 || spinChores.every(c => c.pending || c.completed)
+  const canSpin = spinChores.length === 0 || spinChores.every(c => c.pending || c.completed)
 
   // Spin chores can't be submitted until the cooldown since accepting them elapses
   // (matches the kiosk card). Required chores have no cooldown.
@@ -135,10 +154,6 @@ function ChildViewInner() {
     const elapsed = Date.now() - new Date(chore.acceptedAt).getTime()
     return Math.max(0, Math.ceil((cooldownMs - elapsed) / 60000))
   }
-
-  const allItems = [...routines, ...requiredChores, ...(isChoreDay() ? spinChores : [])]
-  const done     = allItems.filter(r => r.completed).length
-  const total    = allItems.length
 
   async function handleChoreRequest(chore) {
     if (submitting.has(chore.id)) return
@@ -163,12 +178,20 @@ function ChildViewInner() {
 
   return (
     <div className="child-view" style={{ '--child-color': child.color }}>
+      {/* Fixed to the viewport: the page scrolls, and confetti anchored to the
+          document would fall off-screen for a child scrolled down the list. */}
+      <div className="child-view-confetti"><Confetti triggerKey={confettiKey} /></div>
       {/* Header */}
       <div className="child-view-header" style={{ background: child.color }}>
         <div className="child-view-avatar"><ChildIcon name={child.icon} size={48} /></div>
         <div className="child-view-name">{child.name}</div>
         <div className="child-view-progress">
-          {assignedLoading ? 'Syncing…' : total === 0 ? 'Nothing yet' : done === total ? 'All done!' : `${done} of ${total} done`}
+          {assignedLoading
+            ? 'Syncing…'
+            : total === 0 ? 'No chores yet'
+            : everythingDone ? 'All done!'
+            : done === total ? 'Chores done ✓'
+            : `${done} of ${total} done${awaiting > 0 ? ` · ${awaiting} waiting` : ''}`}
         </div>
       </div>
 
@@ -266,6 +289,7 @@ function ChildViewInner() {
         <ChoreModal
           child={child}
           chores={chores}
+          tokenTarget={familySettings.chores.dailyTokenTarget}
           onClose={() => setShowChoreModal(false)}
         />
       )}

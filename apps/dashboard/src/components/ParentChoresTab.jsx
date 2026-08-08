@@ -59,9 +59,10 @@ function emptyChore() {
 
 // ── Chore row in list view ────────────────────────────────────────────────────
 
-function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
+function ChoreRow({ chore, children, onEdit, onSetActive }) {
   const [assigning, setAssigning] = useState(false)
   const [assigned,  setAssigned]  = useState('')
+  const isInactive = chore.active === false
 
   async function handleAssign(child) {
     await apiPost(`/chores/${chore.id}/accept`, {
@@ -75,18 +76,18 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
     triggerChoreRefetch()
   }
 
-  if (confirmDelete) {
-    return (
-      <div className="chore-admin-row deleting">
-        <span className="chore-delete-msg">Remove "{chore.label}"?</span>
-        <button className="chore-delete-yes" onClick={onConfirmDelete}>Remove</button>
-        <button className="chore-delete-no"  onClick={onCancelDelete}>Cancel</button>
-      </div>
-    )
-  }
+  // Whole row opens the editor; the controls inside it stop the click so they
+  // don't also fire the edit.
+  const stop = e => e.stopPropagation()
 
   return (
-    <div className={`chore-admin-row ${chore.active === false ? 'chore-admin-row--inactive' : ''}`}>
+    <div
+      className={`chore-admin-row chore-admin-row--clickable ${chore.active === false ? 'chore-admin-row--inactive' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={onEdit}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit() } }}
+    >
       <span className="chore-admin-icon">{chore.icon || '•'}</span>
       <div className="chore-admin-info">
         <span className="chore-admin-label">
@@ -101,7 +102,7 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
           {chore.frequency === 'weekly' && ' · Weekly'}
         </span>
         {assigning && (
-          <div className="chore-assign-picker">
+          <div className="chore-assign-picker" onClick={stop}>
             {children.map(child => (
               <button key={child.name} className="chore-assign-child-btn" onClick={() => handleAssign(child)}>
                 <ChildIcon name={child.icon} size={15} color={child.color} style={{ verticalAlign: 'text-bottom' }} /> {child.name}
@@ -113,11 +114,33 @@ function ChoreRow({ chore, children, onEdit, confirmDelete, onDeleteRequest, onC
         {assigned && <span className="chore-assign-confirm">Assigned to {assigned} ✓</span>}
       </div>
       <TokenBadge amount={chore.tokens} />
-      {!assigning && !assigned && (
-        <button className="chore-assign-btn" onClick={() => setAssigning(true)} title="Assign to child">→</button>
+      {isInactive ? (
+        <button
+          className="chore-assign-btn"
+          onClick={e => { stop(e); onSetActive(true) }}
+          title="Put this chore back in rotation"
+        >
+          Restore
+        </button>
+      ) : (
+        <>
+          {!assigning && !assigned && (
+            <button
+              className="chore-assign-btn"
+              onClick={e => { stop(e); setAssigning(true) }}
+              title="Assign this chore to a child now"
+            >
+              Assign
+            </button>
+          )}
+          <button
+            className="chore-admin-del-btn"
+            onClick={e => { stop(e); onSetActive(false) }}
+            title="Retire — moves to Inactive, doesn't delete"
+            aria-label={`Retire ${chore.label}`}
+          >×</button>
+        </>
       )}
-      <button className="chore-admin-edit-btn" onClick={onEdit}>Edit</button>
-      <button className="chore-admin-del-btn"  onClick={onDeleteRequest}>×</button>
     </div>
   )
 }
@@ -134,8 +157,8 @@ function ChoreFieldGuide() {
   return (
     <TabGuide summary="What do these fields do?">
       <p className="onboarding-guide-text">
-        <strong>Tokens</strong> — what finishing it earns. Most chores are 1; bump a longer or
-        nastier job to 2.
+        <strong>{labels.tokenName}</strong> — what finishing it earns, and how much of the daily
+        target it covers. Keep everyday jobs at 1 and give longer or nastier ones more.
       </p>
       <p className="onboarding-guide-text">
         <strong>Required</strong> — the big one. A required chore is assigned automatically and
@@ -170,7 +193,9 @@ function ChoreFieldGuide() {
   )
 }
 
-function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
+function ChoreForm({ chore, children = [], onSave, onCancel, onDelete, saving }) {
+  const labels = useLabels()
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
   const [label,        setLabel]        = useState(chore.label || '')
   const [icon,         setIcon]         = useState(chore.icon || '')
   const [tokens,        setTokens]        = useState(chore.tokens || 1)
@@ -225,11 +250,15 @@ function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
           <EmojiPicker value={icon} onChange={setIcon} placeholder="🚿" />
         </div>
         <div className="chore-form-field">
-          <label className="chore-form-label">Tokens</label>
-          <div className="chore-form-toggle">
-            <button className={tokens === 1 ? 'active' : ''} onClick={() => setTokens(1)}>1</button>
-            <button className={tokens === 2 ? 'active' : ''} onClick={() => setTokens(2)}>2</button>
-          </div>
+          <label className="chore-form-label">
+            {labels.tokenName} <span className="chore-form-hint">— what it's worth</span>
+          </label>
+          <input
+            className="chore-form-input chore-form-tokens"
+            type="number" min="1" step="1"
+            value={tokens}
+            onChange={e => setTokens(Math.max(1, parseInt(e.target.value || '1', 10)))}
+          />
         </div>
       </div>
 
@@ -328,6 +357,27 @@ function ChoreForm({ chore, children = [], onSave, onCancel, saving }) {
         </button>
         <button className="btn-cancel-spend" onClick={onCancel}>Cancel</button>
       </div>
+
+      {onDelete && (
+        <div className="chore-form-danger">
+          {confirmingDelete ? (
+            <>
+              <p className="chore-form-hint">
+                Delete "{chore.label}" for good? Retiring it instead keeps it out of rotation
+                without touching anything.
+              </p>
+              <div className="chore-form-danger-actions">
+                <button className="chore-delete-yes" onClick={onDelete}>Delete permanently</button>
+                <button className="chore-delete-no" onClick={() => setConfirmingDelete(false)}>Cancel</button>
+              </div>
+            </>
+          ) : (
+            <button className="chore-form-delete-btn" onClick={() => setConfirmingDelete(true)}>
+              Delete chore
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -408,6 +458,69 @@ function TodayAssignments({ children }) {
   )
 }
 
+// ── Filtering ─────────────────────────────────────────────────────────────────
+
+// Below this many chores the bar is more clutter than help, so it stays hidden.
+const FILTER_BAR_MIN = 6
+
+const EMPTY_FILTERS = { assign: null, frequency: null, tokens: null }
+
+function choreMatches(chore, search, f) {
+  if (search && !chore.label.toLowerCase().includes(search.toLowerCase())) return false
+  if (f.assign === 'required' && !chore.required) return false
+  if (f.assign === 'spin'     &&  chore.required) return false
+  // Chores saved before the frequency field default to daily.
+  if (f.frequency && (chore.frequency ?? 'daily') !== f.frequency) return false
+  if (f.tokens && (chore.tokens ?? 1) !== f.tokens) return false
+  return true
+}
+
+function ChoreFilterBar({ search, onSearch, filters, onChange, shown, total, tokenValues }) {
+  const active = search || filters.assign || filters.frequency || filters.tokens
+  // Tapping the selected chip clears that facet.
+  const set = (key, val) => onChange({ ...filters, [key]: filters[key] === val ? null : val })
+  const chip = (key, val, label) => (
+    <button
+      key={`${key}-${val}`}
+      className={`chore-day-chip ${filters[key] === val ? 'active' : ''}`}
+      onClick={() => set(key, val)}
+    >
+      {label}
+    </button>
+  )
+
+  return (
+    <div className="chore-filter-bar">
+      <input
+        className="chore-form-input chore-filter-search"
+        value={search}
+        onChange={e => onSearch(e.target.value)}
+        placeholder="Search chores…"
+      />
+      <div className="chore-filter-chips">
+        {chip('assign', 'required', 'Required')}
+        {chip('assign', 'spin', 'Spinner')}
+        <span className="chore-filter-sep" />
+        {chip('frequency', 'daily', 'Daily')}
+        {chip('frequency', 'weekly', 'Weekly')}
+        {tokenValues.length > 1 && <span className="chore-filter-sep" />}
+        {tokenValues.length > 1 && tokenValues.map(v => chip('tokens', v, `${v}`))}
+      </div>
+      {active && (
+        <div className="chore-filter-status">
+          <span>{shown} of {total} shown</span>
+          <button
+            className="chore-filter-clear"
+            onClick={() => { onSearch(''); onChange(EMPTY_FILTERS) }}
+          >
+            Clear
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Tab root ──────────────────────────────────────────────────────────────────
 
 export default function ParentChoresTab({ children = [] }) {
@@ -416,7 +529,8 @@ export default function ParentChoresTab({ children = [] }) {
   const [loading,       setLoading]       = useState(true)
   const [form,          setForm]          = useState(null)
   const [saving,        setSaving]        = useState(false)
-  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [search,        setSearch]        = useState('')
+  const [filters,       setFilters]       = useState(EMPTY_FILTERS)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -438,7 +552,15 @@ export default function ParentChoresTab({ children = [] }) {
 
   async function handleDelete(id) {
     await adminDeleteChore(id)
-    setDeleteConfirm(null)
+    await load()
+    setForm(null)
+  }
+
+  // Retire / restore. Goes through the same edit endpoint as the form, so the
+  // chore keeps its id and its history stays attached.
+  async function handleSetActive(chore, active) {
+    setChores(cs => cs.map(c => (c.id === chore.id ? { ...c, active } : c)))
+    await adminEditChore({ ...chore, active })
     await load()
   }
 
@@ -449,13 +571,18 @@ export default function ParentChoresTab({ children = [] }) {
         children={children}
         onSave={handleSave}
         onCancel={() => setForm(null)}
+        onDelete={form.id ? () => handleDelete(form.id) : null}
         saving={saving}
       />
     )
   }
 
-  const active   = chores.filter(c => c.active !== false)
-  const inactive = chores.filter(c => c.active === false)
+  // Token values are family-defined now, so the filter chips come from the data
+  // rather than a hardcoded 1/2.
+  const tokenValues = [...new Set(chores.map(c => c.tokens ?? 1))].sort((a, b) => a - b)
+  const visible  = chores.filter(c => choreMatches(c, search, filters))
+  const active   = visible.filter(c => c.active !== false)
+  const inactive = visible.filter(c => c.active === false)
 
   return (
     <div className="parent-chores-tab">
@@ -470,8 +597,20 @@ export default function ParentChoresTab({ children = [] }) {
           checklist so nothing gets missed.
         </p>
         <p className="onboarding-guide-text">
-          Most chores are worth 1 {labels.tokenNameSingular}. Bump a tougher or longer one to 2 when
-          you add or edit it.
+          <strong>Every active chore that isn't Required is in the spinner pool</strong> — that's
+          what Active means. Retiring a chore (the × on its row) moves it to Inactive and pulls it
+          out of the pool without deleting it or its history. Required chores are never spun; they're
+          assigned directly.
+        </p>
+        <p className="onboarding-guide-text">
+          A chore's value is how much of the daily target it covers. Keep everyday jobs at 1 and
+          give a longer or nastier one more — one big chore can fill a whole day on its own.
+        </p>
+        <p className="onboarding-guide-text">
+          <strong>One spin is a day's work.</strong> A spin fills up to your family's daily target
+          (set it under Settings → Family → Features), so a 2-{labels.tokenNameSingular} chore
+          arrives on its own while a 1-{labels.tokenNameSingular} chore brings a second along. Both
+          options offered after a spin are worth the same, so there's no wrong pick.
         </p>
       </TabGuide>
 
@@ -485,8 +624,24 @@ export default function ParentChoresTab({ children = [] }) {
 
       {loading && <p className="parent-soon-msg">Loading chores…</p>}
 
+      {!loading && chores.length >= FILTER_BAR_MIN && (
+        <ChoreFilterBar
+          search={search}
+          onSearch={setSearch}
+          filters={filters}
+          onChange={setFilters}
+          shown={visible.length}
+          total={chores.length}
+          tokenValues={tokenValues}
+        />
+      )}
+
       {!loading && chores.length === 0 && (
         <p className="parent-soon-msg">No chores yet. Add one above.</p>
+      )}
+
+      {!loading && chores.length > 0 && visible.length === 0 && (
+        <p className="parent-soon-msg">No chores match those filters.</p>
       )}
 
       {!loading && active.map(chore => (
@@ -494,11 +649,8 @@ export default function ParentChoresTab({ children = [] }) {
           key={chore.id}
           chore={chore}
           children={children}
-          confirmDelete={deleteConfirm === chore.id}
           onEdit={() => setForm({ ...chore, instructions: chore.instructions ?? [] })}
-          onDeleteRequest={() => setDeleteConfirm(chore.id)}
-          onConfirmDelete={() => handleDelete(chore.id)}
-          onCancelDelete={() => setDeleteConfirm(null)}
+          onSetActive={active => handleSetActive(chore, active)}
         />
       ))}
 
@@ -510,11 +662,8 @@ export default function ParentChoresTab({ children = [] }) {
               key={chore.id}
               chore={chore}
               children={children}
-              confirmDelete={deleteConfirm === chore.id}
               onEdit={() => setForm({ ...chore, instructions: chore.instructions ?? [] })}
-              onDeleteRequest={() => setDeleteConfirm(chore.id)}
-              onConfirmDelete={() => handleDelete(chore.id)}
-              onCancelDelete={() => setDeleteConfirm(null)}
+              onSetActive={active => handleSetActive(chore, active)}
             />
           ))}
         </>

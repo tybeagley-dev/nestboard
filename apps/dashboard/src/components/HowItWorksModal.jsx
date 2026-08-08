@@ -63,12 +63,12 @@ export default function HowItWorksModal({ onClose }) {
           </Section>
 
           <Section icon={<span className="howto-emoji">🎡</span>} title="Chore spinner">
-            Tap <strong>chore spinner</strong> on a child's card and spin the wheel. Sometimes you
-            land on one bigger chore, sometimes two smaller ones — about the same amount of work
-            either way.{earns.length > 0 && ` Finishing them is how they earn ${earns.join(' and ')}.`}
-            {' '}Don't love your spin? Tap <strong>Spin Again</strong> and keep whichever you prefer.
-            After you pick, there's a short <strong>cooldown</strong> before a chore can be checked
-            off — that's your cue to go actually do it. Finish your chores and you get one
+            Tap <strong>chore spinner</strong> on a child's card and spin the wheel. One spin gives
+            you <strong>two options to choose between</strong> — sometimes one bigger chore,
+            sometimes two smaller ones. Both are worth the same, so pick whichever you'd rather do.
+            {earns.length > 0 && ` Finishing them is how they earn ${earns.join(' and ')}.`}
+            {' '}After you pick, there's a short <strong>cooldown</strong> before a chore can be
+            checked off — that's your cue to go actually do it. Finish your chores and you get one
             {' '}<strong>bonus spin</strong> for a little extra.
           </Section>
 
