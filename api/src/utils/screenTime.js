@@ -10,6 +10,16 @@ export async function getScreenTimeConfig(familyId) {
     dailyAllotmentMinutes: Number.isFinite(st.dailyAllotmentMinutes) ? st.dailyAllotmentMinutes : 0,
     tokensPerBlock: Number.isFinite(st.tokensPerBlock) ? st.tokensPerBlock : 5,
     blockMinutes:   Number.isFinite(st.blockMinutes) && st.blockMinutes > 0 ? st.blockMinutes : 10,
+    ...abstinenceConfig(st),
+  }
+}
+
+// Split out so the abstinence job can read it straight off a families row it
+// already has, without a second query per family.
+export function abstinenceConfig(st = {}) {
+  return {
+    abstinenceEnabled: st.abstinenceEnabled !== false,
+    abstinenceTokens:  Number.isFinite(st.abstinenceTokens) && st.abstinenceTokens > 0 ? st.abstinenceTokens : 15,
   }
 }
 

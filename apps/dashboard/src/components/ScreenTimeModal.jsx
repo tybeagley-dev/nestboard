@@ -10,7 +10,7 @@ const PHASE = { VIEW: 'view', BUY: 'buy' }
 
 export default function ScreenTimeModal({ child, onClose }) {
   const labels = useLabels()
-  const { screenTime } = useSettings()
+  const { screenTime, modules } = useSettings()
   const TOKENS_PER_STEP = screenTime.tokensPerBlock  // tokens per block
   const MINS_PER_STEP   = screenTime.blockMinutes    // minutes per stepper step
   const { balance, purchasedBalance, bonusBalance, dailyFreeAvailable } = useScreenBalance(child.name)
@@ -121,6 +121,14 @@ export default function ScreenTimeModal({ child, onClose }) {
               >
                 Request More Screen Time
               </button>
+            )}
+
+            {modules.tokens && screenTime.abstinenceEnabled && (
+              <p className="st-abstinence-hint">
+                ⭐ Use no screen time all day and you can earn{' '}
+                <strong>{screenTime.abstinenceTokens} {labels.tokenName.toLowerCase()}</strong>{' '}
+                — a parent checks the next morning.
+              </p>
             )}
           </>
         )}

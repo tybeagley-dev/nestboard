@@ -20,6 +20,25 @@ router.get('/', async (req, res) => {
   res.json(rows)
 })
 
+// GET /tokens/:child/history — recent ledger entries for the kid-facing list.
+// Chore earnings were only added to spend_events in Aug 2026, so history simply
+// starts wherever the data starts.
+router.get('/:child/history', async (req, res) => {
+  const childId = await resolveChildId(req.familyId, req.params.child)
+  if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
+  const limit = Math.min(50, Math.max(1, parseInt(req.query.limit ?? '10', 10) || 10))
+  const { rows } = await db.query(
+    `SELECT id, amount, type, created_at
+     FROM spend_events
+     WHERE family_id = $1 AND child_id = $2
+     ORDER BY created_at DESC, id DESC
+     LIMIT $3`,
+    [req.familyId, childId, limit]
+  )
+  res.json(rows)
+})
+
 // POST /tokens/:child/adjust  { delta, type }
 router.post('/:child/adjust', requireParent, async (req, res) => {
   const { delta, type } = req.body

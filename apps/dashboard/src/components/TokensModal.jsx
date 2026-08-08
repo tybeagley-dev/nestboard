@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useChorePoints } from '../hooks/useChores'
 import { useRewards, usePurchases, buyReward } from '../hooks/useRewards'
 import { useLabels } from '../FamilyContext'
+import { useTokenHistory, historyLabel } from '../hooks/useTokenHistory'
 import TokenBadge from './TokenBadge'
 import ChildIcon from './ChildIcon'
 
@@ -12,6 +13,7 @@ export default function TokensModal({ child, onClose }) {
   const { tokens, reloadTokens }         = useChorePoints(child.name)
   const { items, loading }             = useRewards()
   const { purchases, loading: pwLoad } = usePurchases(child.name)
+  const { entries: history }           = useTokenHistory(child.name)
   const [phase,       setPhase]       = useState(PHASE.VIEW)
   const [selected,    setSelected]    = useState(null)
   const [buying,      setBuying]      = useState(false)
@@ -79,6 +81,23 @@ export default function TokensModal({ child, onClose }) {
                   </div>
                 ))}
                 <p className="wallet-hint">Show this to a parent to use it!</p>
+              </div>
+            )}
+
+            {history.length > 0 && (
+              <div className="token-history">
+                <p className="wallet-heading">Recent</p>
+                {history.map(h => (
+                  <div key={h.id} className="token-history-row">
+                    <span className={`token-history-amount ${h.amount < 0 ? 'spent' : 'earned'}`}>
+                      {h.amount > 0 ? `+${h.amount}` : h.amount}
+                    </span>
+                    <span className="token-history-label">{historyLabel(h.type, labels)}</span>
+                    <span className="token-history-date">
+                      {new Date(h.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                ))}
               </div>
             )}
           </div>

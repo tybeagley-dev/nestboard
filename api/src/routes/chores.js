@@ -208,6 +208,12 @@ router.post('/:id/approve', requireParent, async (req, res) => {
      WHERE family_id = $2 AND child_id = $3`,
     [tokensEarned, req.familyId, childId]
   )
+  if (tokensEarned > 0) {
+    await db.query(
+      `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, 'chore')`,
+      [req.familyId, childId, tokensEarned]
+    )
+  }
   broadcast('chore_state', { child }, req.familyId)
   broadcast('tokens', { child }, req.familyId)
   notifyChild(req.familyId, childId, { title: 'Chore approved!', body: `You earned ${tokensEarned} token${tokensEarned !== 1 ? 's' : ''}` })

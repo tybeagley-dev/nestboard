@@ -12,7 +12,7 @@ const DEFAULT_LABELS = {
 // families.settings (PUT /auth/family/settings).
 const DEFAULT_SETTINGS = {
   modules:    { screenTime: true, tokens: true, zones: true, meals: true, grocery: true },
-  screenTime: { dailyAllotmentMinutes: 0, tokensPerBlock: 5, blockMinutes: 10 },
+  screenTime: { dailyAllotmentMinutes: 0, tokensPerBlock: 5, blockMinutes: 10, abstinenceEnabled: true, abstinenceTokens: 15 },
 }
 
 const FamilyContext = createContext(null)

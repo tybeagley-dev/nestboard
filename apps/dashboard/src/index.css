@@ -1900,6 +1900,55 @@ button {
   text-align: center;
 }
 
+/* Recent token activity — same shell as the wallet list below it. */
+.token-history {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.token-history-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.token-history-amount {
+  flex-shrink: 0;
+  min-width: 38px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.token-history-amount.earned { color: var(--accent-sage); }
+.token-history-amount.spent  { color: var(--accent-warm); }
+
+.token-history-label {
+  flex: 1;
+  color: var(--text-secondary);
+}
+
+.token-history-date {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.st-abstinence-hint {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
 .wallet-row {
   display: flex;
   align-items: center;

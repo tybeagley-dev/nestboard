@@ -5,12 +5,10 @@ import { requireParent } from '../middleware/requireParent.js'
 import { broadcast } from './events.js'
 import { resolveChildId } from '../db/resolveChild.js'
 import { notifyParent, notifyChild } from '../utils/push.js'
-import { getScreenTimeConfig, calcFreeAvailable } from '../utils/screenTime.js'
+import { getScreenTimeConfig, calcFreeAvailable, abstinenceConfig } from '../utils/screenTime.js'
 import { familyToday, localDate, shiftDate, tzFromWeather } from '../utils/familyTime.js'
 
 const router = Router()
-
-const ABSTINENCE_TOKENS = 15
 
 router.use(requireFamily)
 
@@ -339,6 +337,9 @@ export async function processAbstinenceRequests() {
     for (const fam of families) {
       if (fam.settings?.modules?.screenTime === false) continue
 
+      const { abstinenceEnabled, abstinenceTokens } = abstinenceConfig(fam.settings?.screenTime)
+      if (!abstinenceEnabled) continue
+
       const yesterday = shiftDate(localDate(tzFromWeather(fam.weather)), -1)
 
       // Pre-migration days have no session history; awarding for them would mean
@@ -356,7 +357,7 @@ export async function processAbstinenceRequests() {
              WHERE s.family_id = c.family_id AND s.child_id = c.id AND s.date = $2::date
            )
          ON CONFLICT (family_id, child_id, date) DO NOTHING`,
-        [fam.id, yesterday, ABSTINENCE_TOKENS]
+        [fam.id, yesterday, abstinenceTokens]
       )
     }
   } catch (err) {

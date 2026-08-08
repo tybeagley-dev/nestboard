@@ -20,7 +20,7 @@ function Section({ icon, title, children }) {
 
 export default function HowItWorksModal({ onClose }) {
   const labels = useLabels()
-  const { modules } = useSettings()
+  const { modules, screenTime } = useSettings()
   const tokens = labels.tokenName.toLowerCase()
 
   // "Finishing chores is how they earn ___" — only name the rewards in play.
@@ -75,6 +75,11 @@ export default function HowItWorksModal({ onClose }) {
             <Section icon={<Monitor size={20} strokeWidth={1.8} />} title="Screen time">
               The screen button shows earned minutes. Kids trade {tokens} for screen time (a parent
               approves the request), then start a timer when they sit down.
+              {modules.tokens && screenTime.abstinenceEnabled && (
+                <> Go a whole day without using any screen time and you can earn{' '}
+                <strong>{screenTime.abstinenceTokens} bonus {tokens}</strong> — it shows up for a
+                parent to confirm the next morning.</>
+              )}
             </Section>
           )}
 

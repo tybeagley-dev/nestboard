@@ -62,6 +62,32 @@ export default function StepFeatures({ modules, screenTime, onChange }) {
               />
             </label>
           )}
+          {modules.tokens && (
+            <>
+              <div className="feature-row">
+                <div className="feature-row-text">
+                  <span className="feature-row-title">Screen-free day reward</span>
+                  <span className="feature-row-desc">
+                    Use no screen time all day and a parent can award bonus tokens the next morning.
+                  </span>
+                </div>
+                <Toggle
+                  on={screenTime.abstinenceEnabled}
+                  onChange={v => setST({ abstinenceEnabled: v })}
+                />
+              </div>
+              {screenTime.abstinenceEnabled && (
+                <label className="feature-num-row">
+                  <span>Tokens for a screen-free day</span>
+                  <input
+                    type="number" min="1" step="1"
+                    value={screenTime.abstinenceTokens}
+                    onChange={e => setST({ abstinenceTokens: Math.max(1, parseInt(e.target.value || '1', 10)) })}
+                  />
+                </label>
+              )}
+            </>
+          )}
         </div>
       )}
     </div>
