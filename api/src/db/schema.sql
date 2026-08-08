@@ -167,6 +167,22 @@ CREATE TABLE IF NOT EXISTS screentime_abstinence_requests (
   UNIQUE (family_id, child_id, date)
 );
 
+-- Append-only log of timers that actually consumed minutes. Source of truth for
+-- "did this kid have screen time on day X" — the balance table is only a cache.
+CREATE TABLE IF NOT EXISTS screen_time_sessions (
+  id                SERIAL PRIMARY KEY,
+  family_id         TEXT NOT NULL REFERENCES families(id),
+  child_id          TEXT NOT NULL REFERENCES children(id),
+  date              DATE NOT NULL,          -- family-local date the session started
+  free_minutes      INTEGER NOT NULL DEFAULT 0,
+  purchased_minutes INTEGER NOT NULL DEFAULT 0,
+  started_at        TIMESTAMPTZ,
+  ended_at          TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS screen_time_sessions_lookup
+  ON screen_time_sessions (family_id, child_id, date);
+
 -- ── Purchases ─────────────────────────────────────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS purchases (

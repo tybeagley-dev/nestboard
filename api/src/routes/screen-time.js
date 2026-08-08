@@ -5,6 +5,8 @@ import { requireParent } from '../middleware/requireParent.js'
 import { broadcast } from './events.js'
 import { resolveChildId } from '../db/resolveChild.js'
 import { notifyParent, notifyChild } from '../utils/push.js'
+import { getScreenTimeConfig, calcFreeAvailable } from '../utils/screenTime.js'
+import { familyToday, localDate, shiftDate, tzFromWeather } from '../utils/familyTime.js'
 
 const router = Router()
 
@@ -12,31 +14,10 @@ const ABSTINENCE_TOKENS = 15
 
 router.use(requireFamily)
 
-// Per-family screen-time tuning lives in families.settings.screenTime. Defaults
-// mirror the generic core (FamilyContext.useSettings): 0 free daily minutes
-// (opt-in), 5 tokens / 10 min. Beagley is backfilled to 30 via migration 022.
-async function getScreenTimeConfig(familyId) {
-  const { rows } = await db.query('SELECT settings FROM families WHERE id = $1', [familyId])
-  const st = rows[0]?.settings?.screenTime ?? {}
-  return {
-    dailyAllotmentMinutes: Number.isFinite(st.dailyAllotmentMinutes) ? st.dailyAllotmentMinutes : 0,
-    tokensPerBlock: Number.isFinite(st.tokensPerBlock) ? st.tokensPerBlock : 5,
-    blockMinutes:   Number.isFinite(st.blockMinutes) && st.blockMinutes > 0 ? st.blockMinutes : 10,
-  }
-}
-
-function calcFreeAvailable(row, allotment) {
-  if (!row) return allotment
-  const today = new Date().toISOString().split('T')[0]
-  const rowDate = row.daily_free_date instanceof Date
-    ? row.daily_free_date.toISOString().split('T')[0]
-    : String(row.daily_free_date)
-  return rowDate === today ? Math.max(0, allotment - Number(row.daily_free_used)) : allotment
-}
-
 // GET /screen-time
 router.get('/', async (req, res) => {
   const { dailyAllotmentMinutes } = await getScreenTimeConfig(req.familyId)
+  const today = await familyToday(req.familyId)
   const { rows } = await db.query(
     `SELECT stb.family_id, stb.purchased_balance, stb.daily_free_used, stb.daily_free_date,
             stb.updated_at, ch.name AS child
@@ -47,7 +28,7 @@ router.get('/', async (req, res) => {
     [req.familyId]
   )
   const result = rows.map(row => {
-    const dailyFreeAvailable = calcFreeAvailable(row, dailyAllotmentMinutes)
+    const dailyFreeAvailable = calcFreeAvailable(row, dailyAllotmentMinutes, today)
     return {
       family_id:           row.family_id,
       child:               row.child,
@@ -60,35 +41,51 @@ router.get('/', async (req, res) => {
   res.json(result)
 })
 
-// POST /screen-time/:child/adjust  { delta }  — parent manual adjustment (today's free allotment)
+// POST /screen-time/:child/adjust  { delta }  — parent manual adjustment.
+// Asymmetric on purpose: granting time adds to purchased_balance (so a bonus can
+// exceed today's allotment and isn't wiped at midnight), while taking time away
+// only consumes today's free allotment (never claws back token-purchased minutes).
 router.post('/:child/adjust', async (req, res) => {
-  const { delta } = req.body
+  const delta = Number(req.body?.delta)
   const childName = req.params.child
-  if (isNaN(delta)) return res.status(400).json({ error: 'Invalid delta' })
+  if (!Number.isInteger(delta) || delta === 0) return res.status(400).json({ error: 'Invalid delta' })
 
   const childId = await resolveChildId(req.familyId, childName)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
   const { dailyAllotmentMinutes } = await getScreenTimeConfig(req.familyId)
+  const today = await familyToday(req.familyId)
 
-  const { rows } = await db.query(
-    `INSERT INTO screen_time_balance (family_id, child_id, daily_free_used, daily_free_date)
-     VALUES ($1, $2, GREATEST(0, LEAST($3, -$4::integer)), CURRENT_DATE)
-     ON CONFLICT (family_id, child_id) DO UPDATE
-       SET daily_free_used = GREATEST(0, LEAST($3,
-             CASE WHEN screen_time_balance.daily_free_date = CURRENT_DATE
-                  THEN screen_time_balance.daily_free_used - $4::integer
-                  ELSE -$4::integer
-             END)),
-           daily_free_date = CURRENT_DATE,
-           updated_at = NOW()
-     RETURNING purchased_balance, daily_free_used, daily_free_date`,
-    [req.familyId, childId, dailyAllotmentMinutes, delta]
-  )
-  const free = calcFreeAvailable(rows[0], dailyAllotmentMinutes)
-  const balance = Number(rows[0].purchased_balance) + free
+  const { rows } = delta > 0
+    ? await db.query(
+        `INSERT INTO screen_time_balance (family_id, child_id, purchased_balance, daily_free_used, daily_free_date)
+         VALUES ($1, $2, $3, 0, $4::date)
+         ON CONFLICT (family_id, child_id) DO UPDATE
+           SET purchased_balance = screen_time_balance.purchased_balance + $3,
+               updated_at = NOW()
+         RETURNING purchased_balance, daily_free_used, daily_free_date`,
+        [req.familyId, childId, delta, today]
+      )
+    : await db.query(
+        `INSERT INTO screen_time_balance (family_id, child_id, daily_free_used, daily_free_date)
+         VALUES ($1, $2, GREATEST(0, LEAST($3, -$4::integer)), $5::date)
+         ON CONFLICT (family_id, child_id) DO UPDATE
+           SET daily_free_used = GREATEST(0, LEAST($3,
+                 CASE WHEN screen_time_balance.daily_free_date = $5::date
+                      THEN screen_time_balance.daily_free_used - $4::integer
+                      ELSE -$4::integer
+                 END)),
+               daily_free_date = $5::date,
+               updated_at = NOW()
+         RETURNING purchased_balance, daily_free_used, daily_free_date`,
+        [req.familyId, childId, dailyAllotmentMinutes, delta, today]
+      )
+
+  const free = calcFreeAvailable(rows[0], dailyAllotmentMinutes, today)
+  const purchased = Number(rows[0].purchased_balance)
+  const balance = purchased + free
   broadcast('screen_time', { child: childName, balance }, req.familyId)
-  res.json({ success: true, balance })
+  res.json({ success: true, balance, purchased_balance: purchased, daily_free_available: free })
 })
 
 // POST /screen-time/:child/request-purchase  { minutesAmount }
@@ -302,31 +299,34 @@ export default router
 
 // ── Background job: daily abstinence request creation ────────────────────────
 
-async function processAbstinenceRequests() {
-  const yesterday = new Date()
-  yesterday.setUTCDate(yesterday.getUTCDate() - 1)
-  const yesterdayStr = yesterday.toISOString().split('T')[0]
-
+// Abstained = no screen_time_sessions row for the family's local yesterday.
+// Reads the session log, not the balance cache, so parent deductions don't count
+// as usage and purchased-only sessions do.
+export async function processAbstinenceRequests() {
   try {
-    const { rows } = await db.query(
-      `SELECT c.id AS child_id, c.family_id,
-              stb.daily_free_used, stb.daily_free_date
-       FROM children c
-       JOIN screen_time_balance stb ON stb.child_id = c.id AND stb.family_id = c.family_id`
-    )
+    const { rows: families } = await db.query('SELECT id, weather, settings FROM families')
 
-    for (const row of rows) {
-      const rowDate = row.daily_free_date instanceof Date
-        ? row.daily_free_date.toISOString().split('T')[0]
-        : String(row.daily_free_date)
-      const usedFreeYesterday = rowDate === yesterdayStr && Number(row.daily_free_used) > 0
-      if (usedFreeYesterday) continue
+    for (const fam of families) {
+      if (fam.settings?.modules?.screenTime === false) continue
+
+      const yesterday = shiftDate(localDate(tzFromWeather(fam.weather)), -1)
+
+      // Pre-migration days have no session history; awarding for them would mean
+      // handing every kid tokens for a day we simply weren't recording.
+      const since = fam.settings?.screenTime?.sessionsSince
+      if (since && yesterday <= since) continue
 
       await db.query(
         `INSERT INTO screentime_abstinence_requests (family_id, child_id, date, status, tokens_awarded)
-         VALUES ($1, $2, $3, 'pending', $4)
+         SELECT c.family_id, c.id, $2::date, 'pending', $3
+         FROM children c
+         WHERE c.family_id = $1
+           AND NOT EXISTS (
+             SELECT 1 FROM screen_time_sessions s
+             WHERE s.family_id = c.family_id AND s.child_id = c.id AND s.date = $2::date
+           )
          ON CONFLICT (family_id, child_id, date) DO NOTHING`,
-        [row.family_id, row.child_id, yesterdayStr, ABSTINENCE_TOKENS]
+        [fam.id, yesterday, ABSTINENCE_TOKENS]
       )
     }
   } catch (err) {
@@ -334,19 +334,11 @@ async function processAbstinenceRequests() {
   }
 }
 
+// Hourly rather than chasing one nightly tick: families sit in different
+// timezones, so there is no single moment that is "just after midnight" for all
+// of them. Each pass is idempotent (UNIQUE on family/child/date + DO NOTHING),
+// so a family's request lands within an hour of their own local midnight.
 export async function startAbstinenceJob() {
   await processAbstinenceRequests()
-
-  function scheduleNext() {
-    const now = new Date()
-    const nextMidnight = new Date(Date.UTC(
-      now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1,
-      0, 0, 30
-    ))
-    setTimeout(async () => {
-      await processAbstinenceRequests()
-      scheduleNext()
-    }, nextMidnight - now)
-  }
-  scheduleNext()
+  setInterval(processAbstinenceRequests, 60 * 60 * 1000)
 }

@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { apiPut } from '../utils/api'
 
 // City search via open-meteo's free geocoding API (no key). Picking a result
-// saves { lat, lon, label } to the family's weather config.
+// saves { lat, lon, label, timezone } to the family's weather config — the
+// timezone is what the API uses to decide when a family's day rolls over.
 export default function WeatherLocationPicker({ current, onSaved }) {
   const [query,     setQuery]     = useState('')
   const [results,   setResults]   = useState([])
@@ -18,6 +19,7 @@ export default function WeatherLocationPicker({ current, onSaved }) {
     setError(null)
     try {
       const res  = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(query.trim())}&count=5`)
+      // results carry an IANA `timezone` field
       const data = await res.json()
       const hits = data.results ?? []
       setResults(hits)
@@ -31,7 +33,7 @@ export default function WeatherLocationPicker({ current, onSaved }) {
 
   async function choose(r) {
     const label   = [r.name, r.admin1].filter(Boolean).join(', ')
-    const weather = { lat: r.latitude, lon: r.longitude, label }
+    const weather = { lat: r.latitude, lon: r.longitude, label, timezone: r.timezone }
     setSaving(true)
     const data = await apiPut('/auth/family/weather', weather)
     setSaving(false)
