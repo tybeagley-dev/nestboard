@@ -11,7 +11,7 @@ router.use(requireAdmin)
 const FAMILY_TABLES = [
   'announcements', 'calendars', 'chore_events', 'chores', 'grocery', 'meals',
   'micro_zones', 'notes', 'purchases', 'push_subscriptions', 'rewards',
-  'routine_defs', 'routine_log', 'screen_time_balance',
+  'routine_defs', 'routine_log', 'screen_time_balance', 'screen_time_sessions',
   'screentime_abstinence_requests', 'screentime_purchase_requests',
   'spend_events', 'timers', 'token_balance', 'zone_assignments',
   'zone_check_log', 'zones',

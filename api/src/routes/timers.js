@@ -3,10 +3,10 @@ import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { broadcast } from './events.js'
 import { resolveChildId } from '../db/resolveChild.js'
+import { getScreenTimeConfig, recordSession } from '../utils/screenTime.js'
+import { familyToday, getFamilyTimezone, localDate } from '../utils/familyTime.js'
 
 const router = Router()
-
-const DAILY_FREE_MINS = 30
 
 router.use(requireFamily)
 
@@ -33,22 +33,25 @@ router.post('/:child/start', async (req, res) => {
   const childId = await resolveChildId(req.familyId, childName)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
 
+  const { dailyAllotmentMinutes } = await getScreenTimeConfig(req.familyId)
+  const today = await familyToday(req.familyId)
+
   const client = await db.connect()
   try {
     await client.query('BEGIN')
 
     const { rows: balRows } = await client.query(
       `SELECT purchased_balance, daily_free_used, daily_free_date,
-              CASE WHEN daily_free_date = CURRENT_DATE
+              CASE WHEN daily_free_date = $4::date
                    THEN GREATEST(0, $3 - daily_free_used)
                    ELSE $3
               END AS free_available
        FROM screen_time_balance WHERE family_id = $1 AND child_id = $2 FOR UPDATE`,
-      [req.familyId, childId, DAILY_FREE_MINS]
+      [req.familyId, childId, dailyAllotmentMinutes, today]
     )
 
     const purchased  = balRows.length ? Number(balRows[0].purchased_balance) : 0
-    const freeAvail  = balRows.length ? Number(balRows[0].free_available)    : DAILY_FREE_MINS
+    const freeAvail  = balRows.length ? Number(balRows[0].free_available)    : dailyAllotmentMinutes
     const totalAvail = purchased + freeAvail
 
     const totalToDeduct = Math.min(totalAvail, durationMinutes)
@@ -59,20 +62,20 @@ router.post('/:child/start', async (req, res) => {
       await client.query(
         `UPDATE screen_time_balance SET
            purchased_balance = GREATEST(0, purchased_balance - $1),
-           daily_free_used   = CASE WHEN daily_free_date = CURRENT_DATE
+           daily_free_used   = CASE WHEN daily_free_date = $5::date
                                     THEN daily_free_used + $2
                                     ELSE $2
                                END,
-           daily_free_date   = CURRENT_DATE,
+           daily_free_date   = $5::date,
            updated_at        = NOW()
          WHERE family_id = $3 AND child_id = $4`,
-        [purchToDeduct, freeToDeduct, req.familyId, childId]
+        [purchToDeduct, freeToDeduct, req.familyId, childId, today]
       )
     } else {
       await client.query(
         `INSERT INTO screen_time_balance (family_id, child_id, purchased_balance, daily_free_used, daily_free_date)
-         VALUES ($1, $2, 0, $3, CURRENT_DATE)`,
-        [req.familyId, childId, freeToDeduct]
+         VALUES ($1, $2, 0, $3, $4::date)`,
+        [req.familyId, childId, freeToDeduct, today]
       )
     }
 
@@ -120,42 +123,53 @@ router.post('/:child/stop', async (req, res) => {
 
   const timer = rows[0]
 
-  if (!expired) {
-    const freeMin  = Number(timer.free_minutes  ?? 0)
-    const purchMin = Number(timer.purchased_minutes ?? timer.duration_minutes ?? 0)
-    const totalMin = freeMin + purchMin
+  const freeMin  = Number(timer.free_minutes  ?? 0)
+  const purchMin = Number(timer.purchased_minutes ?? timer.duration_minutes ?? 0)
+  const totalMin = freeMin + purchMin
 
-    if (totalMin > 0) {
-      const msLeft = Math.max(0, Number(timer.end_time) - Date.now())
-      const paidMs = totalMin * 60 * 1000
+  // An expired timer ran its full length; a manual stop refunds the unused tail.
+  let freeConsumed  = freeMin
+  let purchConsumed = purchMin
 
-      let refundTotal = 0
-      if (msLeft >= paidMs) {
-        refundTotal = totalMin
-      } else if (msLeft > 0) {
-        refundTotal = Math.round((msLeft / paidMs) * totalMin)
-      }
+  if (!expired && totalMin > 0) {
+    const msLeft = Math.max(0, Number(timer.end_time) - Date.now())
+    const paidMs = totalMin * 60 * 1000
 
-      if (refundTotal > 0) {
-        // Free was consumed first, so refund in reverse: free refunded last consumed first
-        const minutesConsumed = totalMin - refundTotal
-        const freeConsumed    = Math.min(minutesConsumed, freeMin)
-        const purchConsumed   = minutesConsumed - freeConsumed
-        const freeRefund      = freeMin - freeConsumed
-        const purchRefund     = purchMin - purchConsumed
+    let refundTotal = 0
+    if (msLeft >= paidMs) {
+      refundTotal = totalMin
+    } else if (msLeft > 0) {
+      refundTotal = Math.round((msLeft / paidMs) * totalMin)
+    }
 
-        await db.query(
-          `UPDATE screen_time_balance SET
-             daily_free_used   = GREATEST(0, daily_free_used - $1),
-             purchased_balance = purchased_balance + $2,
-             updated_at        = NOW()
-           WHERE family_id = $3 AND child_id = $4`,
-          [freeRefund, purchRefund, req.familyId, childId]
-        )
-        broadcast('screen_time', { child: childName }, req.familyId)
-      }
+    if (refundTotal > 0) {
+      // Free was consumed first, so refund in reverse: free refunded last consumed first
+      const minutesConsumed = totalMin - refundTotal
+      freeConsumed  = Math.min(minutesConsumed, freeMin)
+      purchConsumed = minutesConsumed - freeConsumed
+
+      await db.query(
+        `UPDATE screen_time_balance SET
+           daily_free_used   = GREATEST(0, daily_free_used - $1),
+           purchased_balance = purchased_balance + $2,
+           updated_at        = NOW()
+         WHERE family_id = $3 AND child_id = $4`,
+        [freeMin - freeConsumed, purchMin - purchConsumed, req.familyId, childId]
+      )
+      broadcast('screen_time', { child: childName }, req.familyId)
     }
   }
+
+  // Dated to when the session started, so an evening run that crosses midnight
+  // stays on the day the kid actually sat down.
+  await recordSession(db, {
+    familyId: req.familyId,
+    childId,
+    date: localDate(await getFamilyTimezone(req.familyId), timer.started_at ?? undefined),
+    freeMinutes: freeConsumed,
+    purchasedMinutes: purchConsumed,
+    startedAt: timer.started_at,
+  })
 
   await db.query(
     `DELETE FROM timers WHERE family_id = $1 AND child_id = $2`,
@@ -171,19 +185,29 @@ export function startExpiryJob() {
   setInterval(async () => {
     try {
       const { rows } = await db.query(
-        `SELECT t.family_id, t.child_id, ch.name AS child
+        `SELECT t.family_id, t.child_id, t.free_minutes, t.purchased_minutes,
+                t.duration_minutes, t.started_at, ch.name AS child
          FROM timers t
          JOIN children ch ON ch.id = t.child_id
          WHERE t.end_time < $1`,
         [Date.now()]
       )
-      for (const { family_id, child_id, child } of rows) {
+      for (const t of rows) {
+        // These ran to completion, so the whole session counts as consumed.
+        await recordSession(db, {
+          familyId: t.family_id,
+          childId:  t.child_id,
+          date: localDate(await getFamilyTimezone(t.family_id), t.started_at ?? undefined),
+          freeMinutes:      Number(t.free_minutes ?? 0),
+          purchasedMinutes: Number(t.purchased_minutes ?? t.duration_minutes ?? 0),
+          startedAt: t.started_at,
+        })
         await db.query(
           `DELETE FROM timers WHERE family_id = $1 AND child_id = $2`,
-          [family_id, child_id]
+          [t.family_id, t.child_id]
         )
-        broadcast('timers', { child }, family_id)
-        broadcast('screen_time', { child }, family_id)
+        broadcast('timers', { child: t.child }, t.family_id)
+        broadcast('screen_time', { child: t.child }, t.family_id)
       }
     } catch (err) {
       console.error('Timer expiry job error:', err.message)

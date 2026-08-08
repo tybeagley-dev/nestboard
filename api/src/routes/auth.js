@@ -5,6 +5,7 @@ import { getAuth, clerkClient } from '@clerk/express'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
+import { isValidTz as isValidTimezone, invalidateFamilyTimezone } from '../utils/familyTime.js'
 
 const router = Router()
 
@@ -179,19 +180,24 @@ router.put('/family/labels', async (req, res) => {
   }
 })
 
-// PUT /auth/family/weather  { lat, lon, label } → sets the family's forecast location
+// PUT /auth/family/weather  { lat, lon, label, timezone? } → sets the family's forecast location.
+// The geocoder hands us an IANA timezone with every hit; it doubles as the family's
+// clock for screen-time day boundaries (utils/familyTime), so we keep it here rather
+// than asking for it separately.
 router.put('/family/weather', async (req, res) => {
   const { userId } = getAuth(req)
   if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-  const { lat, lon, label } = req.body ?? {}
+  const { lat, lon, label, timezone } = req.body ?? {}
   if (typeof lat !== 'number' || typeof lon !== 'number' || !label?.trim()) {
     return res.status(400).json({ error: 'Missing lat, lon, or label' })
   }
   const weather = { lat, lon, label: label.trim() }
+  if (isValidTimezone(timezone)) weather.timezone = timezone
   try {
     const { rows } = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
     if (!rows.length) return res.status(404).json({ error: 'No family' })
     await db.query('UPDATE families SET weather = $1 WHERE id = $2', [JSON.stringify(weather), rows[0].family_id])
+    invalidateFamilyTimezone(rows[0].family_id)
     res.json({ success: true, weather })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })

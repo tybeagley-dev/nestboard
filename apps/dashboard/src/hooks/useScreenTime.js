@@ -43,7 +43,12 @@ export function useScreenBalance(childName) {
   const addMinutes = useCallback((minutes) => {
     setBalance(prev => Math.max(0, prev + minutes))
     apiPost(`/screen-time/${childName}/adjust`, { delta: minutes })
-      .then(data => { if (data?.balance != null) setBalance(Number(data.balance)) })
+      .then(data => {
+        if (data?.balance == null) return
+        setBalance(Number(data.balance))
+        setPurchasedBalance(Number(data.purchased_balance ?? 0))
+        setDailyFreeAvailable(Number(data.daily_free_available ?? 0))
+      })
     dispatchBalanceUpdate()
   }, [childName])
 
