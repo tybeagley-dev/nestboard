@@ -91,10 +91,30 @@ button {
 .timer-bar {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: 6px;
   flex-shrink: 0;
   padding: 0 2px;
+}
+
+/* Timers grouped into a card on the left; account/config stays bare on the
+   right. Vertical padding is deliberately small so the ribbon keeps its height. */
+.ribbon-card {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.ribbon-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .timer-bar-label {
@@ -1299,10 +1319,12 @@ button {
   border-color: var(--border);
 }
 
+/* Left-anchored: the timers sit at the left edge of the ribbon, so a
+   right-anchored popover would open off-screen. */
 .tidy-popover {
   position: absolute;
   top: calc(100% + 8px);
-  right: 0;
+  left: 0;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -2422,8 +2444,8 @@ button {
   }
 
   .tidy-popover {
-    right: 0;
-    left: auto;
+    left: 0;
+    right: auto;
   }
 
   .numpad {
@@ -5135,6 +5157,22 @@ button {
   color: var(--text-muted);
   margin: 0;
   line-height: 1.5;
+}
+
+.family-code-fallback {
+  margin-top: 0.5rem;
+  border-top: 1px solid var(--border-light);
+  padding-top: 0.75rem;
+}
+
+.family-code-fallback > summary {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.family-code-fallback > *:not(summary) {
+  margin-top: 0.5rem;
 }
 
 /* ── Family members & invites ───────────────────────────────────────────────── */

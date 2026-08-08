@@ -235,7 +235,7 @@ function ChildViewInner() {
       {/* Info cards */}
       <div className="child-view-section">
         <WeatherCard weather={weather} />
-        {modules.meals && <MealPlan now={now} scheduleConfig={scheduleConfig} />}
+        {modules.meals && <MealPlan now={now} scheduleConfig={scheduleConfig} readOnly />}
       </div>
 
       {/* Grocery */}

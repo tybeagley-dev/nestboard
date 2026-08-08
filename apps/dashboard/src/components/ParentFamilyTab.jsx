@@ -9,8 +9,7 @@ import StepFeatures from '../onboarding/StepFeatures'
 import StepLabels from '../onboarding/StepLabels'
 
 export default function ParentFamilyTab({ onPinChanged }) {
-  const [family,  setFamily]  = useState(null)
-  const [copied,  setCopied]  = useState(false)
+  const [family, setFamily] = useState(null)
 
   useEffect(() => {
     apiGet('/auth/family').then(data => { if (data?.id) setFamily(data) })
@@ -26,13 +25,6 @@ export default function ParentFamilyTab({ onPinChanged }) {
     apiPut('/auth/family/settings', next)
   }
 
-  function handleCopy() {
-    if (!family?.slug) return
-    navigator.clipboard.writeText(family.slug)
-    setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
-  }
-
   if (!family) return <p className="parent-soon-msg">Loading…</p>
 
   return (
@@ -41,22 +33,9 @@ export default function ParentFamilyTab({ onPinChanged }) {
         <div className="family-code-header">
           <span className="family-code-name">{family.name}</span>
         </div>
-
-        <div className="family-code-section">
-          <span className="family-code-label">Family code</span>
-          <div className="family-code-row">
-            <code className="family-code-value">{family.slug}</code>
-            <button className="family-code-copy" onClick={handleCopy}>
-              {copied ? 'Copied!' : 'Copy'}
-            </button>
-          </div>
-          <p className="family-code-hint">
-            A fallback way to join: share this code and your parent PIN, and they enter both on the sign-in screen. The easier path is an invite link below.
-          </p>
-        </div>
       </div>
 
-      <FamilyMembers />
+      <FamilyMembers familySlug={family.slug} />
 
       <ChangePinCard onPinChanged={onPinChanged} />
 

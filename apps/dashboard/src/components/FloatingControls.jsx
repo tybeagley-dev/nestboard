@@ -57,6 +57,7 @@ export default function FloatingControls() {
 
   return (
     <div className="timer-bar">
+      <div className="ribbon-card">
       <span className="timer-bar-label">Timers</span>
 
       {/* Toothbrush timer */}
@@ -105,18 +106,21 @@ export default function FloatingControls() {
       ) : (
         <TidyTimerButton onStart={mins => tidy.startTimer(mins)} />
       )}
+      </div>
 
-      <button className="timer-icon-btn" onClick={() => setShowHowto(true)} title="How it works" aria-label="How it works">
-        <HelpCircle size={18} strokeWidth={1.8} />
-      </button>
+      <div className="ribbon-actions">
+        <button className="timer-icon-btn" onClick={() => setShowHowto(true)} title="How it works" aria-label="How it works">
+          <HelpCircle size={18} strokeWidth={1.8} />
+        </button>
 
-      <button className="timer-icon-btn" onClick={() => setShowSetup(true)} title="Set up this device" aria-label="Set up this device">
-        <Smartphone size={18} strokeWidth={1.8} />
-      </button>
+        <button className="timer-icon-btn" onClick={() => setShowSetup(true)} title="Set up this device" aria-label="Set up this device">
+          <Smartphone size={18} strokeWidth={1.8} />
+        </button>
 
-      <button className="timer-icon-btn settings-btn" onClick={() => navigate('/parent')} title="Parent Panel" aria-label="Parent Panel">
-        <Settings size={18} strokeWidth={1.8} />
-      </button>
+        <button className="timer-icon-btn settings-btn" onClick={() => navigate('/parent')} title="Parent Panel" aria-label="Parent Panel">
+          <Settings size={18} strokeWidth={1.8} />
+        </button>
+      </div>
 
       {showHowto && <HowItWorksModal onClose={() => setShowHowto(false)} />}
       {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} />}

@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/react'
 import { apiGet, apiPost, apiDelete } from '../utils/api'
 
-export default function FamilyMembers() {
+export default function FamilyMembers({ familySlug }) {
   const { user } = useUser()
   const [members,     setMembers]     = useState([])
   const [invites,     setInvites]     = useState([])
   const [creating,    setCreating]    = useState(false)
   const [copiedToken, setCopiedToken] = useState(null)
+  const [copiedCode,  setCopiedCode]  = useState(false)
 
   const load = useCallback(() => {
     apiGet('/auth/family/members').then(d => setMembers(Array.isArray(d) ? d : []))
@@ -43,6 +44,13 @@ export default function FamilyMembers() {
     setTimeout(() => setCopiedToken(null), 2000)
   }
 
+  function copyCode() {
+    if (!familySlug) return
+    navigator.clipboard.writeText(familySlug)
+    setCopiedCode(true)
+    setTimeout(() => setCopiedCode(false), 2000)
+  }
+
   return (
     <>
       <div className="family-code-card">
@@ -66,7 +74,7 @@ export default function FamilyMembers() {
         <div className="family-code-section">
           <span className="family-code-label">Invite a parent</span>
           <p className="family-code-hint">
-            Send a private link to add another parent — they join in one tap, no family code to type. Single-use, expires in 7 days. (They'll use the family PIN as the adult unlock, same as you.)
+            Send a private link — they join in one tap, no code to type. Single-use, expires in 7 days. (They'll use the family PIN as the adult unlock, same as you.)
           </p>
           <button className="parent-apply-btn" onClick={createInvite} disabled={creating}>
             {creating ? 'Creating…' : '+ Create invite link'}
@@ -83,6 +91,21 @@ export default function FamilyMembers() {
                 </li>
               ))}
             </ul>
+          )}
+
+          {familySlug && (
+            <details className="family-code-fallback">
+              <summary>Can't use a link? Use your family code</summary>
+              <p className="family-code-hint">
+                Share this code plus your parent PIN, and they enter both on the sign-in screen.
+              </p>
+              <div className="family-code-row">
+                <code className="family-code-value">{familySlug}</code>
+                <button className="family-code-copy" onClick={copyCode}>
+                  {copiedCode ? 'Copied!' : 'Copy'}
+                </button>
+              </div>
+            </details>
           )}
         </div>
       </div>

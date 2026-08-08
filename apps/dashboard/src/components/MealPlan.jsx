@@ -5,7 +5,7 @@ import { getCurrentScheduleMode } from '../utils/scheduleUtils'
 import PinModal from './PinModal'
 import MealsEditModal from './MealsEditModal'
 
-export default function MealPlan({ now, scheduleConfig = {} }) {
+export default function MealPlan({ now, scheduleConfig = {}, readOnly = false }) {
   const todayName = getDayName(now)
   const { meals, updateMeal, getMealForDay, DAY_ORDER } = useMeals()
   const meal = getMealForDay(todayName)
@@ -41,7 +41,9 @@ export default function MealPlan({ now, scheduleConfig = {} }) {
         ) : (
           <span className="info-card-empty">Check the fridge!</span>
         )}
-        <button className="info-card-edit" onClick={() => setShowPin(true)} aria-label="Edit meal plan">✏️</button>
+        {!readOnly && (
+          <button className="info-card-edit" onClick={() => setShowPin(true)} aria-label="Edit meal plan">✏️</button>
+        )}
       </div>
 
       {showPin && (
