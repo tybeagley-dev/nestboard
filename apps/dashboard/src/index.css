@@ -2870,6 +2870,60 @@ button {
   min-height: 52px;
 }
 
+/* ── What's new ───────────────────────────────────────────────────────────── */
+.whats-new-btn { position: relative; }
+
+.unread-dot {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-warm);
+  border: 1.5px solid var(--surface);
+}
+
+.release-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.release-entry-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--accent-warm);
+}
+
+.release-entry-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.release-entry-date {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.release-items {
+  list-style: disc;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.release-items li {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
 .bonus-tag {
   display: inline-block;
   margin-left: 6px;

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Settings, HelpCircle, Smartphone } from 'lucide-react'
+import { Settings, HelpCircle, Smartphone, Sparkles } from 'lucide-react'
 import TidyTimerButton from './TidyTimerButton'
 import TidyTimerPill from './TidyTimerPill'
 import ReadingTimerButton from './ReadingTimerButton'
 import HowItWorksModal from './HowItWorksModal'
 import DeviceSetupModal from './DeviceSetupModal'
+import WhatsNewModal from './WhatsNewModal'
+import { hasUnreadRelease } from '../utils/releases'
 import { useTidyTimer } from '../hooks/useTidyTimer'
 import { useToothbrushTimer } from '../hooks/useToothbrushTimer'
 import { useReadingTimer } from '../hooks/useReadingTimer'
@@ -34,6 +36,8 @@ export default function FloatingControls() {
   const reading  = useReadingTimer()
   const [showHowto, setShowHowto] = useState(false)
   const [showSetup, setShowSetup] = useState(false)
+  const [showNews,  setShowNews]  = useState(false)
+  const [unread,    setUnread]    = useState(() => hasUnreadRelease())
 
   useEffect(() => {
     if (!localStorage.getItem(HOWTO_SEEN_KEY)) {
@@ -109,6 +113,16 @@ export default function FloatingControls() {
       </div>
 
       <div className="ribbon-actions">
+        <button
+          className="timer-icon-btn whats-new-btn"
+          onClick={() => { setShowNews(true); setUnread(false) }}
+          title={unread ? "What's new — unread" : "What's new"}
+          aria-label={unread ? "What's new, unread" : "What's new"}
+        >
+          <Sparkles size={18} strokeWidth={1.8} />
+          {unread && <span className="unread-dot" aria-hidden />}
+        </button>
+
         <button className="timer-icon-btn" onClick={() => setShowHowto(true)} title="How it works" aria-label="How it works">
           <HelpCircle size={18} strokeWidth={1.8} />
         </button>
@@ -123,6 +137,7 @@ export default function FloatingControls() {
       </div>
 
       {showHowto && <HowItWorksModal onClose={() => setShowHowto(false)} />}
+      {showNews && <WhatsNewModal onClose={() => setShowNews(false)} />}
       {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} />}
     </div>
   )
