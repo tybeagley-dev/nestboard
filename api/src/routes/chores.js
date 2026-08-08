@@ -32,7 +32,7 @@ router.get('/state', async (req, res) => {
 
   const { rows } = await db.query(
     `SELECT ce.chore_id, ce.chore_label, ce.tokens, ce.status, ce.accepted_at, ce.created_at,
-            ch.name AS child
+            ce.is_bonus, ch.name AS child
      FROM chore_events ce
      JOIN children ch ON ch.id = ce.child_id
      WHERE ce.family_id = $1 AND ce.created_at >= $2
@@ -50,7 +50,7 @@ router.get('/state', async (req, res) => {
 
   for (const row of rows) {
     const rowDate = row.created_at.toISOString().slice(0, 10)
-    const { child, chore_id, chore_label, tokens, status, accepted_at } = row
+    const { child, chore_id, chore_label, tokens, status, accepted_at, is_bonus } = row
 
     if (rowDate === date || rowDate === nextDayKey) {
       if (!today[child]) today[child] = {}
@@ -62,6 +62,9 @@ router.get('/state', async (req, res) => {
           tokens,
           status,
           acceptedAt: accepted_at ?? existing?.acceptedAt ?? null,
+          // A later row for the same chore (the approval) carries the flag too,
+          // but fall back so a status bump can't lose it.
+          isBonus:    is_bonus ?? existing?.isBonus ?? false,
         }
       }
     }
@@ -79,7 +82,8 @@ router.get('/state', async (req, res) => {
 router.get('/pending-approvals', async (req, res) => {
   const { rows } = await db.query(
     `SELECT ce.id, ce.family_id, ce.child_id, ce.chore_id, ce.chore_label,
-            ce.tokens, ce.status, ce.accepted_at, ce.created_at, ch.name AS child
+            ce.tokens, ce.status, ce.accepted_at, ce.created_at, ce.is_bonus,
+            ch.name AS child
      FROM chore_events ce
      JOIN children ch ON ch.id = ce.child_id
      WHERE ce.family_id = $1 AND ce.status = 'pending_approval'
@@ -121,7 +125,7 @@ router.delete('/:id/assignment', requireParent, async (req, res) => {
 
 // POST /chores/:id/accept  { child, choreLabel, tokens }
 router.post('/:id/accept', async (req, res) => {
-  const { child, choreLabel, tokens } = req.body
+  const { child, choreLabel, tokens, isBonus } = req.body
   const choreId = req.params.id
   if (!child || !choreId || !choreLabel) return res.status(400).json({ error: 'Missing params' })
 
@@ -130,9 +134,9 @@ router.post('/:id/accept', async (req, res) => {
 
   try {
     await db.query(
-      `INSERT INTO chore_events (family_id, child_id, chore_id, chore_label, tokens, status, accepted_at)
-       VALUES ($1, $2, $3, $4, $5, 'accepted', NOW())`,
-      [req.familyId, childId, choreId, choreLabel, tokens]
+      `INSERT INTO chore_events (family_id, child_id, chore_id, chore_label, tokens, status, accepted_at, is_bonus)
+       VALUES ($1, $2, $3, $4, $5, 'accepted', NOW(), $6)`,
+      [req.familyId, childId, choreId, choreLabel, tokens, isBonus === true]
     )
     broadcast('chore_state', { child }, req.familyId)
     res.json({ success: true })

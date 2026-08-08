@@ -161,7 +161,10 @@ export default function ParentApprovalsTab({ children = [] }) {
                   )}
                   <div className="approval-meta">
                     <span className="approval-child">{item.child}</span>
-                    <span className="approval-label">{item.chore_label}</span>
+                    <span className="approval-label">
+                      {item.chore_label}
+                      {item.is_bonus && <span className="bonus-tag">bonus</span>}
+                    </span>
                   </div>
                   <TokenBadge amount={item.tokens} />
                 </div>

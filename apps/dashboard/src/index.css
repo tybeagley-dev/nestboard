@@ -2870,6 +2870,21 @@ button {
   min-height: 52px;
 }
 
+.bonus-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 7px;
+  border-radius: 50px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-warm);
+  background: rgba(193,122,74,0.12);
+  border: 1px solid rgba(193,122,74,0.3);
+  vertical-align: middle;
+}
+
 .chore-bundle-total {
   display: block;
   margin-top: 6px;

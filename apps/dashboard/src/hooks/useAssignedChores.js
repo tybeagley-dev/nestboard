@@ -62,6 +62,7 @@ function buildFromApi(childName, todayEntries, weekCompleted, chores, childId) {
         tokens:        entry.tokens,
         icon:         def.icon ?? '',
         required:     def.required ?? false,
+        extra:        entry.isBonus === true,
         instructions: def.instructions ?? [],
         completed:    entry.status === 'completed',
         pending:      entry.status === 'pending_approval',
@@ -109,11 +110,12 @@ export function assignChores(childName, newChores) {
   saveAssignments(all)
 }
 
+// `pendingAt` bounds how long this optimistic flag is trusted — see hydrate().
 export function markChoreAsPending(childName, choreId) {
   const all = loadAssignments()
   if (!all[childName]) return
   all[childName] = all[childName].map(c =>
-    c.id === choreId ? { ...c, pending: true } : c
+    c.id === choreId ? { ...c, pending: true, pendingAt: new Date().toISOString() } : c
   )
   saveAssignments(all)
 }
@@ -133,6 +135,7 @@ export function acceptChoresToApi(child, chores) {
       child:      child.name,
       choreLabel: c.label,
       tokens:      c.tokens,
+      isBonus:    c.extra === true,
     })
   ))
 }
@@ -177,6 +180,17 @@ export function useAssignedChores(childName, chores = [], childId = null) {
       const localMap     = Object.fromEntries(localChores.map(c => [c.id, c]))
       const builtIds     = new Set(built.map(c => c.id))
       const now          = Date.now()
+
+      // A rejection sets the event back to 'accepted' rather than deleting it, so
+      // "the API still has a record" can't tell pending from rejected — that check
+      // left rejected chores stuck as pending forever. Trust the API's status and
+      // keep the optimistic flag only long enough to cover the gap between
+      // submitting and the write landing.
+      const OPTIMISTIC_MS = 15 * 1000
+      const stillSubmitting = id => {
+        const at = localMap[id]?.pendingAt
+        return !!at && (now - new Date(at).getTime()) < OPTIMISTIC_MS
+      }
       // Preserve locally-assigned chores not yet confirmed by the API, but only within a 5-minute window
       const apiChildToday = data.today?.[childName] ?? {}
       const inFlight     = localChores.filter(c =>
@@ -190,8 +204,8 @@ export function useAssignedChores(childName, chores = [], childId = null) {
       all[childName] = [
         ...built.map(c => ({
           ...c,
-          // Only trust local pending if the API also has a record — if the API deleted it (rejection), clear it
-          pending:    c.pending || (localPending.has(c.id) && !c.completed && !!data.today?.[childName]?.[c.id]),
+          // c.pending is the API's own status; the local flag only bridges the gap.
+          pending:    c.pending || (!c.completed && localPending.has(c.id) && stillSubmitting(c.id)),
           acceptedAt: c.acceptedAt ?? localMap[c.id]?.acceptedAt ?? null,
         })),
         ...inFlight,

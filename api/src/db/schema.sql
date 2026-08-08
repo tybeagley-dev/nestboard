@@ -103,7 +103,8 @@ CREATE TABLE IF NOT EXISTS chore_events (
   chore_label TEXT NOT NULL,
   tokens      INTEGER NOT NULL DEFAULT 0,
   status      TEXT NOT NULL DEFAULT 'accepted',
-  accepted_at TIMESTAMPTZ
+  accepted_at TIMESTAMPTZ,
+  is_bonus    BOOLEAN NOT NULL DEFAULT false
 );
 
 CREATE INDEX IF NOT EXISTS chore_events_status ON chore_events (status);

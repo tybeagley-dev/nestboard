@@ -397,7 +397,12 @@ function TodayAssignments({ children }) {
       const childObj = children.find(c => c.name === childName)
       for (const [choreId, entry] of Object.entries(chores)) {
         if (entry.status === 'accepted') {
-          flat.push({ child: childName, childObj, choreId, choreLabel: entry.choreLabel, tokens: entry.tokens })
+          flat.push({
+            child: childName, childObj, choreId,
+            choreLabel: entry.choreLabel,
+            tokens: entry.tokens,
+            isBonus: entry.isBonus === true,
+          })
         }
       }
     }
@@ -438,7 +443,10 @@ function TodayAssignments({ children }) {
               )}
               <div className="approval-meta">
                 <span className="approval-child">{item.child}</span>
-                <span className="approval-label">{item.choreLabel}</span>
+                <span className="approval-label">
+                  {item.choreLabel}
+                  {item.isBonus && <span className="bonus-tag">bonus</span>}
+                </span>
               </div>
               <TokenBadge amount={item.tokens} />
             </div>
