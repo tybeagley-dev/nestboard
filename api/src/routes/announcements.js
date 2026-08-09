@@ -7,6 +7,11 @@ const router = Router()
 
 router.use(requireFamily)
 
+// A note renders on one line under the dashboard greeting, so long text wrecks
+// that layout. Enforced here as well as in the input's maxLength — the client is
+// a suggestion, not a constraint.
+export const NOTE_MAX_LENGTH = 80
+
 router.get('/', async (req, res) => {
   const { rows } = await db.query(
     `SELECT * FROM announcements WHERE family_id = $1 ORDER BY added_at ASC`,
@@ -17,10 +22,17 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   const { id, text } = req.body
-  if (!id || !text) return res.status(400).json({ error: 'Missing params' })
+  if (!id || typeof text !== 'string') return res.status(400).json({ error: 'Missing params' })
+
+  const trimmed = text.trim()
+  if (!trimmed) return res.status(400).json({ error: 'Note cannot be empty' })
+  if (trimmed.length > NOTE_MAX_LENGTH) {
+    return res.status(400).json({ error: `Note must be ${NOTE_MAX_LENGTH} characters or fewer` })
+  }
+
   await db.query(
     `INSERT INTO announcements (id, family_id, text) VALUES ($1, $2, $3)`,
-    [id, req.familyId, text]
+    [id, req.familyId, trimmed]
   )
   broadcast('announcements', {}, req.familyId)
   res.json({ success: true })

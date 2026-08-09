@@ -179,6 +179,31 @@ button {
   font-size: 12px;
   color: var(--text-muted);
   letter-spacing: 0.04em;
+  animation: greeting-note-in 600ms ease;
+  /* Notes are capped at 80 chars server-side; this keeps even a long one from
+     running the full width of a wide kiosk and crowding the date. */
+  max-width: 42ch;
+}
+
+.note-char-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+.note-char-count.at-limit {
+  color: var(--danger, #b3453a);
+  font-weight: 600;
+}
+
+/* Replayed by React remounting the node on each note, via key={note.id}. */
+@keyframes greeting-note-in {
+  from { opacity: 0; transform: translateY(-2px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .greeting-tagline { animation: none; }
 }
 
 .greeting-headline {

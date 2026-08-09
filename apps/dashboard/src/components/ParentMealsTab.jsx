@@ -1,20 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useMeals } from '../hooks/useMeals'
-import { useAnnouncements } from '../hooks/useAnnouncements'
 import TabGuide from './TabGuide'
 
 const DAY_SHORT = { Sunday: 'Sun', Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed', Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat' }
 
 export default function ParentMealsTab() {
   const { meals, updateMeal, DAY_ORDER, loaded } = useMeals()
-  const { announcements, addAnnouncement, removeAnnouncement } = useAnnouncements()
 
   const [draft, setDraft] = useState(() =>
     DAY_ORDER.map(day => ({ day, main: '', note: '', lunch: '' }))
   )
   const [saved,    setSaved]    = useState(false)
-  const [newNote,  setNewNote]  = useState('')
-  const [adding,   setAdding]   = useState(false)
 
   useEffect(() => {
     if (!loaded) return
@@ -35,22 +31,13 @@ export default function ParentMealsTab() {
     setTimeout(() => setSaved(false), 2000)
   }
 
-  async function handleAddNote() {
-    const text = newNote.trim()
-    if (!text) return
-    setAdding(true)
-    await addAnnouncement(text)
-    setNewNote('')
-    setAdding(false)
-  }
-
   return (
     <div className="parent-meals-tab">
 
       <TabGuide summary="How the meal plan works">
         <p className="onboarding-guide-text">
           Set each day’s dinner — plus a lunch line for summer days — and it shows on the dashboard
-          so everyone knows what’s for dinner. Family notes you add below appear on the dashboard too.
+          so everyone knows what’s for dinner.
         </p>
       </TabGuide>
 
@@ -90,38 +77,6 @@ export default function ParentMealsTab() {
         {saved ? '✓ Saved' : 'Save Meal Plan'}
       </button>
 
-      {/* ── Family Notes / Announcements ── */}
-      <p className="parent-section-label" style={{ marginTop: 20, marginBottom: 8 }}>FAMILY NOTES</p>
-
-      <div className="parent-notes-list">
-        {announcements.length === 0 && (
-          <p className="parent-soon-msg" style={{ padding: '8px 0', textAlign: 'left' }}>No notes yet.</p>
-        )}
-        {announcements.map(a => (
-          <div key={a.id} className="parent-note-row">
-            <span className="parent-note-text">{a.text}</span>
-            <button className="chore-admin-del-btn" onClick={() => removeAnnouncement(a.id)}>×</button>
-          </div>
-        ))}
-      </div>
-
-      <div className="parent-note-add-row">
-        <input
-          className="chore-form-input"
-          placeholder="Add a family note…"
-          value={newNote}
-          onChange={e => setNewNote(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && handleAddNote()}
-        />
-        <button
-          className="parent-apply-btn"
-          onClick={handleAddNote}
-          disabled={adding || !newNote.trim()}
-          style={{ flexShrink: 0 }}
-        >
-          Add
-        </button>
-      </div>
     </div>
   )
 }

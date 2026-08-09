@@ -6,6 +6,7 @@ import { resolveSettings } from '../FamilyContext'
 import WeatherLocationPicker from './WeatherLocationPicker'
 import FamilyMembers from './FamilyMembers'
 import AccountCard from './AccountCard'
+import FamilyNotesCard from './FamilyNotesCard'
 import StepFeatures from '../onboarding/StepFeatures'
 import StepLabels from '../onboarding/StepLabels'
 
@@ -36,6 +37,8 @@ export default function ParentFamilyTab({ onPinChanged }) {
           <span className="family-code-name">{family.name}</span>
         </div>
       </div>
+
+      <FamilyNotesCard />
 
       <FamilyMembers familySlug={family.slug} />
 
