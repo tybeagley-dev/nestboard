@@ -1,7 +1,7 @@
-import bcrypt from 'bcryptjs'
 import { getAuth } from '@clerk/express'
 import { db } from '../db/client.js'
 import { requireFamily } from './requireFamily.js'
+import { verifyParentToken } from '../utils/parentTokens.js'
 
 // Parent authorization. Primary path: a Clerk-authenticated owner/parent of this
 // family. Fallback: the family PIN token, for shared/no-login devices (the fridge
@@ -19,14 +19,13 @@ export function requireParent(req, res, next) {
         if (rows.length) return next()
       }
 
-      // Fallback: parent PIN token
+      // Fallback: a parent session token from POST /auth/parent. This used to be
+      // the raw PIN, bcrypt-compared here on every request — so the PIN rode the
+      // wire constantly and could be ground against this path without the
+      // /auth/parent lockout ever seeing it. The token is opaque, expiring, and
+      // scoped to the family it was issued for.
       const token = req.headers['x-parent-token']
-      if (!token) return res.status(401).json({ error: 'Unauthorized' })
-      const { rows } = await db.query(
-        'SELECT parent_pin_hash FROM families WHERE id = $1',
-        [req.familyId]
-      )
-      if (!rows.length || !await bcrypt.compare(token, rows[0].parent_pin_hash)) {
+      if (!verifyParentToken(token, req.familyId)) {
         return res.status(401).json({ error: 'Unauthorized' })
       }
       next()

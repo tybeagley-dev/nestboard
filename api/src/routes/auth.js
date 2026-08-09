@@ -7,6 +7,7 @@ import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 import { isValidTz as isValidTimezone, invalidateFamilyTimezone } from '../utils/familyTime.js'
 import { checkPinLock, recordPinFailure, recordPinSuccess } from '../utils/pinAttempts.js'
+import { issueParentToken, revokeFamilyParentTokens } from '../utils/parentTokens.js'
 
 const router = Router()
 
@@ -39,7 +40,8 @@ router.post('/parent', (req, res) => {
         return res.status(401).json({ error: 'Invalid PIN' })
       }
       recordPinSuccess(req.familyId)
-      res.json({ token: pin })
+      // An opaque session token, not the PIN itself — see utils/parentTokens.js.
+      res.json({ token: issueParentToken(req.familyId) })
     } catch (err) {
       res.status(500).json({ error: 'Server error' })
     }
@@ -311,6 +313,11 @@ router.put('/family/pin', requireParent, async (req, res) => {
   try {
     const hash = await bcrypt.hash(newPin, 12)
     await db.query('UPDATE families SET parent_pin_hash = $1 WHERE id = $2', [hash, req.familyId])
+    // Every session the old PIN granted dies with it. Someone changing the PIN is
+    // usually trying to cut off a device that had it; leaving those sessions live
+    // for another 30 minutes would defeat the point. The caller re-unlocks too —
+    // ParentPage already re-locks the portal on a successful change.
+    revokeFamilyParentTokens(req.familyId)
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
