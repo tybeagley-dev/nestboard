@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
+import { safeFetchUrl } from '../utils/safeUrl.js'
 
 const router = Router()
 router.use(requireFamily)
@@ -10,6 +11,12 @@ router.post('/subscribe', async (req, res) => {
   const { endpoint, keys, childId } = req.body
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
     return res.status(400).json({ error: 'Missing subscription fields' })
+  }
+  // web-push POSTs to whatever is stored here, so an unvalidated endpoint turns
+  // every notification into a request at a target of the caller's choosing.
+  // Real push services are always public https.
+  if (!safeFetchUrl(endpoint)) {
+    return res.status(400).json({ error: 'Invalid push endpoint' })
   }
 
   await db.query(

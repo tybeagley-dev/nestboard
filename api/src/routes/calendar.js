@@ -3,6 +3,7 @@ import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 import { resolveChildId } from '../db/resolveChild.js'
+import { safeFetchUrl } from '../utils/safeUrl.js'
 
 const router = Router()
 
@@ -11,6 +12,7 @@ router.use(requireFamily)
 // Per-family in-memory cache — Map<familyId, { data, expiresAt }>
 const cacheMap = new Map()
 const CACHE_TTL_MS = 15 * 60 * 1000
+const FETCH_TIMEOUT_MS = 8000
 
 // ── iCal parser ───────────────────────────────────────────────────────────────
 
@@ -210,8 +212,13 @@ async function fetchAndParseCalendars(familyId) {
 
   await Promise.all(rows.map(async cal => {
     try {
-      const url = cal.url.replace(/^webcal:\/\//i, 'https://')
-      const res = await fetch(url)
+      // Re-checked at fetch time, not just at save time: rows predate the
+      // validation, and a feed can be edited straight in the database.
+      const url = safeFetchUrl(cal.url, { allowWebcal: true })
+      if (!url) return
+      // Without a timeout a slow or hanging feed pins the request open, and this
+      // runs every calendar in parallel on a cache miss.
+      const res = await fetch(url, { signal: AbortSignal.timeout(FETCH_TIMEOUT_MS) })
       if (!res.ok) return
       const text   = await res.text()
       const events = parseIcal(text, cal.color, cal.name, cal.child_name ?? null, now, cutoff, cal.is_family)
@@ -264,6 +271,9 @@ router.get('/', requireParent, async (req, res) => {
 router.post('/', requireParent, async (req, res) => {
   const { name, url, color, child, is_family } = req.body
   if (!name || !url) return res.status(400).json({ error: 'Missing params' })
+  if (!safeFetchUrl(url, { allowWebcal: true })) {
+    return res.status(400).json({ error: 'Calendar URL must be a public https:// or webcal:// address' })
+  }
   const childId = child ? await resolveChildId(req.familyId, child) : null
   if (child && !childId) return res.status(400).json({ error: 'Unknown child' })
   const id = Date.now().toString(36)
@@ -277,6 +287,9 @@ router.post('/', requireParent, async (req, res) => {
 
 router.put('/:id', requireParent, async (req, res) => {
   const { name, url, color, child, is_family } = req.body
+  if (!safeFetchUrl(url, { allowWebcal: true })) {
+    return res.status(400).json({ error: 'Calendar URL must be a public https:// or webcal:// address' })
+  }
   const childId = child ? await resolveChildId(req.familyId, child) : null
   if (child && !childId) return res.status(400).json({ error: 'Unknown child' })
   await db.query(
