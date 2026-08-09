@@ -1,7 +1,42 @@
 import { Router } from 'express'
-import { db } from '../db/client.js'
+import { randomUUID } from 'crypto'
+import { requireFamily } from '../middleware/requireFamily.js'
 
 const router = Router()
+
+// Short-lived, single-use SSE tickets. EventSource can't send headers, so the
+// family used to be identified by ?slug= — putting a permanent credential into
+// every proxy log, access log and Referer. A ticket is minted over a normal
+// authenticated request and dies in 60 seconds, so what lands in logs is already
+// worthless. In-memory on purpose: tickets outlive neither the process nor the
+// minute, and a restart just makes clients mint a new one.
+const TICKET_TTL_MS = 60_000
+const tickets = new Map() // ticket -> { familyId, expiresAt }
+
+function issueTicket(familyId) {
+  const ticket = randomUUID()
+  tickets.set(ticket, { familyId, expiresAt: Date.now() + TICKET_TTL_MS })
+  return ticket
+}
+
+function redeemTicket(ticket) {
+  const entry = tickets.get(ticket)
+  if (!entry) return null
+  tickets.delete(ticket)                       // single use
+  if (entry.expiresAt <= Date.now()) return null
+  return entry.familyId
+}
+
+// Sweep expired tickets so an abandoned client can't grow the map unbounded.
+setInterval(() => {
+  const now = Date.now()
+  for (const [t, e] of tickets) if (e.expiresAt <= now) tickets.delete(t)
+}, TICKET_TTL_MS).unref?.()
+
+// POST /events/ticket → { ticket } — auth travels in headers here, not the URL.
+router.post('/ticket', requireFamily, (req, res) => {
+  res.json({ ticket: issueTicket(req.familyId) })
+})
 
 // Connected SSE clients, each tagged with its family so broadcasts stay scoped.
 const clients = new Set() // entries: { res, familyId }
@@ -18,21 +53,12 @@ export function broadcast(type, data, familyId) {
   }
 }
 
-// GET /events?slug=<familySlug> — persistent SSE connection, scoped to a family.
-// EventSource can't send auth headers, so the family is identified by its opaque
-// slug in the query string (same trust level as the kiosk x-family-slug flow).
+// GET /events?ticket=<ticket> — persistent SSE connection, scoped to a family.
+// Tickets only; ?slug= is deliberately no longer accepted. A client on stale JS
+// simply fails to connect and falls back to the existing 20s polls.
 router.get('/', async (req, res) => {
-  const slug = req.query.slug
-  if (!slug) return res.status(400).end()
-
-  let familyId
-  try {
-    const { rows } = await db.query('SELECT id FROM families WHERE slug = $1', [slug])
-    if (!rows.length) return res.status(404).end()
-    familyId = rows[0].id
-  } catch {
-    return res.status(500).end()
-  }
+  const familyId = redeemTicket(req.query.ticket)
+  if (!familyId) return res.status(401).end()
 
   res.setHeader('Content-Type',  'text/event-stream')
   res.setHeader('Cache-Control', 'no-cache')

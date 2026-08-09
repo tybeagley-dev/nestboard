@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { CONFIG } from '../config/config'
+import { apiPost } from '../utils/api'
 
 // Server event types pushed over SSE (see api/src/routes — broadcast() calls).
 const SSE_TYPES = [
@@ -7,28 +8,57 @@ const SSE_TYPES = [
   'screen_time', 'screen_time_requests', 'chore_state', 'timers', 'meals',
 ]
 
-// Opens an SSE connection scoped to the family (identified by slug, since
-// EventSource can't send auth headers) and rebroadcasts each server event as a
-// `sse:<type>` window event. Native EventSource handles reconnection. The
-// existing polls stay as a fallback for when the connection drops.
+const RECONNECT_MS = 5000
+
+// Opens an SSE connection scoped to the family and rebroadcasts each server event
+// as a `sse:<type>` window event. The existing polls stay as a fallback for when
+// the connection drops.
+//
+// Auth is a single-use ticket minted over a normal authenticated request, because
+// EventSource can't send headers and the family slug is a permanent credential —
+// it has no business in a URL that proxies and access logs record. Native
+// EventSource reconnection would replay the consumed ticket, so reconnection is
+// driven here instead: on error, close and mint a fresh one.
 export function useLiveSync(slug) {
   useEffect(() => {
     if (!slug) return
-    const es = new EventSource(`${CONFIG.apiUrl}/events?slug=${encodeURIComponent(slug)}`)
+    let es = null
+    let retry = null
+    let cancelled = false
 
-    const handlers = SSE_TYPES.map(type => {
+    const attach = source => SSE_TYPES.map(type => {
       const handler = e => {
         let data = {}
         try { data = JSON.parse(e.data) } catch {}
         window.dispatchEvent(new CustomEvent(`sse:${type}`, { detail: data }))
       }
-      es.addEventListener(type, handler)
+      source.addEventListener(type, handler)
       return [type, handler]
     })
 
+    async function connect() {
+      if (cancelled) return
+      const res = await apiPost('/events/ticket', {})
+      if (cancelled) return
+      if (!res?.ticket) {
+        retry = setTimeout(connect, RECONNECT_MS)
+        return
+      }
+      es = new EventSource(`${CONFIG.apiUrl}/events?ticket=${encodeURIComponent(res.ticket)}`)
+      attach(es)
+      es.onerror = () => {
+        es?.close()
+        es = null
+        if (!cancelled) retry = setTimeout(connect, RECONNECT_MS)
+      }
+    }
+
+    connect()
+
     return () => {
-      handlers.forEach(([type, handler]) => es.removeEventListener(type, handler))
-      es.close()
+      cancelled = true
+      clearTimeout(retry)
+      es?.close()
     }
   }, [slug])
 }

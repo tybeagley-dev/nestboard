@@ -27,7 +27,21 @@ import adminRoutes from './routes/admin.js'
 const app = express()
 
 app.set('trust proxy', 1)
-app.use(cors())
+
+// CORS_ORIGINS is a comma-separated allowlist. Unset = allow any origin, which is
+// the old behaviour — kept as the fallback so deploying this can't black out the
+// dashboard before the variable is set in Railway. Set it and this tightens.
+const CORS_ORIGINS = (process.env.CORS_ORIGINS ?? '').split(',').map(s => s.trim()).filter(Boolean)
+if (CORS_ORIGINS.length) {
+  console.log(`CORS restricted to: ${CORS_ORIGINS.join(', ')}`)
+} else {
+  console.warn('CORS_ORIGINS unset — allowing all origins. Set it to the dashboard origin(s).')
+}
+app.use(cors({
+  origin: CORS_ORIGINS.length ? CORS_ORIGINS : true,
+  credentials: false,
+}))
+
 app.use(express.json())
 app.use(clerkMiddleware())
 
@@ -40,7 +54,10 @@ const parentLimit = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  skip: req => !req.headers['x-parent-token'],
+  // SSE ticket minting is exempt: an unlocked kiosk sends the parent token on
+  // every request, and a reconnect storm would otherwise burn this budget and
+  // start blocking real parent writes.
+  skip: req => !req.headers['x-parent-token'] || req.path.startsWith('/events/'),
 })
 app.use(parentLimit)
 
