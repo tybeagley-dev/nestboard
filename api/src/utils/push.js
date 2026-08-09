@@ -21,8 +21,13 @@ function ensureVapid() {
 }
 
 // Send to all parent subscriptions for a family (child_id IS NULL)
+//
+// Parent notifications are always "something needs your attention", and the
+// parent portal opens on the approvals tab by default — so tapping one lands
+// where the work is instead of on the dashboard. The service worker reads
+// data.url; a caller can override it for a notification that isn't an approval.
 export async function notifyParent(familyId, payload) {
-  await notifySubscriptions(familyId, null, payload)
+  await notifySubscriptions(familyId, null, { url: '/parent', ...payload })
 }
 
 // Send to all subscriptions for a specific child
