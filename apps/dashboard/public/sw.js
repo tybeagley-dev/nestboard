@@ -64,11 +64,43 @@ self.addEventListener('push', e => {
       body: data.body ?? '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
+      // Carried through to notificationclick. The server doesn't send a url yet;
+      // when it does (e.g. approvals → /parent) this needs no change here.
+      data: { url: data.url ?? '/' },
     })
   )
 })
 
+// Focus an already-open window rather than opening a new one.
+//
+// This used to call openWindow('/') unconditionally. On iOS an installed PWA has
+// its own storage partition, separate from Safari — so a tap that opened a fresh
+// context could land outside the PWA, where the Clerk session doesn't exist, and
+// the parent would be asked to sign in again despite having had the app open
+// moments earlier.
 self.addEventListener('notificationclick', e => {
   e.notification.close()
-  e.waitUntil(clients.openWindow('/'))
+  const target = e.notification.data?.url || '/'
+
+  e.waitUntil((async () => {
+    // includeUncontrolled: a window loaded before this service worker took over
+    // is still ours and still signed in.
+    const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const mine = all.filter(c => {
+      try { return new URL(c.url).origin === self.location.origin } catch { return false }
+    })
+
+    if (mine.length) {
+      // Prefer one already on the target path, else just take the first.
+      const exact = mine.find(c => new URL(c.url).pathname === target)
+      const client = exact ?? mine[0]
+      try { await client.focus() } catch {}
+      if (!exact && target !== '/' && 'navigate' in client) {
+        try { await client.navigate(target) } catch {}
+      }
+      return
+    }
+
+    await self.clients.openWindow(target)
+  })())
 })
