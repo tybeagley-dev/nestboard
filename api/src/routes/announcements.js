@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { nanoid } from 'nanoid'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { broadcast } from './events.js'
@@ -21,8 +22,8 @@ router.get('/', async (req, res) => {
 })
 
 router.post('/', async (req, res) => {
-  const { id, text } = req.body
-  if (!id || typeof text !== 'string') return res.status(400).json({ error: 'Missing params' })
+  const { text } = req.body
+  if (typeof text !== 'string') return res.status(400).json({ error: 'Missing params' })
 
   const trimmed = text.trim()
   if (!trimmed) return res.status(400).json({ error: 'Note cannot be empty' })
@@ -30,12 +31,15 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: `Note must be ${NOTE_MAX_LENGTH} characters or fewer` })
   }
 
+  // Server-generated, same reasoning as grocery: a client-supplied id could
+  // collide and surface as a 500.
+  const id = `a_${nanoid(12)}`
   await db.query(
     `INSERT INTO announcements (id, family_id, text) VALUES ($1, $2, $3)`,
     [id, req.familyId, trimmed]
   )
   broadcast('announcements', {}, req.familyId)
-  res.json({ success: true })
+  res.status(201).json({ success: true, id })
 })
 
 router.delete('/:id', async (req, res) => {

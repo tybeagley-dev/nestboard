@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { nanoid } from 'nanoid'
 import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { broadcast } from './events.js'
@@ -15,15 +16,28 @@ router.get('/', async (req, res) => {
   res.json(rows)
 })
 
+export const ITEM_MAX_LENGTH = 120
+
 router.post('/', async (req, res) => {
-  const { id, item } = req.body
-  if (!id || !item) return res.status(400).json({ error: 'Missing params' })
+  const { item } = req.body
+  if (typeof item !== 'string') return res.status(400).json({ error: 'Missing params' })
+
+  const trimmed = item.trim()
+  if (!trimmed) return res.status(400).json({ error: 'Item cannot be empty' })
+  if (trimmed.length > ITEM_MAX_LENGTH) {
+    return res.status(400).json({ error: `Item must be ${ITEM_MAX_LENGTH} characters or fewer` })
+  }
+
+  // Server-generated: the id used to come from the request body, so a colliding
+  // id threw a primary-key error the caller saw as a 500, and it doubled as an
+  // oracle for whether an id existed in some other family.
+  const id = `g_${nanoid(12)}`
   await db.query(
     `INSERT INTO grocery (id, family_id, item) VALUES ($1, $2, $3)`,
-    [id, req.familyId, item]
+    [id, req.familyId, trimmed]
   )
   broadcast('grocery', {}, req.familyId)
-  res.json({ success: true })
+  res.status(201).json({ success: true, id })
 })
 
 router.delete('/', async (req, res) => {
