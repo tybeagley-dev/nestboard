@@ -29,7 +29,7 @@ function ToothbrushIcon({ size = 18 }) {
   )
 }
 
-export default function FloatingControls() {
+export default function FloatingControls({ kiosk = false }) {
   const navigate = useNavigate()
   const tidy     = useTidyTimer()
   const tooth    = useToothbrushTimer()
@@ -131,9 +131,14 @@ export default function FloatingControls() {
           <Smartphone size={18} strokeWidth={1.8} />
         </button>
 
-        <button className="timer-icon-btn settings-btn" onClick={() => navigate('/parent')} title="Parent Panel" aria-label="Parent Panel">
-          <Settings size={18} strokeWidth={1.8} />
-        </button>
+        {/* Parent work happens on a signed-in phone. A kiosk has no Clerk
+            session, so /parent would render a portal whose writes it can't
+            authorize — better not to offer the door. */}
+        {!kiosk && (
+          <button className="timer-icon-btn settings-btn" onClick={() => navigate('/parent')} title="Parent Panel" aria-label="Parent Panel">
+            <Settings size={18} strokeWidth={1.8} />
+          </button>
+        )}
       </div>
 
       {showHowto && <HowItWorksModal onClose={() => setShowHowto(false)} />}

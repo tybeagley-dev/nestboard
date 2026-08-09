@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { formatDate, formatTime, getGreeting } from '../utils/dateUtils'
-import { CONFIG } from '../config/config'
 import { useFamily, useSettings } from '../FamilyContext'
 import { useAnnouncements } from '../hooks/useAnnouncements'
 
@@ -31,8 +30,14 @@ export default function GreetingSection({ now, onGrocery }) {
   return (
     <div className="greeting-section">
       <div className="greeting-body">
+        {/* No hardcoded fallback name. Under FamilyGate the family was always
+            loaded before this rendered, so the old default was dead code — but
+            the kiosk resolves its family asynchronously, which would have
+            flashed one family's name on every other family's display. */}
         <h1 className="greeting-headline">
-          {getGreeting(now)},<br />{family?.name ?? CONFIG.familyName}!
+          {family?.name
+            ? <>{getGreeting(now)},<br />{family.name}!</>
+            : <>{getGreeting(now)}!</>}
         </h1>
         {note && (
           // key on the note so swapping one for the next replays the fade.

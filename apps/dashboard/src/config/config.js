@@ -6,7 +6,6 @@
 export const CONFIG = {
 
   // ── Family ─────────────────────────────────────────────────────────────────
-  familyName: 'Beagley Fam',
 
   // ── Schedule Modes ─────────────────────────────────────────────────────────
   // The dashboard auto-detects which mode today falls into and shows the

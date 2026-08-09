@@ -19,7 +19,11 @@ import { useLiveSync } from './hooks/useLiveSync'
 import { useFamily, useSettings } from './FamilyContext'
 import { unlockAudio } from './utils/chime'
 
-export default function Dashboard() {
+// `kiosk` marks the shared-device surface (KioskView, slug-authenticated, no
+// Clerk session). Everything the dashboard renders is already requireFamily, so
+// the only thing the flag changes is hiding the route into the parent portal —
+// which on a kiosk would lead somewhere the device can no longer authorize.
+export default function Dashboard({ kiosk = false }) {
   const now     = useClock()
   const weather = useWeather()
   const family  = useFamily()
@@ -69,7 +73,7 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard">
-      <FloatingControls />
+      <FloatingControls kiosk={kiosk} />
 
       <div className="dashboard-top">
         <GreetingSection

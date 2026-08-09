@@ -6,6 +6,7 @@ import Landing from './Landing'
 import Dashboard from './Dashboard'
 import ParentPage from './ParentPage'
 import ChildView from './ChildView'
+import KioskView from './KioskView'
 import FamilySetup from './FamilySetup'
 import JoinInvite from './JoinInvite'
 import AdminPage from './AdminPage'
@@ -75,6 +76,7 @@ export default function App() {
   return (
     <Routes>
       <Route path="/:slug/child/:childId" element={<ChildView />} />
+      <Route path="/:slug/kiosk" element={<KioskView />} />
       <Route path="/privacy" element={<LegalDoc which="privacy" />} />
       <Route path="/terms" element={<LegalDoc which="terms" />} />
       <Route

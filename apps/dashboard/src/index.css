@@ -5281,6 +5281,19 @@ button {
   border-color: var(--text-muted);
 }
 
+.kiosk-link-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.kiosk-qr-wrap {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0 4px;
+}
+
 .account-card-row {
   display: flex;
   align-items: flex-start;
