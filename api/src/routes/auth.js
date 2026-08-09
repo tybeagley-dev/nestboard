@@ -79,8 +79,12 @@ router.get('/family', async (req, res) => {
     return
   }
 
-  // Dev fallback: slug-based resolution
-  const slug = req.headers['x-family-slug'] ?? process.env.DEFAULT_FAMILY_SLUG
+  // Slug resolution, for the kiosk and child views. This route has its own copy
+  // of the lookup rather than going through requireFamily, so it needed the same
+  // DEFAULT_FAMILY_SLUG removal — the response includes the slug itself, so an
+  // env var set by accident would hand an unauthenticated caller the credential
+  // for everything else.
+  const slug = req.headers['x-family-slug']
   if (!slug) return res.status(401).json({ error: 'Unauthorized' })
   try {
     const { rows } = await db.query('SELECT id, name, slug, labels, onboarded, weather, settings FROM families WHERE slug = $1', [slug])

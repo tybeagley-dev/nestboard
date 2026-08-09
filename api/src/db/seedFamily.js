@@ -325,9 +325,12 @@ console.log(`
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   SEED COMPLETE
 
-  Add this to api/.env:
+  Family slug: ${slug}
 
-    DEFAULT_FAMILY_SLUG=${slug}
+  DEFAULT_FAMILY_SLUG is no longer read anywhere — it
+  granted a whole family to unauthenticated callers.
+  Reach this family by signing in, or by sending the
+  slug as an x-family-slug header.
 
   If the family row already existed, the slug was not
   changed — check the DB and use the existing slug.
