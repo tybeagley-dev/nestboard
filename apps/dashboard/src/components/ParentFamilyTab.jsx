@@ -5,6 +5,7 @@ import FeedbackCard from './FeedbackCard'
 import { resolveSettings } from '../FamilyContext'
 import WeatherLocationPicker from './WeatherLocationPicker'
 import FamilyMembers from './FamilyMembers'
+import AccountCard from './AccountCard'
 import StepFeatures from '../onboarding/StepFeatures'
 import StepLabels from '../onboarding/StepLabels'
 
@@ -37,6 +38,8 @@ export default function ParentFamilyTab({ onPinChanged }) {
       </div>
 
       <FamilyMembers familySlug={family.slug} />
+
+      <AccountCard />
 
       <ChangePinCard onPinChanged={onPinChanged} />
 
