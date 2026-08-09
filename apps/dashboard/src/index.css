@@ -5834,6 +5834,48 @@ button {
   color: var(--text-primary);
 }
 
+/* The pills are buttons on this page — it's the only interactive surface for a
+   family without a stationary kiosk. */
+.child-view-balance-pill--action {
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.child-view-balance-pill--action:active {
+  transform: scale(0.97);
+}
+
+.child-view-timer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  margin: 0 1rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.child-view-timer.expired {
+  border-color: var(--danger, #b3453a);
+  color: var(--danger, #b3453a);
+}
+
+.child-view-timer-stop {
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: 0.8rem;
+  border-radius: 999px;
+  padding: 0.15rem 0.7rem;
+  cursor: pointer;
+}
+
 .child-view-section {
   padding: 1rem;
   display: flex;

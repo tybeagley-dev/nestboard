@@ -12,7 +12,12 @@ import { useRoutines, useScheduleConfig } from './hooks/useRoutines'
 import { useChores, useChorePoints } from './hooks/useChores'
 import { useAssignedChores, markChoreAsPending, submitApprovalRequest, triggerChoreRefetch } from './hooks/useAssignedChores'
 import { useScreenBalance } from './hooks/useScreenTime'
-import { useFamilySettings } from './hooks/useFamilySettings'
+import { useFamilyPayload } from './hooks/useFamilySettings'
+import { FamilyProvider, useSettings, useLabels } from './FamilyContext'
+import TokensModal from './components/TokensModal'
+import ScreenTimeModal from './components/ScreenTimeModal'
+import { useActiveChildTimers, stopChildTimer } from './hooks/useScreenTime'
+import { stopChimeLoop } from './utils/chime'
 import { useCalendarEvents } from './hooks/useCalendarEvents'
 import { useGroceryList } from './hooks/useGroceryList'
 import { useWeather } from './hooks/useWeather'
@@ -82,7 +87,20 @@ export default function ChildView() {
     )
   }
 
-  return <ChildViewInner />
+  return <ChildViewFamily />
+}
+
+// Supplies a real FamilyProvider so everything below sees the family's own labels
+// and settings. Without it, kiosk components mounted here fall back to generic
+// defaults — showing the wrong token name and the wrong screen-time price while
+// the server charges the real one.
+function ChildViewFamily() {
+  const family = useFamilyPayload()
+  return (
+    <FamilyProvider family={family}>
+      <ChildViewInner />
+    </FamilyProvider>
+  )
 }
 
 function ChildViewInner() {
@@ -108,8 +126,16 @@ function ChildViewInner() {
   const { chores: assignedChores, loading: assignedLoading } = useAssignedChores(child?.name ?? '', chores, child?.id ?? null)
   const { balance }  = useScreenBalance(child?.name ?? '')
   const { tokens }    = useChorePoints(child?.name ?? '')
-  const familySettings = useFamilySettings()
-  const { modules }   = familySettings
+  const { modules }   = useSettings()
+  const labels        = useLabels()
+
+  // Families without a stationary kiosk have this page as their only interactive
+  // surface, so the balance pills open the same modals the kiosk uses.
+  const [showTokens,     setShowTokens]     = useState(false)
+  const [showScreenTime, setShowScreenTime] = useState(false)
+
+  const activeTimers = useActiveChildTimers()
+  const timer = activeTimers.find(t => t.child === child?.name) ?? null
 
   const [showChoreModal,  setShowChoreModal]  = useState(false)
   const [showUpcoming,    setShowUpcoming]    = useState(false)
@@ -195,21 +221,45 @@ function ChildViewInner() {
         </div>
       </div>
 
-      {/* Balance pills */}
+      {/* Balance pills — tappable, opening the same modals as the kiosk */}
       {(modules.screenTime || modules.tokens) && (
         <div className="child-view-balances">
           {modules.screenTime && (
-            <div className="child-view-balance-pill">
+            <button
+              className="child-view-balance-pill child-view-balance-pill--action"
+              onClick={() => setShowScreenTime(true)}
+            >
               <Monitor size={16} strokeWidth={1.8} />
               <span>{balance} min</span>
-            </div>
+            </button>
           )}
           {modules.tokens && (
-            <div className="child-view-balance-pill">
+            <button
+              className="child-view-balance-pill child-view-balance-pill--action"
+              onClick={() => setShowTokens(true)}
+            >
               <Coins size={16} strokeWidth={1.8} />
-              <span>{tokens} tokens</span>
-            </div>
+              <span>{tokens} {labels.tokenName.toLowerCase()}</span>
+            </button>
           )}
+        </div>
+      )}
+
+      {/* A timer started from this page has to be visible on it — on the kiosk
+          the countdown lives on ChildCard, which this page doesn't render. */}
+      {timer && (
+        <div className={`child-view-timer ${timer.expired ? 'expired' : ''}`}>
+          {timer.expired ? (
+            <span>Time's up!</span>
+          ) : (
+            <span>{timer.minutes}:{String(timer.seconds).padStart(2, '0')} left</span>
+          )}
+          <button
+            className="child-view-timer-stop"
+            onClick={() => { stopChimeLoop(); stopChildTimer(child.name) }}
+          >
+            Stop
+          </button>
         </div>
       )}
 
@@ -295,6 +345,14 @@ function ChildViewInner() {
       )}
       {showUpcoming && (
         <UpcomingModal child={child} onClose={() => setShowUpcoming(false)} />
+      )}
+
+      {showScreenTime && modules.screenTime && (
+        <ScreenTimeModal child={child} onClose={() => setShowScreenTime(false)} />
+      )}
+
+      {showTokens && modules.tokens && (
+        <TokensModal child={child} onClose={() => setShowTokens(false)} />
       )}
       {instructionsChore && (
         <ChoreInstructionsModal
