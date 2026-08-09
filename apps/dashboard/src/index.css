@@ -5238,11 +5238,110 @@ button {
 .notif-toggle-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Schedule Config Section ─────────────────────────────────────────────── */
+/* Now a <details>; flex would break the summary/marker row. */
 .sched-config-section {
+  display: block;
+  margin-top: 24px;
+  border-top: 1.5px solid var(--border);
+  padding-top: 12px;
+}
+
+.sched-config-summary {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  margin-top: 20px;
+  gap: 2px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  padding: 6px 0;
+  list-style-position: outside;
+}
+
+.sched-config-summary:hover {
+  color: var(--text);
+}
+
+.sched-config-summary-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.sched-config-section[open] .sched-config-summary {
+  margin-bottom: 12px;
+}
+
+.sched-config-section .sched-config-block + .sched-config-block {
+  margin-top: 16px;
+}
+
+/* ── Routine groups ─────────────────────────────────────────────────────────
+   Routines group by time of day, which is how parents organize them; the day-type
+   schedule only shows on a card when it isn't the all-days default. */
+
+.routine-group {
+  margin-top: 18px;
+}
+
+.routine-group-head {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 2px 8px;
+}
+
+.routine-group-icon {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.routine-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.routine-sched-note {
+  font-weight: 600;
+}
+
+.routine-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: 2px;
+}
+
+.routine-move-btn {
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 6px;
+  width: 26px;
+  height: 18px;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.routine-move-btn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--text-muted);
+}
+
+.routine-move-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.routine-child-chips .chore-day-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .sched-config-divider {
