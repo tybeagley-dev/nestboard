@@ -245,7 +245,11 @@ router.get('/events', async (req, res) => {
 
 // ── Calendar URL management (parent only) ─────────────────────────────────────
 
-router.get('/', async (req, res) => {
+// requireParent: the rows carry `url`, and an iCal URL is itself a capability —
+// whoever holds one reads the family's whole calendar outside nestboard, forever.
+// Slug-level callers (kiosk, child views) use /events, which returns parsed
+// events and never the URLs.
+router.get('/', requireParent, async (req, res) => {
   const { rows } = await db.query(
     `SELECT c.id, c.family_id, c.name, c.url, c.color, c.child_id, c.family AS is_family, ch.name AS child
      FROM calendars c

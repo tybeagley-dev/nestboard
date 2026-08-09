@@ -19,8 +19,16 @@ export async function requireFamily(req, res, next) {
     }
   }
 
-  // Dev fallback: x-family-slug header or DEFAULT_FAMILY_SLUG env var
-  const slug = req.headers['x-family-slug'] ?? process.env.DEFAULT_FAMILY_SLUG
+  // Slug auth, for the surfaces that cannot hold a Clerk session: the kiosk and
+  // the child views. The slug is a bearer credential in a URL — it never expires,
+  // can't be rotated without breaking every installed PWA, and is one secret for
+  // the whole family. Treat it as LOW TRUST: anything exposing a secret (calendar
+  // URLs, invites, members) or spending a parent's authority must sit behind
+  // requireParent, not this. See NEXT_UP "slug-as-credential".
+  //
+  // DEFAULT_FAMILY_SLUG is deliberately gone — an unset-by-accident env var must
+  // never grant a family to an unauthenticated caller.
+  const slug = req.headers['x-family-slug']
   if (!slug) return res.status(401).json({ error: 'Unauthorized' })
   try {
     const { rows } = await db.query('SELECT id FROM families WHERE slug = $1', [slug])

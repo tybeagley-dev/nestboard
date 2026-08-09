@@ -44,7 +44,11 @@ router.get('/', async (req, res) => {
 // Grants land in bonus_balance; deductions walk free-then-bonus. Both are the
 // parent's own money, so a grant is always reversible. purchased_balance is the
 // kid's — bought with tokens — and a deduction never touches it.
-router.post('/:child/adjust', async (req, res) => {
+// requireParent: this grants or removes screen time. It is only ever called from
+// ParentTokensTab, behind the parent unlock — it was reachable with the slug
+// alone, which let anyone holding a child URL grant themselves screen time.
+// Mirrors POST /tokens/:child/adjust, which was already gated.
+router.post('/:child/adjust', requireParent, async (req, res) => {
   const delta = Number(req.body?.delta)
   const childName = req.params.child
   if (!Number.isInteger(delta) || delta === 0) return res.status(400).json({ error: 'Invalid delta' })
