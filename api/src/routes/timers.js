@@ -23,12 +23,20 @@ router.get('/', async (req, res) => {
 })
 
 // POST /timers/:child/start  { durationMinutes, bufferMinutes }
+// Grace period on top of the minutes actually spent — time to get settled before
+// the countdown matters. Capped so it can't become a source of free screen time.
+const MAX_BUFFER_MINUTES = 15
+
 router.post('/:child/start', async (req, res) => {
   const childName = req.params.child
-  const { durationMinutes, bufferMinutes } = req.body
-  if (!durationMinutes || isNaN(durationMinutes) || durationMinutes <= 0) {
+  const durationMinutes = Number(req.body?.durationMinutes)
+  if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
     return res.status(400).json({ error: 'Invalid durationMinutes' })
   }
+  const bufferMinutes = Math.min(
+    MAX_BUFFER_MINUTES,
+    Math.max(0, Math.floor(Number(req.body?.bufferMinutes ?? 5)) || 0)
+  )
 
   const childId = await resolveChildId(req.familyId, childName)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
@@ -58,6 +66,14 @@ router.post('/:child/start', async (req, res) => {
     // Spend the perishable and the parent's own first; the kid's token-bought
     // minutes are the last to go.
     const totalToDeduct = Math.min(totalAvail, durationMinutes)
+
+    // A timer with nothing behind it used to run anyway — see the endTime note
+    // below. Refuse instead of granting free screen time.
+    if (totalToDeduct <= 0) {
+      await client.query('ROLLBACK')
+      return res.status(400).json({ error: 'No screen time available' })
+    }
+
     const freeToDeduct  = Math.min(freeAvail, totalToDeduct)
     const bonusToDeduct = Math.min(bonus, totalToDeduct - freeToDeduct)
     const purchToDeduct = totalToDeduct - freeToDeduct - bonusToDeduct
@@ -84,7 +100,16 @@ router.post('/:child/start', async (req, res) => {
       )
     }
 
-    const storedBuffer = (durationMinutes + (bufferMinutes ?? 5)) - totalToDeduct
+    // Was: storedBuffer = (durationMinutes + bufferMinutes) - totalToDeduct, which
+    // made endTime = now + durationMinutes + bufferMinutes once totalToDeduct
+    // cancelled out — the client decided how long the timer ran, regardless of the
+    // balance. A child with nothing got a full timer, and {durationMinutes: 600}
+    // got ten hours while deducting zero. The timer now runs exactly as long as
+    // the minutes actually spent, plus the capped grace period.
+    //
+    // stop() is unaffected: it compares msLeft against the deducted minutes, so
+    // stopping inside the grace window still refunds in full.
+    const storedBuffer = bufferMinutes
     const endTime      = Date.now() + (totalToDeduct + storedBuffer) * 60 * 1000
 
     await client.query(
