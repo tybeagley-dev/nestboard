@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { apiPost, setParentToken } from '../utils/api'
+import { apiPostResult, setParentToken } from '../utils/api'
 
 function isTouchDevice() {
   return 'ontouchstart' in window || navigator.maxTouchPoints > 0
@@ -11,8 +11,19 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
   const [pin,   setPin]   = useState('')
   const [error, setError] = useState(false)
   const [busy,  setBusy]  = useState(false)
+  // Seconds remaining on a rate-limit lockout. The server locks a family after
+  // repeated failures, and without this the modal reported "Incorrect PIN" for
+  // the whole window — including for the correct PIN — with no hint that waiting
+  // was the fix.
+  const [lockedFor, setLockedFor] = useState(0)
   const inputRef = useRef(null)
   const touch = isTouchDevice()
+
+  useEffect(() => {
+    if (lockedFor <= 0) return
+    const id = setInterval(() => setLockedFor(s => Math.max(0, s - 1)), 1000)
+    return () => clearInterval(id)
+  }, [lockedFor > 0])
 
   useEffect(() => {
     if (touch) {
@@ -35,22 +46,30 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
 
   async function verify(candidate) {
     setBusy(true)
-    const data = await apiPost('/auth/parent', { pin: candidate })
+    const { status, data } = await apiPostResult('/auth/parent', { pin: candidate })
     setBusy(false)
+
     if (data?.token) {
       setParentToken(data.token)
       onSuccess()
+      return
+    }
+
+    // 429 is the family lockout, not a wrong PIN — say so, and count it down.
+    if (status === 429) {
+      setLockedFor(Number(data?.retryAfterSec) || 60)
+      setError(false)
     } else {
       setError(true)
-      setTimeout(() => {
-        setPin('')
-        if (inputRef.current) inputRef.current.value = ''
-      }, 600)
     }
+    setTimeout(() => {
+      setPin('')
+      if (inputRef.current) inputRef.current.value = ''
+    }, 600)
   }
 
   function handleDigit(d) {
-    if (busy || pin.length >= PIN_LENGTH) return
+    if (busy || lockedFor > 0 || pin.length >= PIN_LENGTH) return
     const next = pin + d
     setPin(next)
     setError(false)
@@ -87,12 +106,18 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
             />
           )}
           <p className="pin-prompt">{prompt}</p>
-          <div className={`pin-dots ${error ? 'pin-error' : ''}`}>
+          <div className={`pin-dots ${error || lockedFor > 0 ? 'pin-error' : ''}`}>
             {Array.from({ length: PIN_LENGTH }).map((_, i) => (
               <div key={i} className={`pin-dot ${i < pin.length ? 'filled' : ''}`} />
             ))}
           </div>
-          {error && <p className="pin-error-msg">Incorrect PIN</p>}
+          {lockedFor > 0 ? (
+            <p className="pin-error-msg">
+              Too many attempts — try again in {lockedFor > 60
+                ? `${Math.ceil(lockedFor / 60)} min`
+                : `${lockedFor}s`}
+            </p>
+          ) : error && <p className="pin-error-msg">Incorrect PIN</p>}
           {!touch && (
             <div className="numpad">
               {['1','2','3','4','5','6','7','8','9','','0','⌫'].map((k, i) => (

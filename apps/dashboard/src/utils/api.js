@@ -19,7 +19,9 @@ export function setParentToken(token) {
   _parentToken = token
 }
 
-async function apiFetch(path, options = {}) {
+// Returns { ok, status, data }. status is 0 when the request never completed
+// (network error), which is distinguishable from a server response.
+async function apiRequest(path, options = {}) {
   const token = _getToken ? await _getToken() : null
   const slugHeader = (!token && _familySlug) ? { 'x-family-slug': _familySlug } : {}
   const method = options.method ?? 'GET'
@@ -33,17 +35,22 @@ async function apiFetch(path, options = {}) {
         ...options.headers,
       },
     })
-    // Non-2xx returns null (not the error body) so a failed request can't
-    // masquerade as data — callers already treat null as "no data / failed".
-    if (!r.ok) {
-      console.warn(`API ${method} ${path} → ${r.status}`)
-      return null
-    }
-    return await r.json().catch(() => null) // tolerate empty bodies
+    const data = await r.json().catch(() => null) // tolerate empty bodies
+    if (!r.ok) console.warn(`API ${method} ${path} → ${r.status}`)
+    return { ok: r.ok, status: r.status, data }
   } catch (err) {
     console.warn(`API ${method} ${path} failed:`, err)
-    return null
+    return { ok: false, status: 0, data: null }
   }
+}
+
+async function apiFetch(path, options = {}) {
+  // Non-2xx returns null (not the error body) so a failed request can't
+  // masquerade as data — callers already treat null as "no data / failed".
+  // Where a caller needs to tell failures apart — a 429 lockout from a wrong
+  // PIN, say — use apiPostResult instead.
+  const { ok, data } = await apiRequest(path, options)
+  return ok ? data : null
 }
 
 export function apiGet(path) {
@@ -57,6 +64,17 @@ function parentHeader(parentToken) {
 
 export function apiPost(path, body, parentToken) {
   return apiFetch(path, {
+    method: 'POST',
+    body:   JSON.stringify(body),
+    headers: parentHeader(parentToken),
+  })
+}
+
+// Full result rather than null-on-failure, for callers that must distinguish
+// *why* a request failed. Used by the PIN modal to tell a rate-limit lockout
+// apart from a wrong PIN — they're the same "null" to apiPost.
+export function apiPostResult(path, body, parentToken) {
+  return apiRequest(path, {
     method: 'POST',
     body:   JSON.stringify(body),
     headers: parentHeader(parentToken),
