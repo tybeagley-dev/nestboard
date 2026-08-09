@@ -6,6 +6,7 @@ import { db } from '../db/client.js'
 import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 import { isValidTz as isValidTimezone, invalidateFamilyTimezone } from '../utils/familyTime.js'
+import { checkPinLock, recordPinFailure, recordPinSuccess } from '../utils/pinAttempts.js'
 
 const router = Router()
 
@@ -17,14 +18,27 @@ router.post('/parent', (req, res) => {
   requireFamily(req, res, async () => {
     const { pin } = req.body ?? {}
     if (!pin) return res.status(400).json({ error: 'Missing pin' })
+
+    const locked = checkPinLock(req.familyId)
+    if (locked.locked) {
+      res.set('Retry-After', String(locked.retryAfterSec))
+      return res.status(429).json({ error: 'Too many attempts', retryAfterSec: locked.retryAfterSec })
+    }
+
     try {
       const { rows } = await db.query(
         'SELECT parent_pin_hash FROM families WHERE id = $1',
         [req.familyId]
       )
       if (!rows.length || !await bcrypt.compare(pin, rows[0].parent_pin_hash)) {
+        const hit = recordPinFailure(req.familyId)
+        if (hit.locked) {
+          res.set('Retry-After', String(hit.retryAfterSec))
+          return res.status(429).json({ error: 'Too many attempts', retryAfterSec: hit.retryAfterSec })
+        }
         return res.status(401).json({ error: 'Invalid PIN' })
       }
+      recordPinSuccess(req.familyId)
       res.json({ token: pin })
     } catch (err) {
       res.status(500).json({ error: 'Server error' })
@@ -42,8 +56,23 @@ router.post('/login', async (req, res) => {
       [slug]
     )
     if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' })
+
+    const locked = checkPinLock(rows[0].id)
+    if (locked.locked) {
+      res.set('Retry-After', String(locked.retryAfterSec))
+      return res.status(429).json({ error: 'Too many attempts', retryAfterSec: locked.retryAfterSec })
+    }
+
     const valid = await bcrypt.compare(pin, rows[0].parent_pin_hash)
-    if (!valid) return res.status(401).json({ error: 'Invalid credentials' })
+    if (!valid) {
+      const hit = recordPinFailure(rows[0].id)
+      if (hit.locked) {
+        res.set('Retry-After', String(hit.retryAfterSec))
+        return res.status(429).json({ error: 'Too many attempts', retryAfterSec: hit.retryAfterSec })
+      }
+      return res.status(401).json({ error: 'Invalid credentials' })
+    }
+    recordPinSuccess(rows[0].id)
     res.json({ familyId: rows[0].id, name: rows[0].name })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
