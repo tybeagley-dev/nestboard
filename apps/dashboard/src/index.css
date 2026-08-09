@@ -5263,6 +5263,24 @@ button {
 .notif-toggle-btn:disabled { opacity: 0.5; cursor: default; }
 
 /* ── Schedule Config Section ─────────────────────────────────────────────── */
+.member-make-owner {
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.member-make-owner:hover {
+  color: var(--text-primary);
+  border-color: var(--text-muted);
+}
+
 .account-card-row {
   display: flex;
   align-items: flex-start;

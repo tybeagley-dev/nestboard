@@ -34,6 +34,20 @@ export default function FamilyMembers({ familySlug }) {
     load()
   }
 
+  // Owner-only actions are gated server-side; hiding them here just avoids
+  // offering a button that 403s.
+  const isOwner = members.some(m => m.user_id === user?.id && m.role === 'owner')
+
+  async function transferOwnership(targetUserId, email) {
+    if (!confirm(
+      `Make ${email} the family owner?\n\n` +
+      `You'll become a parent. Only the owner can invite or remove members, ` +
+      `so you won't be able to undo this yourself.`
+    )) return
+    await apiPost('/auth/family/transfer-ownership', { targetUserId })
+    load()
+  }
+
   function inviteLink(token) {
     return `${window.location.origin}/join/${token}`
   }
@@ -61,8 +75,16 @@ export default function FamilyMembers({ familySlug }) {
               <li key={m.user_id} className="member-row">
                 <span className="member-email">{m.email}</span>
                 <span className="member-role">{m.role}</span>
-                {m.role !== 'owner' && m.user_id !== user?.id && (
-                  <button className="member-remove" onClick={() => removeMember(m.user_id)}>Remove</button>
+                {isOwner && m.role !== 'owner' && m.user_id !== user?.id && (
+                  <>
+                    <button
+                      className="member-make-owner"
+                      onClick={() => transferOwnership(m.user_id, m.email)}
+                    >
+                      Make owner
+                    </button>
+                    <button className="member-remove" onClick={() => removeMember(m.user_id)}>Remove</button>
+                  </>
                 )}
               </li>
             ))}
@@ -74,12 +96,16 @@ export default function FamilyMembers({ familySlug }) {
         <div className="family-code-section">
           <span className="family-code-label">Invite a parent</span>
           <p className="family-code-hint">
-            Send a private link — they join in one tap, no code to type. Single-use, expires in 7 days. (They'll use the family PIN as the adult unlock, same as you.)
+            {isOwner
+              ? "Send a private link — they join in one tap, no code to type. Single-use, expires in 7 days. (They'll use the family PIN as the adult unlock, same as you.)"
+              : 'Only the family owner can invite or remove members. Ask them to send a link.'}
           </p>
+          {isOwner && (
           <button className="parent-apply-btn" onClick={createInvite} disabled={creating}>
             {creating ? 'Creating…' : '+ Create invite link'}
           </button>
-          {invites.length > 0 && (
+          )}
+          {isOwner && invites.length > 0 && (
             <ul className="invite-list">
               {invites.map(inv => (
                 <li key={inv.token} className="invite-row">

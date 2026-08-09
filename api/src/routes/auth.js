@@ -130,6 +130,13 @@ router.post('/families', async (req, res) => {
 
   const { name, pin } = req.body
   if (!name?.trim() || !pin?.trim()) return res.status(400).json({ error: 'Missing name or pin' })
+  // Mirrors PUT /auth/family/pin. Only the client enforced this, and PinModal is
+  // hard-coded to six digits and auto-submits on the sixth — so a PIN set any
+  // other way could never be typed, permanently breaking kiosk and child-page
+  // PIN auth for that family.
+  if (!/^\d{6}$/.test(pin.trim())) {
+    return res.status(400).json({ error: 'PIN must be exactly 6 digits' })
+  }
 
   try {
     const existing = await db.query(
@@ -381,6 +388,19 @@ async function callerFamilyId(userId) {
   return rows.length ? rows[0].family_id : null
 }
 
+// family_id + role. The owner/parent distinction existed in the column but was
+// enforced nowhere except "you may not remove the owner", so any invited parent
+// could mint invites and evict the other parent. That's fine between two adults
+// who trust each other and badly wrong in the case a family app should expect —
+// separating co-parents, or a partner invited during a relationship that ended.
+async function callerMembership(userId) {
+  const { rows } = await db.query(
+    'SELECT family_id, role FROM family_memberships WHERE user_id = $1',
+    [userId]
+  )
+  return rows.length ? rows[0] : null
+}
+
 // POST /auth/family/feedback  { type?, message } → records beta feedback or an
 // account-deletion request for the admin to action. type ∈ feedback|deletion_request.
 router.post('/family/feedback', async (req, res) => {
@@ -427,8 +447,11 @@ router.delete('/family/members/:targetId', async (req, res) => {
   if (!userId) return res.status(401).json({ error: 'Unauthorized' })
   const { targetId } = req.params
   try {
-    const familyId = await callerFamilyId(userId)
-    if (!familyId) return res.status(404).json({ error: 'No family' })
+    const me = await callerMembership(userId)
+    if (!me) return res.status(404).json({ error: 'No family' })
+    // Owner-only: otherwise an invited parent can evict the other parent.
+    if (me.role !== 'owner') return res.status(403).json({ error: 'Only the family owner can remove members' })
+    const familyId = me.family_id
     const { rows } = await db.query(
       'SELECT role FROM family_memberships WHERE user_id = $1 AND family_id = $2',
       [targetId, familyId]
@@ -447,8 +470,12 @@ router.post('/family/invites', async (req, res) => {
   const { userId } = getAuth(req)
   if (!userId) return res.status(401).json({ error: 'Unauthorized' })
   try {
-    const familyId = await callerFamilyId(userId)
-    if (!familyId) return res.status(404).json({ error: 'No family' })
+    const me = await callerMembership(userId)
+    if (!me) return res.status(404).json({ error: 'No family' })
+    // Owner-only: minting invites is how new adults get in, so it shouldn't be
+    // available to everyone who was themselves invited.
+    if (me.role !== 'owner') return res.status(403).json({ error: 'Only the family owner can create invites' })
+    const familyId = me.family_id
     const token = nanoid(16)
     await db.query(
       `INSERT INTO family_invites (token, family_id, role, created_by, expires_at)
@@ -492,6 +519,51 @@ router.delete('/family/invites/:token', async (req, res) => {
     res.json({ success: true })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// POST /auth/family/transfer-ownership  { targetUserId }
+// Owner-only. Without this there was no way to hand the family over: if the
+// owner left or lost their account, nobody could take it on and it needed a
+// super-admin. Swaps the two roles in one transaction so the family is never
+// left with no owner or two.
+router.post('/family/transfer-ownership', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  const targetUserId = req.body?.targetUserId
+  if (!targetUserId) return res.status(400).json({ error: 'targetUserId required' })
+  if (targetUserId === userId) return res.status(400).json({ error: 'You are already the owner' })
+
+  const me = await callerMembership(userId)
+  if (!me) return res.status(404).json({ error: 'No family' })
+  if (me.role !== 'owner') return res.status(403).json({ error: 'Only the family owner can transfer ownership' })
+
+  const client = await db.connect()
+  try {
+    await client.query('BEGIN')
+    const { rows } = await client.query(
+      'SELECT role FROM family_memberships WHERE user_id = $1 AND family_id = $2 FOR UPDATE',
+      [targetUserId, me.family_id]
+    )
+    if (!rows.length) {
+      await client.query('ROLLBACK')
+      return res.status(404).json({ error: 'Not a member of this family' })
+    }
+    await client.query(
+      `UPDATE family_memberships SET role = 'owner' WHERE user_id = $1 AND family_id = $2`,
+      [targetUserId, me.family_id]
+    )
+    await client.query(
+      `UPDATE family_memberships SET role = 'parent' WHERE user_id = $1 AND family_id = $2`,
+      [userId, me.family_id]
+    )
+    await client.query('COMMIT')
+    res.json({ success: true })
+  } catch (err) {
+    await client.query('ROLLBACK')
+    res.status(500).json({ error: 'Server error' })
+  } finally {
+    client.release()
   }
 })
 
