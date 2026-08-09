@@ -92,8 +92,19 @@ export function useActiveChildTimers() {
   useEffect(() => {
     loadTimers()
     window.addEventListener('fam_timer_update', loadTimers)
-    return () => window.removeEventListener('fam_timer_update', loadTimers)
+    // fam_timer_update only fires in the tab that acted, so without the poll and
+    // the SSE subscription below a timer started or stopped on another device
+    // never reached this one — the pill would sit there until something else
+    // happened to remount or the expired-cleanup below fired. Matches
+    // useScreenBalance, which had both all along.
+    const id = setInterval(loadTimers, POLL_MS)
+    return () => {
+      window.removeEventListener('fam_timer_update', loadTimers)
+      clearInterval(id)
+    }
   }, [])
+
+  useSseRefetch('timers', loadTimers)
 
   // Tick every second while any timer is active
   useEffect(() => {
