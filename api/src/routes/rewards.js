@@ -34,11 +34,18 @@ router.post('/:id/buy', async (req, res) => {
 
   const item = rows[0]
 
-  await db.query(
-    `UPDATE token_balance SET balance = GREATEST(0, balance - $1), updated_at = NOW()
-     WHERE family_id = $2 AND child_id = $3`,
+  // Affordability was enforced only by the UI disabling the button — the server
+  // floored the balance at 0 with GREATEST and let the purchase through, so a
+  // child with nothing could buy anything, repeatedly, from the console. The
+  // `balance >= cost` predicate makes the check atomic with the deduction, which
+  // also closes the race where two tabs both pass a UI check and both deduct.
+  const { rowCount } = await db.query(
+    `UPDATE token_balance SET balance = balance - $1, updated_at = NOW()
+     WHERE family_id = $2 AND child_id = $3 AND balance >= $1`,
     [item.cost, req.familyId, childId]
   )
+  if (!rowCount) return res.status(400).json({ error: 'Not enough tokens' })
+
   await db.query(
     `INSERT INTO purchases (id, family_id, child_id, item_id, item_label, cost)
      VALUES ($1,$2,$3,$4,$5,$6)`,

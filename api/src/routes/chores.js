@@ -125,12 +125,24 @@ router.delete('/:id/assignment', requireParent, async (req, res) => {
 
 // POST /chores/:id/accept  { child, choreLabel, tokens }
 router.post('/:id/accept', async (req, res) => {
-  const { child, choreLabel, tokens, isBonus } = req.body
+  const { child, isBonus } = req.body
   const choreId = req.params.id
-  if (!child || !choreId || !choreLabel) return res.status(400).json({ error: 'Missing params' })
+  if (!child || !choreId) return res.status(400).json({ error: 'Missing params' })
 
   const childId = await resolveChildId(req.familyId, child)
   if (!childId) return res.status(404).json({ error: 'Unknown child' })
+
+  // Value and label come from the chore row, never the request body. /approve
+  // credits whatever was stored here, so a client-supplied `tokens` was a
+  // self-service token grant — and a client-supplied label let a child rewrite
+  // their own history. The label is still snapshotted onto the event (so history
+  // survives the chore being deleted); it just has to be the real one.
+  const { rows: choreRows } = await db.query(
+    'SELECT label, tokens FROM chores WHERE id = $1 AND family_id = $2',
+    [choreId, req.familyId]
+  )
+  if (!choreRows.length) return res.status(404).json({ error: 'Unknown chore' })
+  const { label: choreLabel, tokens } = choreRows[0]
 
   try {
     await db.query(
@@ -146,9 +158,9 @@ router.post('/:id/accept', async (req, res) => {
   }
 })
 
-// POST /chores/:id/request-approval  { child, choreLabel, tokens }
+// POST /chores/:id/request-approval  { child }
 router.post('/:id/request-approval', async (req, res) => {
-  const { child, choreLabel, tokens } = req.body
+  const { child } = req.body
   const choreId = req.params.id
   if (!child || !choreId) return res.status(400).json({ error: 'Missing params' })
 
@@ -169,6 +181,11 @@ router.post('/:id/request-approval', async (req, res) => {
   // Required chores are submitted straight from the card — they never go through
   // /accept, so there's nothing to promote. Create the pending row directly,
   // unless this chore already has a row today (already pending/completed).
+  // The promote path above needs no value — it keeps whatever /accept stored,
+  // which is now the chore's real value. Only this insert writes one, so only
+  // this branch needs the lookup; a required chore whose definition was deleted
+  // 404s rather than being credited a client-supplied number.
+  let choreLabel = null
   if (!rowCount) {
     const { rows: existing } = await db.query(
       `SELECT 1 FROM chore_events
@@ -178,11 +195,26 @@ router.post('/:id/request-approval', async (req, res) => {
     )
     if (existing.length) return res.json({ success: true, skipped: true })
 
+    const { rows: choreRows } = await db.query(
+      'SELECT label, tokens FROM chores WHERE id = $1 AND family_id = $2',
+      [choreId, req.familyId]
+    )
+    if (!choreRows.length) return res.status(404).json({ error: 'Unknown chore' })
+    choreLabel = choreRows[0].label
+
     await db.query(
       `INSERT INTO chore_events (family_id, child_id, chore_id, chore_label, tokens, status, accepted_at)
        VALUES ($1, $2, $3, $4, $5, 'pending_approval', now())`,
-      [req.familyId, childId, choreId, choreLabel, tokens ?? 0]
+      [req.familyId, childId, choreId, choreLabel, choreRows[0].tokens]
     )
+  } else {
+    const { rows } = await db.query(
+      `SELECT chore_label FROM chore_events
+       WHERE family_id = $1 AND child_id = $2 AND chore_id = $3 AND created_at::date = $4
+       LIMIT 1`,
+      [req.familyId, childId, choreId, today]
+    )
+    choreLabel = rows[0]?.chore_label ?? 'a chore'
   }
 
   broadcast('chore_state', { child }, req.familyId)
