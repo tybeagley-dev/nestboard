@@ -48,7 +48,12 @@ CREATE TABLE IF NOT EXISTS chores (
 CREATE TABLE IF NOT EXISTS routine_defs (
   id         TEXT PRIMARY KEY,
   family_id  TEXT REFERENCES families(id),
-  child_id   TEXT NOT NULL REFERENCES children(id),
+  -- Legacy owning key, superseded by child_ids in migration 029. Nullable and
+  -- no longer written; kept for one release as a rollback path.
+  child_id   TEXT REFERENCES children(id),
+  -- Children this routine applies to. Empty = every child in the family, so new
+  -- children inherit existing routines. Same convention as chores.child_ids.
+  child_ids  TEXT[] NOT NULL DEFAULT '{}',
   label      TEXT NOT NULL,
   icon       TEXT NOT NULL DEFAULT '',
   schedules  TEXT[] NOT NULL DEFAULT '{}',

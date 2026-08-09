@@ -72,7 +72,8 @@ export function useRoutines(now, children = [], scheduleConfig = {}) {
 
   const routinesByChild = {}
   children.forEach(child => {
-    const childDefs = routineDefs.filter(r => r.child === child.name)
+    // Empty child_ids = applies to every child, so new children inherit routines.
+    const childDefs = routineDefs.filter(r => !r.child_ids?.length || r.child_ids.includes(child.id))
     routinesByChild[child.name] = childDefs
       .filter(r => {
         if (!r.schedules.includes(mode)) return false
@@ -104,11 +105,10 @@ export function useRoutineDefs() {
   return { defs, loading, reload: load }
 }
 
-// Create one routine per child in a single transaction (server generates ids
-// and per-child sort_order). children is an array of child names.
-export async function adminAddRoutineDefs(data) {
-  return apiPost('/routines/defs/bulk', {
-    children:  data.children,
+// One routine, applying to N children. Empty childIds = every child.
+export async function adminAddRoutineDef(data) {
+  return apiPost('/routines/defs', {
+    child_ids: data.childIds ?? [],
     label:     data.label,
     icon:      data.icon,
     schedules: data.schedules,
@@ -118,13 +118,18 @@ export async function adminAddRoutineDefs(data) {
 
 export async function adminEditRoutineDef(data) {
   return apiPut(`/routines/defs/${data.id}`, {
-    child:     data.child,
+    child_ids: data.childIds ?? [],
     label:     data.label,
     icon:      data.icon,
     schedules: data.schedules,
     time:      data.time || null,
     sort_order: data.sortOrder ?? 0,
   })
+}
+
+// ids in their new order; positions are assigned per time-of-day group.
+export async function adminReorderRoutineDefs(ids) {
+  return apiPut('/routines/defs/order', { ids })
 }
 
 export async function adminDeleteRoutineDef(id) {

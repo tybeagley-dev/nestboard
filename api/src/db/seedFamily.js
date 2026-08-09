@@ -171,10 +171,10 @@ const routineDefs = [
 ]
 for (const r of routineDefs) {
   await db.query(
-    `INSERT INTO routine_defs (id, family_id, child_id, label, icon, schedules, time, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO routine_defs (id, family_id, child_id, child_ids, label, icon, schedules, time, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (id) DO NOTHING`,
-    [r.id, FAMILY_ID, r.childId, r.label, r.icon, r.schedules, r.time, r.sort_order]
+    [r.id, FAMILY_ID, r.childId, [r.childId], r.label, r.icon, r.schedules, r.time, r.sort_order]
   )
 }
 console.log('routine_defs seeded')
