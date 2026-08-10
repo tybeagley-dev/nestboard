@@ -16,6 +16,7 @@ import { useWeather } from './hooks/useWeather'
 import { useChildren } from './hooks/useChildren'
 import { useScheduleConfig } from './hooks/useRoutines'
 import { useLiveSync } from './hooks/useLiveSync'
+import { useAppUpdate } from './hooks/useAppUpdate'
 import { useFamily, useSettings } from './FamilyContext'
 import { unlockAudio } from './utils/chime'
 
@@ -32,6 +33,10 @@ export default function Dashboard({ kiosk = false }) {
   const { scheduleConfig } = useScheduleConfig()
 
   useLiveSync(family?.slug)
+
+  // The resume-reload below only fires for a page that gets hidden. A fridge
+  // tablet is never backgrounded, so it needs its own trigger.
+  const updateReady = useAppUpdate({ kiosk })
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has('clearcache')) {
@@ -73,6 +78,12 @@ export default function Dashboard({ kiosk = false }) {
 
   return (
     <div className="dashboard">
+      {updateReady && !kiosk && (
+        <button className="update-banner" onClick={() => window.location.reload()}>
+          A new version is ready — tap to reload
+        </button>
+      )}
+
       <FloatingControls kiosk={kiosk} />
 
       <div className="dashboard-top">

@@ -214,6 +214,21 @@ button {
   line-height: 1.15;
 }
 
+/* Non-kiosk surfaces get a prompt rather than an automatic reload — a parent may
+   be mid-edit, and there's no way to know from here. */
+.update-banner {
+  align-self: center;
+  flex-shrink: 0;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: var(--accent-sage);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
 /* Live preview of the board headline, shown while editing the greeting. Scaled
    down from .greeting-headline but otherwise the same type, so it doesn't
    misrepresent what lands on the board. */
