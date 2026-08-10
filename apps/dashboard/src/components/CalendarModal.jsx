@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useCalendarEvents, useCalendars } from '../hooks/useCalendarEvents'
 import { isSameDay } from '../utils/dateUtils'
+import { calColorVars } from '../utils/color'
 
 const HIDDEN_KEY = 'nestboard_cal_hidden'
 function loadHidden() {
@@ -126,7 +127,7 @@ export default function CalendarModal({ onClose }) {
               <button
                 key={cal.name}
                 className={`cal-filter-pill ${hidden.has(cal.name) ? 'off' : ''}`}
-                style={{ '--cal-color': cal.color }}
+                style={calColorVars(cal.color)}
                 onClick={() => toggleCalendar(cal.name)}
               >
                 <span className="cal-filter-dot" />
@@ -143,7 +144,7 @@ export default function CalendarModal({ onClose }) {
               <p className="cal-day-empty">Nothing scheduled.</p>
             ) : (
               dayEventsForDayView.map((evt, j) => (
-                <div key={j} className="cal-event-item cal-day-event" style={{ '--cal-color': evt.color }}>
+                <div key={j} className="cal-event-item cal-day-event" style={calColorVars(evt.color)}>
                   <div className="cal-event-text">
                     <span className="cal-event-title">{evt.title}</span>
                     {evt.time && (
@@ -176,7 +177,7 @@ export default function CalendarModal({ onClose }) {
                   </div>
                   <div className="cal-week-events">
                     {dayEvents.map((evt, j) => (
-                      <div key={j} className="cal-event-item" style={{ '--cal-color': evt.color }}>
+                      <div key={j} className="cal-event-item" style={calColorVars(evt.color)}>
                         <span className="cal-event-bar" />
                         <div className="cal-event-text">
                           <span className="cal-event-title">{evt.title}</span>
@@ -216,7 +217,7 @@ export default function CalendarModal({ onClose }) {
                   </div>
                   <div className="cal-month-events">
                     {dayEvents.slice(0, 2).map((evt, j) => (
-                      <span key={j} className="cal-month-event-label" style={{ '--cal-color': evt.color }}>
+                      <span key={j} className="cal-month-event-label" style={calColorVars(evt.color)}>
                         {evt.title}
                       </span>
                     ))}

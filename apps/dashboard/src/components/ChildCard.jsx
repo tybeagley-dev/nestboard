@@ -11,6 +11,7 @@ import { recordChoreCompletion } from '../hooks/useChoreFrequency'
 import { startChimeLoop, stopChimeLoop } from '../utils/chime'
 import { CONFIG } from '../config/config'
 import { useLabels, useSettings } from '../FamilyContext'
+import { childColorVars } from '../utils/color'
 import ZoneCard from './ZoneCard'
 
 const COOLDOWN_MESSAGES = [
@@ -127,7 +128,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
   return (
     <div
       className={`child-card ${everythingDone ? 'all-done' : ''}`}
-      style={{ '--child-color': child.color, background: `color-mix(in srgb, ${child.color} 30%, #F2EDE4)`, position: 'relative' }}
+      style={{ ...childColorVars(child.color), background: 'var(--child-card-bg, var(--surface))', position: 'relative' }}
     >
       <Confetti triggerKey={confettiKey} />
 
@@ -237,7 +238,7 @@ export default function ChildCard({ child, now, routines, routinesLoading, chore
           className="child-pill chore-pill"
           onClick={choreDay && !spinBlocked ? (canInitialSpin ? onSpin : canExtraSpin ? onExtraSpin : undefined) : undefined}
           disabled={!choreDay || spinBlocked}
-          style={{ '--child-color': child.color }}
+          style={childColorVars(child.color)}
         >
           🎡 chore spinner
         </button>

@@ -4,6 +4,7 @@ import ChildIcon from './components/ChildIcon'
 import Confetti from './components/Confetti'
 import PinModal from './components/PinModal'
 import { isChildTrusted, trustChild } from './utils/childTrust'
+import { childColorVars } from './utils/color'
 import { useLiveSync } from './hooks/useLiveSync'
 import { setFamilySlug } from './utils/api'
 import { useChildren } from './hooks/useChildren'
@@ -203,7 +204,7 @@ function ChildViewInner() {
   }
 
   return (
-    <div className="child-view" style={{ '--child-color': child.color }}>
+    <div className="child-view" style={childColorVars(child.color)}>
       {/* Fixed to the viewport: the page scrolls, and confetti anchored to the
           document would fall off-screen for a child scrolled down the list. */}
       <div className="child-view-confetti"><Confetti triggerKey={confettiKey} /></div>
