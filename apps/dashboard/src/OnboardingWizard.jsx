@@ -5,6 +5,7 @@ import { useChildren } from './hooks/useChildren'
 import StepChildren from './onboarding/StepChildren'
 import StepFeatures from './onboarding/StepFeatures'
 import StepLabels from './onboarding/StepLabels'
+import StepIdentity from './onboarding/StepIdentity'
 import StepCalendars from './onboarding/StepCalendars'
 import StepWeather from './onboarding/StepWeather'
 import StepDone from './onboarding/StepDone'
@@ -24,6 +25,7 @@ const STEPS = [
   { key: 'calendars', title: 'Connect calendars', optional: true,  blurb: 'Pull in your calendars so family events show on the dashboard.' },
   { key: 'weather',   title: 'Local weather',     optional: true,  blurb: 'Show your city’s forecast on the dashboard.' },
   { key: 'labels',    title: 'Name your rewards', optional: true, module: 'tokens', blurb: 'Want your own name for the token economy? Plenty of families use their surname — "Smith Bucks" — or something sillier. Otherwise we’ll use "Token," "Tokens," and "Rewards Store."' },
+  { key: 'identity',  title: 'Name your board',   optional: true, blurb: 'Your dashboard opens with a greeting built from your family name. Change the second line if it reads better another way — "the Smiths", "Team Smith", whatever your family actually calls itself.' },
   { key: 'done',      title: 'You’re all set',    optional: false, blurb: 'A few finishing touches, then you’re off.' },
 ]
 
@@ -76,6 +78,7 @@ export default function OnboardingWizard({ onComplete }) {
       case 'calendars': return <StepCalendars children={children} />
       case 'weather':   return <StepWeather />
       case 'labels':    return <StepLabels />
+      case 'identity':  return <StepIdentity />
       case 'done':      return <StepDone children={children} />
       default:
         return <p className="onboarding-placeholder">[{step.key}] step UI goes here</p>

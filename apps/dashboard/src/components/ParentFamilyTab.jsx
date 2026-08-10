@@ -8,7 +8,7 @@ import FamilyMembers from './FamilyMembers'
 import AccountCard from './AccountCard'
 import FamilyNotesCard from './FamilyNotesCard'
 import KioskLinkCard from './KioskLinkCard'
-import FamilyIdentityCard from './FamilyIdentityCard'
+import StepIdentity from '../onboarding/StepIdentity'
 import StepFeatures from '../onboarding/StepFeatures'
 import StepLabels from '../onboarding/StepLabels'
 
@@ -34,10 +34,12 @@ export default function ParentFamilyTab({ onPinChanged }) {
 
   return (
     <div className="parent-family-tab">
-      <FamilyIdentityCard
-        family={family}
-        onSaved={patch => setFamily(f => ({ ...f, ...patch }))}
-      />
+      <div className="family-code-card">
+        <div className="family-code-section">
+          <span className="family-code-label">Family name & greeting</span>
+          <StepIdentity />
+        </div>
+      </div>
 
       <KioskLinkCard familySlug={family.slug} />
 
