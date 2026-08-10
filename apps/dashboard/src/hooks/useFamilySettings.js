@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { apiGet } from '../utils/api'
+import { useSseRefetch } from './useLiveSync'
 
 // The raw family payload for surfaces that mount outside FamilyProvider — the
 // public child view, which has no Clerk session and resolves its family from the
@@ -14,8 +15,12 @@ import { apiGet } from '../utils/api'
 // while the server charged the real amount.
 export function useFamilyPayload() {
   const [family, setFamily] = useState(null)
-  useEffect(() => {
+  const load = useCallback(() => {
     apiGet('/auth/family').then(data => setFamily(data ?? null)).catch(() => {})
   }, [])
+  useEffect(() => { load() }, [load])
+  // A kiosk can run for weeks without a reload, so it re-reads the row when a
+  // parent edits it rather than displaying stale labels/flags indefinitely.
+  useSseRefetch('family', load)
   return family
 }

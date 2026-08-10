@@ -18,8 +18,29 @@ const DEFAULT_SETTINGS = {
 
 const FamilyContext = createContext(null)
 
-export function FamilyProvider({ family, children }) {
-  return <FamilyContext.Provider value={family ?? null}>{children}</FamilyContext.Provider>
+// Separate context so adding a refresh channel doesn't change the shape of the
+// value useFamily() returns. Module-level constant: an inline default would be a
+// new function identity on every render.
+const NO_REFRESH = () => {}
+const FamilyRefreshContext = createContext(NO_REFRESH)
+
+// `onRefresh` re-fetches /auth/family in whatever owns the family state. The
+// provider-less surfaces (kiosk, child view) pass nothing and get the no-op.
+export function FamilyProvider({ family, onRefresh, children }) {
+  return (
+    <FamilyContext.Provider value={family ?? null}>
+      <FamilyRefreshContext.Provider value={onRefresh ?? NO_REFRESH}>
+        {children}
+      </FamilyRefreshContext.Provider>
+    </FamilyContext.Provider>
+  )
+}
+
+// Call after mutating the family row so the tree re-reads it. Without this an
+// edit made in the parent portal doesn't reach the dashboard until a page load —
+// FamilyGate stays mounted across route changes, so nothing refetches on nav.
+export function useRefreshFamily() {
+  return useContext(FamilyRefreshContext)
 }
 
 // The raw family payload from /auth/family ({ id, name, slug, labels }), or null

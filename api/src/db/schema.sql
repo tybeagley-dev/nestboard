@@ -6,6 +6,7 @@
 CREATE TABLE IF NOT EXISTS families (
   id               TEXT PRIMARY KEY,
   name             TEXT NOT NULL,
+  greeting         TEXT,                  -- board headline's second line; NULL = derive "<name>!"
   slug             TEXT NOT NULL UNIQUE,  -- opaque nanoid used in URLs
   parent_pin_hash  TEXT NOT NULL,         -- bcrypt hash of parent PIN
   labels           JSONB NOT NULL DEFAULT '{}',  -- per-family display names rendered over the generic core

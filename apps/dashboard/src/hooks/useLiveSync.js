@@ -6,6 +6,10 @@ import { apiPost } from '../utils/api'
 const SSE_TYPES = [
   'grocery', 'announcements', 'routine_state', 'tokens',
   'screen_time', 'screen_time_requests', 'chore_state', 'timers', 'meals',
+  // The families row itself — name/greeting/labels/settings/weather. Unlike the
+  // rest, this one is read once at mount, so without it a shared display shows
+  // stale labels and feature flags until someone reloads it.
+  'family',
 ]
 
 const RECONNECT_MS = 5000

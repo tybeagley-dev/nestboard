@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth, SignIn, SignUp } from '@clerk/react'
 import { setTokenGetter, apiGet } from './utils/api'
@@ -14,6 +14,7 @@ import OnboardingWizard from './OnboardingWizard'
 import ConsentGate from './components/ConsentGate'
 import LegalDoc from './components/LegalDoc'
 import { FamilyProvider } from './FamilyContext'
+import { useSseRefetch } from './hooks/useLiveSync'
 
 // Requires a signed-in Clerk user; does NOT gate on family membership (so the
 // invite-accept screen can render for a user who isn't in a family yet).
@@ -50,10 +51,14 @@ function AuthGate({ children }) {
 function FamilyGate({ children }) {
   const [family,  setFamily]  = useState(undefined) // undefined = loading
   const [retryKey, setRetryKey] = useState(0)
+  const refresh = useCallback(() => setRetryKey(k => k + 1), [])
 
   useEffect(() => {
     apiGet('/auth/family').then(data => setFamily(data ?? null))
   }, [retryKey])
+
+  // Picks up family edits made from another device (or another tab) without a reload.
+  useSseRefetch('family', refresh)
 
   if (family === undefined) return null
 
@@ -63,13 +68,13 @@ function FamilyGate({ children }) {
 
   if (!family.onboarded) {
     return (
-      <FamilyProvider family={family}>
-        <OnboardingWizard onComplete={() => setRetryKey(k => k + 1)} />
+      <FamilyProvider family={family} onRefresh={refresh}>
+        <OnboardingWizard onComplete={refresh} />
       </FamilyProvider>
     )
   }
 
-  return <FamilyProvider family={family}>{children}</FamilyProvider>
+  return <FamilyProvider family={family} onRefresh={refresh}>{children}</FamilyProvider>
 }
 
 export default function App() {

@@ -27,7 +27,8 @@ export default function KioskLinkCard({ familySlug }) {
         <p className="family-code-hint">
           Open this on a tablet you leave out for everyone — the fridge, the kitchen counter. It shows
           the whole board and lets children check things off, spin chores and run timers, but it can't
-          reach approvals or settings. Do those from your phone, signed in.
+          reach approvals, settings or your account. That's the point: a screen the whole house can
+          reach shouldn't carry a parent login. Approvals happen on your phone, signed in.
         </p>
 
         <div className="kiosk-link-row">
@@ -42,9 +43,7 @@ export default function KioskLinkCard({ familySlug }) {
         </div>
 
         <p className="chore-form-hint">
-          Asks for the family PIN once on a new device, then remembers it. If that tablet is currently
-          signed in to nestboard, sign out on it after switching — otherwise it keeps the account
-          access this link is meant to avoid.
+          Asks for the family PIN once on a new device, then remembers it.
         </p>
       </div>
     </div>

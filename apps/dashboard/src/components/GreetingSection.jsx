@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { formatDate, formatTime, getGreeting } from '../utils/dateUtils'
 import { useFamily, useSettings } from '../FamilyContext'
 import { useAnnouncements } from '../hooks/useAnnouncements'
+import { greetingLine } from '../utils/greeting'
 
 // The line under the greeting is the family's note. It used to be the hardcoded
 // string "Do good, be kind, have fun!" — one family's motto shipped to everyone,
@@ -14,6 +15,7 @@ export default function GreetingSection({ now, onGrocery }) {
   const { modules } = useSettings()
   const { announcements } = useAnnouncements()
   const [index, setIndex] = useState(0)
+  const line = greetingLine(family)
 
   // More than one note cycles, so a list of them is actually visible on a board
   // nobody interacts with. Keyed off length so removing a note resets cleanly.
@@ -35,8 +37,8 @@ export default function GreetingSection({ now, onGrocery }) {
             the kiosk resolves its family asynchronously, which would have
             flashed one family's name on every other family's display. */}
         <h1 className="greeting-headline">
-          {family?.name
-            ? <>{getGreeting(now)},<br />{family.name}!</>
+          {line
+            ? <>{getGreeting(now)},<br />{line}</>
             : <>{getGreeting(now)}!</>}
         </h1>
         {note && (

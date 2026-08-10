@@ -8,6 +8,7 @@ import { requireParent } from '../middleware/requireParent.js'
 import { isValidTz as isValidTimezone, invalidateFamilyTimezone } from '../utils/familyTime.js'
 import { checkPinLock, recordPinFailure, recordPinSuccess } from '../utils/pinAttempts.js'
 import { issueParentToken, revokeFamilyParentTokens } from '../utils/parentTokens.js'
+import { broadcast } from './events.js'
 
 const router = Router()
 
@@ -97,7 +98,7 @@ router.get('/family', async (req, res) => {
       )
 
       const { rows } = await db.query(
-        `SELECT f.id, f.name, f.slug, f.labels, f.onboarded, f.weather, f.settings FROM families f
+        `SELECT f.id, f.name, f.greeting, f.slug, f.labels, f.onboarded, f.weather, f.settings FROM families f
          JOIN family_memberships fm ON fm.family_id = f.id
          WHERE fm.user_id = $1`,
         [userId]
@@ -118,7 +119,7 @@ router.get('/family', async (req, res) => {
   const slug = req.headers['x-family-slug']
   if (!slug) return res.status(401).json({ error: 'Unauthorized' })
   try {
-    const { rows } = await db.query('SELECT id, name, slug, labels, onboarded, weather, settings FROM families WHERE slug = $1', [slug])
+    const { rows } = await db.query('SELECT id, name, greeting, slug, labels, onboarded, weather, settings FROM families WHERE slug = $1', [slug])
     res.json(rows[0] ?? null)
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -202,6 +203,61 @@ router.post('/families/join', async (req, res) => {
   }
 })
 
+// The family row is read on mount by every surface and, until now, never again —
+// a fridge tablet can run for weeks, so an edit made on a parent's phone would sit
+// invisible until someone reloaded it.
+//
+// Deliberately an empty nudge rather than the row itself: clients refetch through
+// the normal authenticated endpoint, so authorization is re-checked per fetch
+// instead of once at SSE connect. Every other broadcast in the app works this way.
+function notifyFamilyChanged(familyId) {
+  broadcast('family', {}, familyId)
+}
+
+// PUT /auth/family/identity { name?, greeting? }
+// The family name was previously write-once at creation — there was no way to fix a
+// typo short of editing the DB. `greeting` is the board headline's second line; an
+// empty string clears it back to the derived "<name>!" rather than storing a blank.
+router.put('/family/identity', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+
+  const { name, greeting } = req.body ?? {}
+  const sets = []
+  const vals = []
+
+  if (name !== undefined) {
+    const trimmed = String(name).trim()
+    if (!trimmed) return res.status(400).json({ error: 'Family name cannot be empty' })
+    if (trimmed.length > 120) return res.status(400).json({ error: 'Family name is too long' })
+    vals.push(trimmed)
+    sets.push(`name = $${vals.length}`)
+  }
+
+  if (greeting !== undefined) {
+    const trimmed = greeting === null ? '' : String(greeting).trim()
+    if (trimmed.length > 120) return res.status(400).json({ error: 'Greeting is too long' })
+    vals.push(trimmed || null)
+    sets.push(`greeting = $${vals.length}`)
+  }
+
+  if (!sets.length) return res.status(400).json({ error: 'Nothing to update' })
+
+  try {
+    const { rows } = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
+    if (!rows.length) return res.status(404).json({ error: 'No family' })
+    vals.push(rows[0].family_id)
+    const { rows: updated } = await db.query(
+      `UPDATE families SET ${sets.join(', ')} WHERE id = $${vals.length} RETURNING name, greeting`,
+      vals
+    )
+    notifyFamilyChanged(rows[0].family_id)
+    res.json({ success: true, ...updated[0] })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
 // PUT /auth/family/labels { tokenName, tokenNameSingular, rewardsName }
 // Stores only non-empty values — blanks fall back to the generic defaults in the UI.
 router.put('/family/labels', async (req, res) => {
@@ -216,6 +272,7 @@ router.put('/family/labels', async (req, res) => {
     const { rows } = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
     if (!rows.length) return res.status(404).json({ error: 'No family' })
     await db.query('UPDATE families SET labels = $1 WHERE id = $2', [JSON.stringify(labels), rows[0].family_id])
+    notifyFamilyChanged(rows[0].family_id)
     res.json({ success: true, labels })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -240,6 +297,7 @@ router.put('/family/weather', async (req, res) => {
     if (!rows.length) return res.status(404).json({ error: 'No family' })
     await db.query('UPDATE families SET weather = $1 WHERE id = $2', [JSON.stringify(weather), rows[0].family_id])
     invalidateFamilyTimezone(rows[0].family_id)
+    notifyFamilyChanged(rows[0].family_id)
     res.json({ success: true, weather })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -296,6 +354,7 @@ router.put('/family/settings', async (req, res) => {
       chores:     { ...(existing.chores ?? {}),     ...(clean.chores ?? {}) },
     }
     await db.query('UPDATE families SET settings = $1 WHERE id = $2', [JSON.stringify(merged), familyId])
+    notifyFamilyChanged(familyId)
     res.json({ success: true, settings: merged })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
