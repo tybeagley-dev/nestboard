@@ -139,17 +139,29 @@ export default function ParentCalendarTab({ children, guideOpen = false }) {
 
           <div>
             {calendars.map(cal => (
-              <div key={cal.id} className="chore-admin-row">
+              <div
+                key={cal.id}
+                className="chore-admin-row chore-admin-row--clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => setEditing({ ...cal, is_family: cal.is_family })}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    setEditing({ ...cal, is_family: cal.is_family })
+                  }
+                }}
+              >
                 <span className="chore-admin-icon" style={{ color: cal.color }}>●</span>
                 <div className="chore-admin-info">
                   <span className="chore-admin-label">{cal.name}</span>
                   {cal.is_family && <span className="chore-admin-meta">Shown on child cards</span>}
                 </div>
-                <button className="chore-admin-edit-btn" onClick={() => setEditing({ ...cal, is_family: cal.is_family })}>Edit</button>
                 <button
                   className="chore-admin-del-btn"
-                  onClick={() => handleDelete(cal)}
+                  onClick={e => { e.stopPropagation(); handleDelete(cal) }}
                   disabled={deleting === cal.id}
+                  aria-label={`Remove ${cal.name}`}
                 >
                   {deleting === cal.id ? '…' : '×'}
                 </button>

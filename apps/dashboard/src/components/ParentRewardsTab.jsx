@@ -23,7 +23,13 @@ function StoreRow({ item, onEdit, confirmDelete, onDeleteRequest, onConfirmDelet
   }
 
   return (
-    <div className={`chore-admin-row ${item.active === false ? 'chore-admin-row--inactive' : ''}`}>
+    <div
+      className={`chore-admin-row chore-admin-row--clickable ${item.active === false ? 'chore-admin-row--inactive' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={onEdit}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit() } }}
+    >
       <span className="chore-admin-icon">{item.icon || '🎁'}</span>
       <div className="chore-admin-info">
         <span className="chore-admin-label">
@@ -35,8 +41,11 @@ function StoreRow({ item, onEdit, confirmDelete, onDeleteRequest, onConfirmDelet
         </span>
       </div>
       <TokenBadge amount={item.cost} />
-      <button className="chore-admin-edit-btn" onClick={onEdit}>Edit</button>
-      <button className="chore-admin-del-btn"  onClick={onDeleteRequest}>×</button>
+      <button
+        className="chore-admin-del-btn"
+        onClick={e => { e.stopPropagation(); onDeleteRequest() }}
+        aria-label={`Remove ${item.label}`}
+      >×</button>
     </div>
   )
 }

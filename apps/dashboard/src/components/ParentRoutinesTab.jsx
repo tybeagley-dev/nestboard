@@ -236,13 +236,22 @@ function BreakRow({ brk, onEdit, onDelete, confirmDelete, onConfirmDelete, onCan
     )
   }
   return (
-    <div className="chore-admin-row">
+    <div
+      className="chore-admin-row chore-admin-row--clickable"
+      role="button"
+      tabIndex={0}
+      onClick={onEdit}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit() } }}
+    >
       <div className="chore-admin-info">
         <span className="chore-admin-label">{brk.name}</span>
         <span className="chore-admin-meta">{brk.start} – {brk.end}</span>
       </div>
-      <button className="chore-admin-edit-btn" onClick={onEdit}>Edit</button>
-      <button className="chore-admin-del-btn"  onClick={onDelete}>×</button>
+      <button
+        className="chore-admin-del-btn"
+        onClick={e => { e.stopPropagation(); onDelete() }}
+        aria-label={`Remove ${brk.name}`}
+      >×</button>
     </div>
   )
 }
@@ -379,12 +388,17 @@ function ScheduleConfigSection() {
             </div>
           </div>
         ) : summer.start ? (
-          <div className="chore-admin-row">
+          <div
+            className="chore-admin-row chore-admin-row--clickable"
+            role="button"
+            tabIndex={0}
+            onClick={openSummerEdit}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openSummerEdit() } }}
+          >
             <div className="chore-admin-info">
               <span className="chore-admin-label">Summer Break</span>
               <span className="chore-admin-meta">{summer.start} – {summer.end}</span>
             </div>
-            <button className="chore-admin-edit-btn" onClick={openSummerEdit}>Edit</button>
           </div>
         ) : (
           <button className="parent-add-chore-btn" onClick={openSummerEdit}>+ Set Summer Dates</button>
