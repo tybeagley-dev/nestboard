@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { apiGet } from '../utils/api'
+import { useFamily } from '../FamilyContext'
 
 const REFRESH_MS = 30 * 60 * 1000 // 30 minutes
 
@@ -22,14 +22,20 @@ function windDir(deg) {
 
 export function useWeather() {
   const [weather, setWeather] = useState(null)
+  // Coords come from the family row the tree already holds. Fetching
+  // /auth/family here again cost a round trip before the forecast could even
+  // start, and left the card absent long enough for the meal card beside it to
+  // claim the whole column and then shrink.
+  const family = useFamily()
+  const { lat, lon, label } = family?.weather ?? {}
+  const hasLocation = typeof lat === 'number'
 
   useEffect(() => {
     let cancelled = false
     let intervalId
 
-    async function fetch_(coords) {
+    async function fetch_() {
       try {
-        const { lat, lon, label } = coords
         const url = [
           `https://api.open-meteo.com/v1/forecast`,
           `?latitude=${lat}&longitude=${lon}`,
@@ -99,16 +105,14 @@ export function useWeather() {
       }
     }
 
-    // Coords live on the family record (per-family, set in onboarding/Settings).
-    // No location set → no fetch, weather stays null and the pill stays hidden.
-    apiGet('/auth/family').then(fam => {
-      if (cancelled || typeof fam?.weather?.lat !== 'number') return
-      fetch_(fam.weather)
-      intervalId = setInterval(() => fetch_(fam.weather), REFRESH_MS)
-    })
+    // No location set → no fetch, weather stays null and the card stays hidden.
+    if (hasLocation) {
+      fetch_()
+      intervalId = setInterval(fetch_, REFRESH_MS)
+    }
 
     return () => { cancelled = true; if (intervalId) clearInterval(intervalId) }
-  }, [])
+  }, [hasLocation, lat, lon, label])
 
   return weather
 }
