@@ -12,8 +12,9 @@ import ParentApprovalsTab from './components/ParentApprovalsTab'
 import ParentGroceryTab from './components/ParentGroceryTab'
 import ParentChildrenTab from './components/ParentChildrenTab'
 import ParentCalendarTab from './components/ParentCalendarTab'
-import ParentNotificationsTab from './components/ParentNotificationsTab'
 import ParentFamilyTab from './components/ParentFamilyTab'
+import ParentDevicesTab from './components/ParentDevicesTab'
+import ParentSettingsTab from './components/ParentSettingsTab'
 import { useChildren } from './hooks/useChildren'
 import { useSettings } from './FamilyContext'
 
@@ -93,9 +94,10 @@ export default function ParentPage() {
     { id: 'store',     label: 'Rewards', show: modules.tokens },
     { id: 'grocery',   label: 'Grocery', show: modules.grocery },
     { id: 'children',  label: 'Children'     },
-    { id: 'calendars',     label: 'Calendars'      },
-    { id: 'notifications', label: 'Notifications'  },
-    { id: 'family',        label: 'Family'         },
+    { id: 'calendars', label: 'Calendars'    },
+    { id: 'family',    label: 'Family'       },
+    { id: 'devices',   label: 'Devices'      },
+    { id: 'settings',  label: 'Settings'     },
   ].filter(t => t.show !== false)
 
   return (
@@ -139,9 +141,10 @@ export default function ParentPage() {
           {tab === 'store'     && <ParentRewardsTab children={children} />}
           {tab === 'grocery'   && <ParentGroceryTab />}
           {tab === 'children'  && <ParentChildrenTab children={children} onReload={reloadChildren} />}
-          {tab === 'calendars'     && <ParentCalendarTab children={children} />}
-          {tab === 'notifications' && <ParentNotificationsTab children={children} />}
-          {tab === 'family'        && <ParentFamilyTab onPinChanged={lock} />}
+          {tab === 'calendars' && <ParentCalendarTab children={children} />}
+          {tab === 'family'    && <ParentFamilyTab onPinChanged={lock} />}
+          {tab === 'devices'   && <ParentDevicesTab children={children} />}
+          {tab === 'settings'  && <ParentSettingsTab />}
         </div>
       </main>
     </div>

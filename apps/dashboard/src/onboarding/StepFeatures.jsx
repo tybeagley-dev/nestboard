@@ -20,7 +20,12 @@ function Toggle({ on, onChange }) {
   )
 }
 
-export default function StepFeatures({ modules, screenTime, chores, onChange }) {
+// The default blurb is written for a first-run wizard; the Settings tab renders
+// the same component and passes its own, since "change this later in Settings"
+// reads oddly once you are in Settings.
+const DEFAULT_HELP = 'Turn on only what your family wants — you can change any of this later in Settings.'
+
+export default function StepFeatures({ modules, screenTime, chores, onChange, help = DEFAULT_HELP }) {
   const labels = useLabels()
   // Meals & grocery are one choice here but two flags under the hood.
   function setModule(key, val) {
@@ -32,9 +37,7 @@ export default function StepFeatures({ modules, screenTime, chores, onChange }) 
 
   return (
     <div className="onboarding-features">
-      <p className="onboarding-help">
-        Turn on only what your family wants — you can change any of this later in Settings.
-      </p>
+      <p className="onboarding-help">{help}</p>
 
       {MODULE_ROWS.map(row => (
         <div key={row.key} className="feature-row">

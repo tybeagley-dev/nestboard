@@ -1,34 +1,15 @@
-import { useState, useEffect } from 'react'
-import { apiGet, apiPut } from '../utils/api'
 import ChangePinCard from './ChangePinCard'
 import FeedbackCard from './FeedbackCard'
-import { resolveSettings } from '../FamilyContext'
-import WeatherLocationPicker from './WeatherLocationPicker'
 import FamilyMembers from './FamilyMembers'
 import AccountCard from './AccountCard'
 import FamilyNotesCard from './FamilyNotesCard'
-import KioskLinkCard from './KioskLinkCard'
 import StepIdentity from '../onboarding/StepIdentity'
-import StepFeatures from '../onboarding/StepFeatures'
-import StepLabels from '../onboarding/StepLabels'
+import { useFamily } from '../FamilyContext'
 
+// Who the family is and who can act for it. Device setup lives in Devices,
+// feature configuration in Settings.
 export default function ParentFamilyTab({ onPinChanged }) {
-  const [family, setFamily] = useState(null)
-
-  useEffect(() => {
-    apiGet('/auth/family').then(data => { if (data?.id) setFamily(data) })
-  }, [])
-
-  const settings = resolveSettings(family?.settings)
-  function saveSettings(partial) {
-    const next = {
-      modules:    { ...settings.modules,    ...(partial.modules ?? {}) },
-      screenTime: { ...settings.screenTime, ...(partial.screenTime ?? {}) },
-      chores:     { ...settings.chores,     ...(partial.chores ?? {}) },
-    }
-    setFamily(f => ({ ...f, settings: next }))
-    apiPut('/auth/family/settings', next)
-  }
+  const family = useFamily()
 
   if (!family) return <p className="parent-soon-msg">Loading…</p>
 
@@ -41,8 +22,6 @@ export default function ParentFamilyTab({ onPinChanged }) {
         </div>
       </div>
 
-      <KioskLinkCard familySlug={family.slug} />
-
       <FamilyNotesCard />
 
       <FamilyMembers familySlug={family.slug} />
@@ -50,37 +29,6 @@ export default function ParentFamilyTab({ onPinChanged }) {
       <AccountCard />
 
       <ChangePinCard onPinChanged={onPinChanged} />
-
-      <div className="family-code-card">
-        <div className="family-code-section">
-          <span className="family-code-label">Features</span>
-          <StepFeatures
-            modules={settings.modules}
-            screenTime={settings.screenTime}
-            chores={settings.chores}
-            onChange={saveSettings}
-          />
-        </div>
-      </div>
-
-      {settings.modules.tokens && (
-        <div className="family-code-card">
-          <div className="family-code-section">
-            <span className="family-code-label">Token economy names</span>
-            <StepLabels />
-          </div>
-        </div>
-      )}
-
-      <div className="family-code-card">
-        <div className="family-code-section">
-          <span className="family-code-label">Weather location</span>
-          <WeatherLocationPicker
-            current={family.weather ?? null}
-            onSaved={w => setFamily(f => ({ ...f, weather: w }))}
-          />
-        </div>
-      </div>
 
       <FeedbackCard />
     </div>

@@ -1,8 +1,15 @@
 import { useState } from 'react'
 import { usePushSubscription } from '../hooks/usePushSubscription'
 import DeviceSetupModal from './DeviceSetupModal'
+import KioskLinkCard from './KioskLinkCard'
+import { useFamily } from '../FamilyContext'
 
-export default function ParentNotificationsTab({ children }) {
+// Everything about putting nestboard on a screen: the kiosk link for a shared
+// display, the per-device install walkthrough, and push notifications. These
+// were split across the Family and Notifications tabs, so setting up a tablet
+// meant visiting both. Per-device tokens land here too.
+export default function ParentDevicesTab({ children }) {
+  const family = useFamily()
   const parent = usePushSubscription(null)
   const [showSetup, setShowSetup] = useState(false)
 
@@ -14,6 +21,8 @@ export default function ParentNotificationsTab({ children }) {
         </p>
         <button className="devsetup-btn" onClick={() => setShowSetup(true)}>Set up this device</button>
       </div>
+
+      <KioskLinkCard familySlug={family?.slug} />
 
       <div className="notif-section">
         <h3 className="notif-section-title">Parent notifications</h3>
