@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import {
   useZoneDefs,
   adminAddZone, adminEditZone, adminDeleteZone,
@@ -37,10 +37,24 @@ function MicroZonePicker({ defs, onPick, onCancel }) {
 
 // ── This week assignments ─────────────────────────────────────────────────────
 
+// Names the assignment being replaced ("Kitchen · wipe the counter") so the
+// picker can say what it is about to overwrite.
+function pickChange(assignment, child) {
+  return {
+    mode:      'change',
+    id:        assignment.id,
+    childName: child.name,
+    current:   `${assignment.zone_label} · ${assignment.micro_zone_label}`,
+  }
+}
+
 function ThisWeek({ children, defs, onChanged }) {
   const [assignments, setAssignments] = useState([])
   const [loading,     setLoading]     = useState(true)
-  const [picking,     setPicking]     = useState(null) // { assignmentId, childId } | 'new-{childId}'
+  // null, or what the picker is currently doing:
+  //   { mode: 'change', id, childName, current }  — replace an existing assignment
+  //   { mode: 'new',    childId, childName }      — add one on top of the auto pick
+  const [picking, setPicking] = useState(null)
 
   const load = useCallback(async () => {
     const today = getTodayKey(new Date())
@@ -50,14 +64,6 @@ function ThisWeek({ children, defs, onChanged }) {
   }, [])
 
   useEffect(() => { load() }, [load])
-
-  // Build a map of micro_zone_id → label for display
-  const microZoneMap = {}
-  for (const zone of defs) {
-    for (const mz of zone.micro_zones) {
-      microZoneMap[mz.id] = { label: mz.label, zoneLabel: zone.label, zoneIcon: zone.icon }
-    }
-  }
 
   async function handleUpdateAssignment(assignmentId, microZoneId) {
     await adminUpdateAssignment(assignmentId, microZoneId)
@@ -87,18 +93,26 @@ function ThisWeek({ children, defs, onChanged }) {
       {picking && (
         <div className="zone-picker-backdrop" onClick={() => setPicking(null)}>
           <div className="zone-picker-modal" onClick={e => e.stopPropagation()}>
-            <p className="zone-picker-title">Pick a micro-zone</p>
+            {picking.mode === 'change' ? (
+              <>
+                <p className="zone-picker-title">Change {picking.childName}’s micro-zone</p>
+                <p className="zone-picker-sub">
+                  Currently {picking.current}. Pick what replaces it for the rest of the week.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="zone-picker-title">Give {picking.childName} another micro-zone</p>
+                <p className="zone-picker-sub">
+                  An extra job on top of the one they were assigned automatically this week.
+                </p>
+              </>
+            )}
             <MicroZonePicker
               defs={defs}
               onPick={microZoneId => {
-                // "new-<childId>" → add a manual assignment; anything else is an
-                // existing assignment id → update it. (Both are strings, so the
-                // prefix — not typeof — is the discriminator.)
-                if (typeof picking === 'string' && picking.startsWith('new-')) {
-                  handleAddAssignment(picking.replace('new-', ''), microZoneId)
-                } else {
-                  handleUpdateAssignment(picking, microZoneId)
-                }
+                if (picking.mode === 'new') handleAddAssignment(picking.childId, microZoneId)
+                else                        handleUpdateAssignment(picking.id, microZoneId)
               }}
               onCancel={() => setPicking(null)}
             />
@@ -118,33 +132,50 @@ function ThisWeek({ children, defs, onChanged }) {
             </div>
 
             {auto ? (
-              <div className="chore-admin-row">
+              <div
+                className="chore-admin-row chore-admin-row--clickable"
+                role="button"
+                tabIndex={0}
+                onClick={() => setPicking(pickChange(auto, child))}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicking(pickChange(auto, child)) } }}
+              >
                 <div className="chore-admin-info">
                   <span className="chore-admin-label">{auto.micro_zone_label}</span>
                   <span className="chore-admin-meta">{auto.zone_icon} {auto.zone_label} · auto</span>
                 </div>
-                <button className="chore-admin-edit-btn" onClick={() => setPicking(auto.id)}>Change</button>
               </div>
             ) : (
               <p className="parent-soon-msg" style={{ fontSize: 12, padding: '4px 0' }}>No auto assignment yet</p>
             )}
 
             {manual.map(a => (
-              <div key={a.id} className="chore-admin-row" style={{ paddingLeft: 12 }}>
+              <div
+                key={a.id}
+                className="chore-admin-row chore-admin-row--clickable"
+                style={{ paddingLeft: 12 }}
+                role="button"
+                tabIndex={0}
+                onClick={() => setPicking(pickChange(a, child))}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setPicking(pickChange(a, child)) } }}
+              >
                 <div className="chore-admin-info">
                   <span className="chore-admin-label">{a.micro_zone_label}</span>
                   <span className="chore-admin-meta">{a.zone_icon} {a.zone_label} · added</span>
                 </div>
-                <button className="chore-admin-del-btn" onClick={() => handleDelete(a.id)}>×</button>
+                <button
+                  className="chore-admin-del-btn"
+                  onClick={e => { e.stopPropagation(); handleDelete(a.id) }}
+                  aria-label={`Remove ${a.micro_zone_label}`}
+                >×</button>
               </div>
             ))}
 
             <button
               className="chore-admin-row"
               style={{ color: 'var(--accent-warm)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left', fontSize: 12 }}
-              onClick={() => setPicking(`new-${child.id}`)}
+              onClick={() => setPicking({ mode: 'new', childId: child.id, childName: child.name })}
             >
-              + Add zone for {child.name}
+              + Assign additional micro-zone for {child.name}
             </button>
           </div>
         )
@@ -153,96 +184,9 @@ function ThisWeek({ children, defs, onChanged }) {
   )
 }
 
-// ── Micro-zone row ────────────────────────────────────────────────────────────
-
-function MicroZoneRow({ item, onUpdated, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
-  const [editing, setEditing] = useState(false)
-  const [label,   setLabel]   = useState(item.label)
-  const [active,  setActive]  = useState(item.active)
-  const [saving,  setSaving]  = useState(false)
-
-  async function handleSave() {
-    setSaving(true)
-    await adminEditMicroZone(item.id, { label, active, sort_order: item.sort_order })
-    setSaving(false)
-    setEditing(false)
-    onUpdated()
-  }
-
-  if (confirmDelete) {
-    return (
-      <div className="chore-admin-row deleting" style={{ paddingLeft: 24 }}>
-        <span className="chore-delete-msg">Remove "{item.label}"?</span>
-        <button className="chore-delete-yes" onClick={onConfirmDelete}>Remove</button>
-        <button className="chore-delete-no"  onClick={onCancelDelete}>Cancel</button>
-      </div>
-    )
-  }
-
-  if (editing) {
-    return (
-      <div className="chore-admin-row" style={{ paddingLeft: 24, flexDirection: 'column', alignItems: 'stretch', gap: 8 }}>
-        <input
-          className="chore-form-input"
-          value={label}
-          onChange={e => setLabel(e.target.value)}
-          autoFocus
-        />
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <label style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} />
-            Active
-          </label>
-          <button className="parent-apply-btn" onClick={handleSave} disabled={saving || !label.trim()}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-          <button className="btn-cancel-spend" onClick={() => setEditing(false)}>Cancel</button>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="chore-admin-row" style={{ paddingLeft: 24 }}>
-      <div className="chore-admin-info">
-        <span className="chore-admin-label" style={{ opacity: active ? 1 : 0.45 }}>
-          {item.label}
-          {!active && <span className="chore-inactive-badge"> inactive</span>}
-        </span>
-      </div>
-      <button className="chore-admin-edit-btn" onClick={() => setEditing(true)}>Edit</button>
-      <button className="chore-admin-del-btn"  onClick={onDeleteRequest}>×</button>
-    </div>
-  )
-}
-
 // ── Zone row ──────────────────────────────────────────────────────────────────
 
-function ZoneRow({ zone, children, onEdit, onUpdated, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
-  // Start expanded when the zone has no micro-zones yet, so the next step
-  // (adding them) is visible immediately after creating the zone.
-  const [expanded,     setExpanded]     = useState(zone.micro_zones.length === 0)
-  const [addingItem,   setAddingItem]   = useState(false)
-  const [newItemLabel, setNewItemLabel] = useState('')
-  const [savingItem,   setSavingItem]   = useState(false)
-  const [deleteItem,   setDeleteItem]   = useState(null)
-
-  async function handleAddItem() {
-    if (!newItemLabel.trim()) return
-    setSavingItem(true)
-    await adminAddMicroZone(zone.id, { label: newItemLabel.trim(), active: true, sort_order: zone.micro_zones.length })
-    setNewItemLabel('')
-    setAddingItem(false)
-    setSavingItem(false)
-    onUpdated()
-  }
-
-  async function handleDeleteItem(id) {
-    await adminDeleteMicroZone(id)
-    setDeleteItem(null)
-    onUpdated()
-  }
-
+function ZoneRow({ zone, children, onEdit, confirmDelete, onDeleteRequest, onConfirmDelete, onCancelDelete }) {
   const eligibleNames = zone.eligible_child_ids.length > 0
     ? children.filter(c => zone.eligible_child_ids.includes(c.id)).map(c => c.name).join(', ')
     : 'All children'
@@ -258,83 +202,81 @@ function ZoneRow({ zone, children, onEdit, onUpdated, confirmDelete, onDeleteReq
   }
 
   return (
-    <div className="zone-admin-block">
-      <div className="chore-admin-row">
-        <span className="chore-admin-icon">{zone.icon || '📍'}</span>
-        <div className="chore-admin-info">
-          <span className="chore-admin-label">{zone.label}</span>
-          <span className="chore-admin-meta">{eligibleNames} · {zone.micro_zones.length} micro-zone{zone.micro_zones.length !== 1 ? 's' : ''}</span>
-        </div>
-        <button className="chore-admin-edit-btn" onClick={() => setExpanded(e => !e)}>
-          {expanded ? 'Collapse' : 'Micro-zones'}
-        </button>
-        <button className="chore-admin-edit-btn" onClick={onEdit}>Edit</button>
-        <button className="chore-admin-del-btn"  onClick={onDeleteRequest}>×</button>
+    <div
+      className="chore-admin-row chore-admin-row--clickable"
+      role="button"
+      tabIndex={0}
+      onClick={onEdit}
+      onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit() } }}
+    >
+      <span className="chore-admin-icon">{zone.icon || '📍'}</span>
+      <div className="chore-admin-info">
+        <span className="chore-admin-label">{zone.label}</span>
+        <span className="chore-admin-meta">{eligibleNames} · {zone.micro_zones.length} micro-zone{zone.micro_zones.length !== 1 ? 's' : ''}</span>
       </div>
-
-      {expanded && (
-        <div className="zone-items-section">
-          {zone.micro_zones.length === 0 && (
-            <p className="chore-form-hint" style={{ paddingLeft: 24 }}>
-              Now add this zone’s micro-zones — the small weekly jobs inside it (e.g. “wipe the counter”).
-            </p>
-          )}
-          {zone.micro_zones.map(item => (
-            <MicroZoneRow
-              key={item.id}
-              item={item}
-              onUpdated={onUpdated}
-              confirmDelete={deleteItem === item.id}
-              onDeleteRequest={() => setDeleteItem(item.id)}
-              onConfirmDelete={() => handleDeleteItem(item.id)}
-              onCancelDelete={() => setDeleteItem(null)}
-            />
-          ))}
-
-          {addingItem ? (
-            <div className="chore-admin-row" style={{ paddingLeft: 24, gap: 8 }}>
-              <input
-                className="chore-form-input"
-                value={newItemLabel}
-                onChange={e => setNewItemLabel(e.target.value)}
-                placeholder="Micro-zone label"
-                autoFocus
-                onKeyDown={e => { if (e.key === 'Enter') handleAddItem() }}
-              />
-              <button className="parent-apply-btn" onClick={handleAddItem} disabled={savingItem || !newItemLabel.trim()}>
-                {savingItem ? '…' : 'Add'}
-              </button>
-              <button className="btn-cancel-spend" onClick={() => setAddingItem(false)}>Cancel</button>
-            </div>
-          ) : (
-            <button
-              className="chore-admin-row"
-              style={{ paddingLeft: 24, color: 'var(--accent-warm)', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left' }}
-              onClick={() => setAddingItem(true)}
-            >
-              + Add micro-zone
-            </button>
-          )}
-        </div>
-      )}
+      <button
+        className="chore-admin-del-btn"
+        onClick={e => { e.stopPropagation(); onDeleteRequest() }}
+        aria-label={`Remove ${zone.label}`}
+      >×</button>
     </div>
   )
 }
 
 // ── Zone form ─────────────────────────────────────────────────────────────────
 
+// One editor for the whole zone: name, icon, eligibility, and the micro-zones
+// inside it. Micro-zones used to be a separate inline flow that wrote to the API
+// on every keystroke-save, which meant Cancel here discarded the rename but kept
+// the micro-zone you had just added. They are staged in local state now and
+// committed together, so Cancel means cancel.
+//
+// `key` is the identity used while editing: a real micro_zone id, or `new-<n>`
+// for one that doesn't exist server-side yet.
 function ZoneForm({ zone, children, onSave, onCancel, saving }) {
   const [label,    setLabel]    = useState(zone?.label ?? '')
   const [icon,     setIcon]     = useState(zone?.icon ?? '')
   const [eligible, setEligible] = useState(zone?.eligible_child_ids ?? [])
+  const [micros,   setMicros]   = useState(() =>
+    (zone?.micro_zones ?? []).map(mz => ({ key: mz.id, id: mz.id, label: mz.label, active: mz.active }))
+  )
+  const [newLabel, setNewLabel] = useState('')
+  const [confirmRemove, setConfirmRemove] = useState(null)
+  const nextKey = useRef(0)
 
   function toggleEligible(id) {
     setEligible(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
   }
 
+  function addMicro() {
+    if (!newLabel.trim()) return
+    setMicros(prev => [...prev, { key: `new-${nextKey.current++}`, id: null, label: newLabel.trim(), active: true }])
+    setNewLabel('')
+  }
+
+  function patchMicro(key, patch) {
+    setMicros(prev => prev.map(m => m.key === key ? { ...m, ...patch } : m))
+  }
+
+  function removeMicro(key) {
+    setMicros(prev => prev.filter(m => m.key !== key))
+    setConfirmRemove(null)
+  }
+
+  // Only an existing micro-zone is worth confirming: zone_assignments cascades on
+  // its delete, so removing one takes this week's assignment and its check history
+  // with it. A row added in this session has none of that behind it yet.
+  function requestRemove(m) {
+    if (m.id) setConfirmRemove(m.key)
+    else      removeMicro(m.key)
+  }
+
   function handleSave() {
     if (!label.trim()) return
-    onSave({ ...zone, label: label.trim(), icon, eligible_child_ids: eligible })
+    onSave(
+      { ...zone, label: label.trim(), icon, eligible_child_ids: eligible },
+      micros.filter(m => m.label.trim()).map((m, i) => ({ ...m, label: m.label.trim(), sort_order: i })),
+    )
   }
 
   return (
@@ -362,6 +304,57 @@ function ZoneForm({ zone, children, onSave, onCancel, saving }) {
               {c.name}
             </button>
           ))}
+        </div>
+      </div>
+
+      <div className="chore-form-field">
+        <label className="chore-form-label">Micro-zones</label>
+        <p className="chore-form-hint">
+          The small weekly jobs inside this zone — “wipe the counter”, “hang up the coats”.
+          One is handed to a child each week. Turn one off to keep it out of the rotation
+          without losing it.
+        </p>
+
+        {micros.map(m => confirmRemove === m.key ? (
+          <div key={m.key} className="zone-micro-edit-row zone-micro-edit-row--confirm">
+            <span className="chore-delete-msg">
+              Remove “{m.label}”? Anyone assigned it this week loses it, along with their check-ins.
+            </span>
+            <button className="chore-delete-yes" onClick={() => removeMicro(m.key)}>Remove</button>
+            <button className="chore-delete-no"  onClick={() => setConfirmRemove(null)}>Keep</button>
+          </div>
+        ) : (
+          <div key={m.key} className="zone-micro-edit-row">
+            <input
+              className="chore-form-input"
+              value={m.label}
+              onChange={e => patchMicro(m.key, { label: e.target.value })}
+              placeholder="Micro-zone label"
+            />
+            <button
+              className={`zone-micro-active-btn ${m.active ? 'active' : ''}`}
+              onClick={() => patchMicro(m.key, { active: !m.active })}
+              title={m.active ? 'In the weekly rotation' : 'Not in the rotation'}
+            >
+              {m.active ? 'Active' : 'Inactive'}
+            </button>
+            <button
+              className="chore-admin-del-btn"
+              onClick={() => requestRemove(m)}
+              aria-label={`Remove ${m.label || 'micro-zone'}`}
+            >×</button>
+          </div>
+        ))}
+
+        <div className="zone-micro-edit-row">
+          <input
+            className="chore-form-input"
+            value={newLabel}
+            onChange={e => setNewLabel(e.target.value)}
+            placeholder="Add a micro-zone…"
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addMicro() } }}
+          />
+          <button className="chore-step-add" onClick={addMicro} disabled={!newLabel.trim()}>+ Add</button>
         </div>
       </div>
 
@@ -394,10 +387,30 @@ export default function ParentZonesTab({ children }) {
     }
   }, [autoRouted, loading, defs.length])
 
-  async function handleSave(data) {
+  // Commits the zone, then reconciles its micro-zones against what was there
+  // when the form opened: rows that vanished are deleted, rows without an id are
+  // created, and the rest are updated only when something actually changed.
+  // A new zone has to be created first — its micro-zones need the returned id.
+  async function handleSave(data, micros) {
     setSaving(true)
-    if (data.id) await adminEditZone(data.id, data)
-    else         await adminAddZone(data)
+    let zoneId = data.id
+    if (zoneId) await adminEditZone(zoneId, data)
+    else        zoneId = (await adminAddZone(data))?.id
+
+    if (zoneId) {
+      const before = defs.find(z => z.id === zoneId)?.micro_zones ?? []
+      const keptIds = new Set(micros.map(m => m.id).filter(Boolean))
+      await Promise.all([
+        ...before.filter(mz => !keptIds.has(mz.id)).map(mz => adminDeleteMicroZone(mz.id)),
+        ...micros.map(m => {
+          if (!m.id) return adminAddMicroZone(zoneId, m)
+          const prev = before.find(mz => mz.id === m.id)
+          const same = prev && prev.label === m.label && prev.active === m.active && prev.sort_order === m.sort_order
+          return same ? null : adminEditMicroZone(m.id, m)
+        }).filter(Boolean),
+      ])
+    }
+
     setSaving(false)
     await reload()
     setForm(null)
@@ -468,7 +481,6 @@ export default function ParentZonesTab({ children }) {
               zone={zone}
               children={children}
               onEdit={() => setForm({ ...zone })}
-              onUpdated={reload}
               confirmDelete={deleteConfirm === zone.id}
               onDeleteRequest={() => setDeleteConfirm(zone.id)}
               onConfirmDelete={() => handleDelete(zone.id)}
