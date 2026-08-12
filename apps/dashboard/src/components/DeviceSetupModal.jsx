@@ -2,14 +2,20 @@ import { useEffect } from 'react'
 import { Smartphone, Bell, CheckCircle2, Share, Plus, Lock } from 'lucide-react'
 import { usePushSubscription } from '../hooks/usePushSubscription'
 import { usePwaInstall } from '../hooks/usePwaInstall'
-import { untrustChild } from '../utils/childTrust'
+import { clearDeviceToken } from '../utils/deviceToken'
+import { apiDelete } from '../utils/api'
 
 // Reusable per-device setup guide: add-to-home-screen + enable notifications.
 // `childId`/`label` make the push step context-aware — parent device when null,
 // a specific child's device when opened from that child's view. When `familySlug`
 // is set (child view), a third "device access" beat reflects the PIN gate and
 // lets the parent re-lock the device.
-export default function DeviceSetupModal({ onClose, childId = null, label, familySlug = null }) {
+// `kiosk` drops the notifications step. The guide was offering PARENT push on the
+// fridge display: notifyParent sends url '/parent', so tapping one there would
+// navigate the family board to a portal it cannot authorize — a Clerk sign-in
+// screen where the week's meals used to be. Parent notifications belong on a
+// parent's phone, which is where approvals happen anyway.
+export default function DeviceSetupModal({ onClose, childId = null, label, familySlug = null, kiosk = false }) {
   const { canInstall, isInstalled, promptInstall, platform } = usePwaInstall()
   const push = usePushSubscription(childId)
 
@@ -21,6 +27,16 @@ export default function DeviceSetupModal({ onClose, childId = null, label, famil
 
   // iOS only exposes the Push API inside an installed PWA, so install must come first.
   const pushBlocked = platform === 'ios' && !isInstalled
+
+  // Hand the device's own token back before forgetting it locally, so the row in
+  // the family's Devices list goes away with it. Clearing regardless of the
+  // response: if the call fails the device still stops holding the credential,
+  // which is what the button promises. Worst case a dead row needs revoking.
+  async function unpair() {
+    await apiDelete('/auth/device/self')
+    clearDeviceToken(familySlug)
+    window.location.reload()
+  }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -52,17 +68,19 @@ export default function DeviceSetupModal({ onClose, childId = null, label, famil
             </div>
           </div>
 
-          <div className="devsetup-step">
-            <div className={`devsetup-step-icon ${push.subscribed ? 'done' : ''}`}>
-              {push.subscribed
-                ? <CheckCircle2 size={20} strokeWidth={2} />
-                : <Bell size={20} strokeWidth={1.8} />}
+          {!kiosk && (
+            <div className="devsetup-step">
+              <div className={`devsetup-step-icon ${push.subscribed ? 'done' : ''}`}>
+                {push.subscribed
+                  ? <CheckCircle2 size={20} strokeWidth={2} />
+                  : <Bell size={20} strokeWidth={1.8} />}
+              </div>
+              <div className="devsetup-step-body">
+                <h3 className="howto-section-title">Turn on notifications</h3>
+                <PushStep push={push} childId={childId} label={label} blocked={pushBlocked} />
+              </div>
             </div>
-            <div className="devsetup-step-body">
-              <h3 className="howto-section-title">Turn on notifications</h3>
-              <PushStep push={push} childId={childId} label={label} blocked={pushBlocked} />
-            </div>
-          </div>
+          )}
 
           {familySlug && (
             <div className="devsetup-step">
@@ -72,11 +90,12 @@ export default function DeviceSetupModal({ onClose, childId = null, label, famil
               <div className="devsetup-step-body">
                 <h3 className="howto-section-title">Device access</h3>
                 <p className="onboarding-guide-text">
-                  This device is trusted — it opens {label ? `${label}'s page` : 'this page'} without the family PIN.
+                  This device is paired — it opens {label ? `${label}'s page` : 'this page'} without the family PIN.
+                  A parent can also remove it from the Devices tab.
                 </p>
                 <button
                   className="devsetup-btn"
-                  onClick={() => { untrustChild(familySlug); window.location.reload() }}
+                  onClick={unpair}
                 >
                   <Lock size={14} strokeWidth={2} style={{ verticalAlign: '-2px', marginRight: 4 }} />
                   Lock this device

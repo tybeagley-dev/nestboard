@@ -8,6 +8,7 @@ import { requireParent } from '../middleware/requireParent.js'
 import { isValidTz as isValidTimezone, invalidateFamilyTimezone } from '../utils/familyTime.js'
 import { checkPinLock, recordPinFailure, recordPinSuccess } from '../utils/pinAttempts.js'
 import { issueParentToken, revokeFamilyParentTokens } from '../utils/parentTokens.js'
+import { issueDeviceToken, verifyDeviceToken, listDevices, revokeDevice, revokeAllDevices } from '../utils/deviceTokens.js'
 import { broadcast } from './events.js'
 
 const router = Router()
@@ -47,6 +48,88 @@ router.post('/parent', (req, res) => {
       res.status(500).json({ error: 'Server error' })
     }
   })
+})
+
+// POST /auth/device/pair  { pin, label?, kind?, childId? } → { id, token, label }
+//
+// Pairing a shared device. A parent walks to the kiosk or the child's tablet and
+// types the family PIN into it; the device gets back an opaque, revocable token
+// and stops needing the slug. See migration 031.
+//
+// The family is resolved from x-family-slug directly rather than through
+// requireFamily, because this is the bootstrap step: once slug auth is removed
+// from requireFamily, an unpaired device has nothing else to identify itself
+// with. That's the only thing the slug still buys, and on its own it buys
+// nothing — the PIN below is what authorizes.
+router.post('/device/pair', async (req, res) => {
+  const slug = req.headers['x-family-slug']
+  const { pin, label, kind, childId } = req.body ?? {}
+  if (!slug) return res.status(401).json({ error: 'Unauthorized' })
+  if (!pin) return res.status(400).json({ error: 'Missing pin' })
+  if (kind && !['kiosk', 'child'].includes(kind)) {
+    return res.status(400).json({ error: 'Invalid kind' })
+  }
+
+  try {
+    const { rows } = await db.query(
+      'SELECT id, parent_pin_hash FROM families WHERE slug = $1',
+      [slug]
+    )
+    // Same response as a bad PIN. An unknown slug and a wrong PIN are
+    // indistinguishable from outside, so a stale link can't be used to probe
+    // which families exist.
+    if (!rows.length) return res.status(401).json({ error: 'Invalid PIN' })
+    const familyId = rows[0].id
+
+    // The same lockout ladder as /auth/parent, keyed the same way (by family,
+    // not IP — a household shares an IP). Without this, pairing would be a
+    // second, unrated door onto the same 6-digit secret.
+    const locked = checkPinLock(familyId)
+    if (locked.locked) {
+      res.set('Retry-After', String(locked.retryAfterSec))
+      return res.status(429).json({ error: 'Too many attempts', retryAfterSec: locked.retryAfterSec })
+    }
+
+    if (!await bcrypt.compare(pin, rows[0].parent_pin_hash)) {
+      const hit = recordPinFailure(familyId)
+      if (hit.locked) {
+        res.set('Retry-After', String(hit.retryAfterSec))
+        return res.status(429).json({ error: 'Too many attempts', retryAfterSec: hit.retryAfterSec })
+      }
+      return res.status(401).json({ error: 'Invalid PIN' })
+    }
+    recordPinSuccess(familyId)
+
+    const clean = String(label ?? '').trim().slice(0, 60) || 'Shared device'
+    const device = await issueDeviceToken(familyId, {
+      label: clean,
+      kind: kind ?? 'kiosk',
+      childId: childId ?? null,
+      userAgent: req.headers['user-agent'],
+    })
+    res.json({ id: device.id, token: device.token, label: clean })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// DELETE /auth/device/self → a device unpairing itself, for "Lock this device"
+// in the setup guide. Authorized by the token it is giving up, so it needs no
+// PIN and no parent session: handing back your own credential can't be used
+// against anyone. Without this the button could only forget the token locally,
+// leaving a live row in the family's Devices list for a device that no longer
+// holds it — a list that lies is worse than no list.
+router.delete('/device/self', async (req, res) => {
+  const token = req.headers['x-device-token']
+  if (!token) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const device = await verifyDeviceToken(token)
+    if (!device) return res.status(401).json({ error: 'Unauthorized', code: 'DEVICE_REVOKED' })
+    await revokeDevice(device.family_id, device.id)
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
 })
 
 // POST /auth/login  { slug, pin } → { familyId, name }
@@ -111,15 +194,16 @@ router.get('/family', async (req, res) => {
     return
   }
 
-  // Slug resolution, for the kiosk and child views. This route has its own copy
-  // of the lookup rather than going through requireFamily, so it needed the same
-  // DEFAULT_FAMILY_SLUG removal — the response includes the slug itself, so an
-  // env var set by accident would hand an unauthenticated caller the credential
-  // for everything else.
-  const slug = req.headers['x-family-slug']
-  if (!slug) return res.status(401).json({ error: 'Unauthorized' })
+  // Device resolution, for the kiosk and child views. This route has its own
+  // copy of the lookup rather than going through requireFamily, which is exactly
+  // why it has to be changed in step with it: the response includes the slug
+  // itself, so leaving the old slug lookup here would have kept a bare slug
+  // sufficient to fetch the credential for everything else — the middleware
+  // would look closed while this stayed open.
+  const device = await verifyDeviceToken(req.headers['x-device-token'])
+  if (!device) return res.status(401).json({ error: 'Unauthorized', code: 'DEVICE_REVOKED' })
   try {
-    const { rows } = await db.query('SELECT id, name, greeting, slug, labels, onboarded, weather, settings FROM families WHERE slug = $1', [slug])
+    const { rows } = await db.query('SELECT id, name, greeting, slug, labels, onboarded, weather, settings FROM families WHERE id = $1', [device.family_id])
     res.json(rows[0] ?? null)
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
@@ -377,7 +461,45 @@ router.put('/family/pin', requireParent, async (req, res) => {
     // for another 30 minutes would defeat the point. The caller re-unlocks too —
     // ParentPage already re-locks the portal on a successful change.
     revokeFamilyParentTokens(req.familyId)
+    // Paired devices deliberately survive a PIN change. The PIN authorizes the
+    // act of pairing; the device token stands on its own afterwards. Cascading
+    // here would mean every PIN change is a walk around the house re-entering it
+    // on every tablet, which makes people avoid changing it. To cut a device off,
+    // revoke that device — or DELETE /auth/family/devices for all of them.
+    // ChangePinCard says this out loud; keep the two in step.
     res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// GET /auth/family/devices → the paired shared devices, for the Devices tab.
+// Never returns token_hash — there is nothing here a parent needs the secret for.
+router.get('/family/devices', requireParent, async (req, res) => {
+  try {
+    res.json(await listDevices(req.familyId))
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// DELETE /auth/family/devices/:id → revoke one device.
+router.delete('/family/devices/:id', requireParent, async (req, res) => {
+  try {
+    const count = await revokeDevice(req.familyId, req.params.id)
+    if (!count) return res.status(404).json({ error: 'Not found' })
+    res.json({ success: true })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// DELETE /auth/family/devices → revoke every paired device at once. The button
+// for a lost tablet or a leaked PIN: everything drops back to the pairing prompt
+// and the devices still in the house get paired again in person.
+router.delete('/family/devices', requireParent, async (req, res) => {
+  try {
+    res.json({ revoked: await revokeAllDevices(req.familyId) })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
   }

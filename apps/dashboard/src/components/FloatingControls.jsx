@@ -143,7 +143,7 @@ export default function FloatingControls({ kiosk = false }) {
 
       {showHowto && <HowItWorksModal onClose={() => setShowHowto(false)} />}
       {showNews && <WhatsNewModal onClose={() => setShowNews(false)} />}
-      {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} />}
+      {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} kiosk={kiosk} />}
     </div>
   )
 }

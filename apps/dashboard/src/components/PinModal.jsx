@@ -7,7 +7,12 @@ function isTouchDevice() {
 
 const PIN_LENGTH = 6
 
-export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN required', dismissable = true }) {
+// `pair` switches what a correct PIN buys. Without it the PIN unlocks a parent
+// session (the portal). With it — { label, kind, childId } — the PIN pairs this
+// device instead, trading itself for a per-device token the server can revoke.
+// Same modal either way: the lockout countdown, the numpad and the touch focus
+// handling are fiddly enough that a second copy would drift.
+export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN required', dismissable = true, pair = null }) {
   const [pin,   setPin]   = useState('')
   const [error, setError] = useState(false)
   const [busy,  setBusy]  = useState(false)
@@ -46,12 +51,16 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
 
   async function verify(candidate) {
     setBusy(true)
-    const { status, data } = await apiPostResult('/auth/parent', { pin: candidate })
+    const { status, data } = pair
+      ? await apiPostResult('/auth/device/pair', { pin: candidate, ...pair })
+      : await apiPostResult('/auth/parent', { pin: candidate })
     setBusy(false)
 
     if (data?.token) {
-      setParentToken(data.token)
-      onSuccess()
+      // A device token is this device's long-lived credential and is stored by
+      // the caller; a parent token is a 30-minute session and lives in memory.
+      if (!pair) setParentToken(data.token)
+      onSuccess(data)
       return
     }
 

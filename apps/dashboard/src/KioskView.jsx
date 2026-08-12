@@ -1,9 +1,9 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import Dashboard from './Dashboard'
-import PinModal from './components/PinModal'
-import { setFamilySlug } from './utils/api'
-import { isChildTrusted, trustChild } from './utils/childTrust'
+import DevicePairing from './components/DevicePairing'
+import { setFamilySlug, setDeviceToken, onDeviceRevoked } from './utils/api'
+import { getDeviceToken, clearDeviceToken } from './utils/deviceToken'
 import { useFamilyPayload } from './hooks/useFamilySettings'
 import { FamilyProvider } from './FamilyContext'
 
@@ -24,23 +24,34 @@ import { FamilyProvider } from './FamilyContext'
 export default function KioskView() {
   const { slug } = useParams()
 
-  // Synchronous so PinModal's /auth/parent call is scoped to this family.
+  // Both synchronous so the first request out of this view — pairing, or a data
+  // fetch on an already-paired display — carries the right headers.
   setFamilySlug(slug)
 
-  const [trusted, setTrusted] = useState(() => isChildTrusted(slug))
+  const [token, setToken] = useState(() => getDeviceToken(slug))
+  setDeviceToken(token)
 
-  // Same once-per-device gate as the child views, and the same caveat: this is
-  // deterrence against a link that got forwarded somewhere, not access control.
-  // The slug is in the URL, so anyone holding it can call the API directly and
-  // never see this. Revoking that needs per-device tokens.
-  if (!trusted) {
+  // A parent revoking this display from the Devices tab is the only way it can
+  // lose its credential mid-session. It drops back to pairing rather than
+  // sitting on a board it can no longer refresh — a fridge display that quietly
+  // stops updating is worse than one asking to be set up again.
+  useEffect(() => {
+    onDeviceRevoked(() => { clearDeviceToken(slug); setToken(null) })
+    return () => onDeviceRevoked(null)
+  }, [slug])
+
+  // Pairing replaces the old client-side trust flag. That gate set a boolean the
+  // server never saw, so the API went on accepting the slug from anyone holding
+  // the URL — deterrence, not access control. The PIN now buys a real credential
+  // that a parent can take back.
+  if (!token) {
     return (
       <div className="child-view-loading">
-        <PinModal
-          prompt="Enter family PIN to set up this display"
-          dismissable={false}
-          onSuccess={() => { trustChild(slug); setTrusted(true) }}
-          onCancel={() => {}}
+        <DevicePairing
+          slug={slug}
+          kind="kiosk"
+          defaultLabel="Family display"
+          onPaired={setToken}
         />
       </div>
     )

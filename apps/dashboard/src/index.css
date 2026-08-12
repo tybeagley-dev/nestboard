@@ -6547,3 +6547,28 @@ button {
   font-weight: 600;
 }
 .landing-footer a:hover { color: var(--text-primary); }
+
+/* Device pairing — the naming step before the PIN. Reuses .pin-modal /
+   .tokens-pin-phase for the card and .btn-confirm-spend for the action, so this
+   is only the two bits that have no equivalent. */
+.device-pair-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+  text-align: center;
+}
+
+.device-pair-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+/* Remove-all sits under the device list rather than inline in a row, so it needs
+   to break out of .member-remove's inline sizing. */
+.devices-remove-all {
+  margin-top: 10px;
+  align-self: flex-start;
+}

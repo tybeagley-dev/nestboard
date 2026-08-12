@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { usePushSubscription } from '../hooks/usePushSubscription'
 import DeviceSetupModal from './DeviceSetupModal'
 import KioskLinkCard from './KioskLinkCard'
+import PairedDevicesCard from './PairedDevicesCard'
 import { useFamily } from '../FamilyContext'
 
 // Everything about putting nestboard on a screen: the kiosk link for a shared
@@ -23,6 +24,8 @@ export default function ParentDevicesTab({ children }) {
       </div>
 
       <KioskLinkCard familySlug={family?.slug} />
+
+      <PairedDevicesCard />
 
       <div className="notif-section">
         <h3 className="notif-section-title">Parent notifications</h3>

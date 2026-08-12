@@ -2,11 +2,11 @@ import { useState, useRef, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
 import ChildIcon from './components/ChildIcon'
 import Confetti from './components/Confetti'
-import PinModal from './components/PinModal'
-import { isChildTrusted, trustChild } from './utils/childTrust'
+import DevicePairing from './components/DevicePairing'
+import { getDeviceToken, clearDeviceToken } from './utils/deviceToken'
 import { childColorVars } from './utils/color'
 import { useLiveSync } from './hooks/useLiveSync'
-import { setFamilySlug } from './utils/api'
+import { setFamilySlug, setDeviceToken, onDeviceRevoked } from './utils/api'
 import { useChildren } from './hooks/useChildren'
 import { useClock } from './hooks/useClock'
 import { useRoutines, useScheduleConfig } from './hooks/useRoutines'
@@ -63,26 +63,34 @@ function GroceryAdd({ addItem }) {
   )
 }
 
-// Device-level gate: the child route is unauthenticated, so an untrusted device
-// must enter the family PIN once before ChildView mounts (and before any child
-// data is fetched). Gating in this wrapper keeps ChildView's hook order intact.
+// Device-level gate: the child route is unauthenticated, so an unpaired device
+// must be set up with the family PIN before ChildView mounts (and before any
+// child data is fetched). Gating in this wrapper keeps ChildView's hook order
+// intact. The token is family-wide rather than bound to this child — a device is
+// a device, and whoever pairs it already holds the PIN.
 export default function ChildView() {
-  const { slug } = useParams()
+  const { slug, childId } = useParams()
 
-  // Set the slug header synchronously so PinModal's /auth/parent call is scoped.
   setFamilySlug(slug)
 
-  const [trusted, setTrusted] = useState(() => isChildTrusted(slug))
+  const [token, setToken] = useState(() => getDeviceToken(slug))
+  setDeviceToken(token)
 
-  if (!trusted) {
+  useEffect(() => {
+    onDeviceRevoked(() => { clearDeviceToken(slug); setToken(null) })
+    return () => onDeviceRevoked(null)
+  }, [slug])
+
+  if (!token) {
     // Non-dismissable: there's no "escape" past the gate on a child device.
     return (
       <div className="child-view-loading">
-        <PinModal
-          prompt="Enter family PIN"
-          dismissable={false}
-          onSuccess={() => { trustChild(slug); setTrusted(true) }}
-          onCancel={() => {}}
+        <DevicePairing
+          slug={slug}
+          kind="child"
+          childId={childId}
+          defaultLabel="Child tablet"
+          onPaired={setToken}
         />
       </div>
     )

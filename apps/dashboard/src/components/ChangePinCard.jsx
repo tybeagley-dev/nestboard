@@ -32,6 +32,13 @@ export default function ChangePinCard({ onPinChanged }) {
         <p className="family-code-hint">
           Sets a new PIN for approvals and parent mode. You don’t need the old one.
         </p>
+        {/* The reasonable assumption is that changing the PIN locks everything
+            down. It doesn't, deliberately — see the note on PUT /auth/family/pin
+            — and finding that out by accident would be the wrong moment. */}
+        <p className="family-code-hint">
+          Devices you’ve already set up keep working. To sign one out, remove it
+          under Devices.
+        </p>
 
         <div className="family-setup-field">
           <label className="family-setup-label">New PIN</label>
