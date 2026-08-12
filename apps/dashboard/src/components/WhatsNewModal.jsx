@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { Sparkles } from 'lucide-react'
-import { RELEASES } from '../content/releases'
+import { VISIBLE_RELEASES } from '../content/releases'
 import { markReleasesSeen } from '../utils/releases'
 
 export default function WhatsNewModal({ onClose }) {
@@ -24,7 +24,7 @@ export default function WhatsNewModal({ onClose }) {
         </div>
 
         <div className="release-list">
-          {RELEASES.map(rel => (
+          {VISIBLE_RELEASES.map(rel => (
             <section key={rel.version} className="release-entry">
               <div className="release-entry-head">
                 <Sparkles size={16} strokeWidth={1.8} />
