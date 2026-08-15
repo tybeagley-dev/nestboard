@@ -6548,6 +6548,23 @@ button {
 }
 .landing-footer a:hover { color: var(--text-primary); }
 
+/* Legal links in Settings. Same treatment as the landing footer, spaced for a
+   thumb rather than a cursor since this is read on a phone. */
+.settings-legal-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 0.25rem;
+}
+.settings-legal-links a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.95rem;
+  padding: 0.35rem 0;
+}
+.settings-legal-links a:hover { color: var(--text-primary); }
+
 /* Device pairing — the naming step before the PIN. Reuses .pin-modal /
    .tokens-pin-phase for the card and .btn-confirm-spend for the action, so this
    is only the two bits that have no equivalent. */

@@ -7,7 +7,9 @@ import ReadingTimerButton from './ReadingTimerButton'
 import HowItWorksModal from './HowItWorksModal'
 import DeviceSetupModal from './DeviceSetupModal'
 import WhatsNewModal from './WhatsNewModal'
+import PinModal from './PinModal'
 import { hasUnreadRelease } from '../utils/releases'
+import { isParentUnlocked, markParentUnlocked } from '../utils/parentSession'
 import { useTidyTimer } from '../hooks/useTidyTimer'
 import { useToothbrushTimer } from '../hooks/useToothbrushTimer'
 import { useReadingTimer } from '../hooks/useReadingTimer'
@@ -37,7 +39,26 @@ export default function FloatingControls({ kiosk = false }) {
   const [showHowto, setShowHowto] = useState(false)
   const [showSetup, setShowSetup] = useState(false)
   const [showNews,  setShowNews]  = useState(false)
+  const [showPin,   setShowPin]   = useState(false)
   const [unread,    setUnread]    = useState(() => hasUnreadRelease())
+
+  // The PIN is taken here rather than on /parent so the modal mounts inside the
+  // tap on the gear. react-router v7 wraps navigate() in startTransition, so a
+  // modal mounted by the route change commits in a later task — and iOS only
+  // opens the keyboard for a focus() that happens synchronously inside the user
+  // gesture. Going through the route meant the PIN pad appeared with no keyboard
+  // and had to be tapped a second time. ParentPage keeps its own gate for anyone
+  // arriving at /parent cold, where no gesture exists to work with.
+  function openParentPanel() {
+    if (isParentUnlocked()) { navigate('/parent'); return }
+    setShowPin(true)
+  }
+
+  function handleUnlocked() {
+    markParentUnlocked()
+    setShowPin(false)
+    navigate('/parent')
+  }
 
   useEffect(() => {
     if (!localStorage.getItem(HOWTO_SEEN_KEY)) {
@@ -135,7 +156,7 @@ export default function FloatingControls({ kiosk = false }) {
             session, so /parent would render a portal whose writes it can't
             authorize — better not to offer the door. */}
         {!kiosk && (
-          <button className="timer-icon-btn settings-btn" onClick={() => navigate('/parent')} title="Parent Panel" aria-label="Parent Panel">
+          <button className="timer-icon-btn settings-btn" onClick={openParentPanel} title="Parent Panel" aria-label="Parent Panel">
             <Settings size={18} strokeWidth={1.8} />
           </button>
         )}
@@ -144,6 +165,13 @@ export default function FloatingControls({ kiosk = false }) {
       {showHowto && <HowItWorksModal onClose={() => setShowHowto(false)} />}
       {showNews && <WhatsNewModal onClose={() => setShowNews(false)} />}
       {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} kiosk={kiosk} />}
+      {showPin && (
+        <PinModal
+          prompt="Parent Panel"
+          onSuccess={handleUnlocked}
+          onCancel={() => setShowPin(false)}
+        />
+      )}
     </div>
   )
 }

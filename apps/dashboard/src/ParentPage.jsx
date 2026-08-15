@@ -17,14 +17,7 @@ import ParentDevicesTab from './components/ParentDevicesTab'
 import ParentSettingsTab from './components/ParentSettingsTab'
 import { useChildren } from './hooks/useChildren'
 import { useSettings } from './FamilyContext'
-
-const SESSION_KEY = 'parent_unlocked_at'
-const TIMEOUT_MS  = 3 * 60 * 1000
-
-function isUnlocked() {
-  const ts = sessionStorage.getItem(SESSION_KEY)
-  return ts && Date.now() - Number(ts) < TIMEOUT_MS
-}
+import { isParentUnlocked, markParentUnlocked, lockParent } from './utils/parentSession'
 
 async function fetchPendingCount() {
   try {
@@ -41,7 +34,7 @@ export default function ParentPage() {
   const navigate = useNavigate()
   const { modules } = useSettings()
   const { children, reload: reloadChildren } = useChildren()
-  const [unlocked, setUnlocked] = useState(isUnlocked)
+  const [unlocked, setUnlocked] = useState(isParentUnlocked)
   const [tab, setTab] = useState('approvals')
   const [pendingCount, setPendingCount] = useState(0)
   const [navOpen, setNavOpen] = useState(false)
@@ -60,14 +53,14 @@ export default function ParentPage() {
   }, [unlocked])
 
   function handleUnlock() {
-    sessionStorage.setItem(SESSION_KEY, String(Date.now()))
+    markParentUnlocked()
     setUnlocked(true)
   }
 
   // Re-lock after a PIN change so the new PIN must be entered to continue. The
   // active tab is preserved (ParentPage stays mounted), so they resume here.
   function lock() {
-    sessionStorage.removeItem(SESSION_KEY)
+    lockParent()
     setUnlocked(false)
   }
 

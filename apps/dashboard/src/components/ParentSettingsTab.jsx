@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { Link } from 'react-router-dom'
 import { apiPut } from '../utils/api'
 import WeatherLocationPicker from './WeatherLocationPicker'
 import StepFeatures from '../onboarding/StepFeatures'
@@ -68,6 +69,20 @@ export default function ParentSettingsTab() {
             current={family.weather ?? null}
             onSaved={refreshFamily}
           />
+        </div>
+      </div>
+
+      <div className="family-code-card">
+        <div className="family-code-section">
+          <span className="family-code-label">Legal</span>
+          <p className="chore-form-hint">
+            What nestboard stores about your family, and the terms you accepted
+            when you signed up.
+          </p>
+          <div className="settings-legal-links">
+            <Link to="/privacy">Privacy Policy</Link>
+            <Link to="/terms">Terms of Service</Link>
+          </div>
         </div>
       </div>
     </div>

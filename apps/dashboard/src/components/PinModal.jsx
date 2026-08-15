@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { apiPostResult, setParentToken } from '../utils/api'
 
 function isTouchDevice() {
@@ -30,12 +30,17 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
     return () => clearInterval(id)
   }, [lockedFor > 0])
 
-  useEffect(() => {
-    if (touch) {
-      // Small delay so the page is fully rendered before focusing
-      const t = setTimeout(() => inputRef.current?.focus(), 100)
-      return () => clearTimeout(t)
-    }
+  // iOS opens the keyboard only for a focus() that runs synchronously inside the
+  // user gesture that mounted this modal. The old setTimeout landed in a later
+  // task, so focus succeeded but the keyboard stayed shut and you had to tap the
+  // dots to get it. useLayoutEffect runs inside React's synchronous flush of the
+  // discrete tap that navigated here, which is still within that gesture.
+  //
+  // Arriving without a gesture — a direct URL, a PWA cold start — can't work:
+  // no browser opens a keyboard unprompted. The tap-to-focus handlers below stay
+  // as the fallback for that case.
+  useLayoutEffect(() => {
+    if (touch) inputRef.current?.focus()
   }, [touch])
 
   useEffect(() => {
@@ -106,9 +111,19 @@ export default function PinModal({ onSuccess, onCancel, prompt = 'Adult PIN requ
               pattern="[0-9]*"
               value={pin}
               onChange={e => {
+                if (busy || lockedFor > 0) return
                 const digits = e.target.value.replace(/\D/g, '').slice(0, PIN_LENGTH)
-                const added = digits.slice(pin.length)
-                for (const d of added) handleDigit(d)
+                // Deleting has to be written back explicitly. The input is
+                // controlled by `pin`, and the old handler only ever appended,
+                // so a backspace produced a shorter value, added nothing, and
+                // then React restored the digit from `pin` on re-render — the
+                // keypress looked ignored.
+                if (digits.length < pin.length) {
+                  setPin(digits)
+                  setError(false)
+                  return
+                }
+                for (const d of digits.slice(pin.length)) handleDigit(d)
               }}
               className="pin-hidden-input"
               autoComplete="off"
