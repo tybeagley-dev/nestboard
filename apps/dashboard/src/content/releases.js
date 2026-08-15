@@ -22,6 +22,17 @@
 // never rendered, it is the anchor /release-notes uses to find the next batch.
 export const RELEASES = [
   {
+    version: '2026.08.14',
+    date: 'August 14, 2026',
+    commit: '1e8e313',
+    title: 'A friendlier PIN pad',
+    items: [
+      'The PIN pad brings up the number keyboard on its own now, instead of waiting for you to tap it.',
+      'The Privacy Policy and Terms are linked in Settings, so you can read them any time.',
+      'Fixed: backspace did nothing on the PIN pad, so a wrong digit could not be corrected.',
+    ],
+  },
+  {
     version: '2026.08.11',
     date: 'August 11, 2026',
     commit: '7d1995f',
