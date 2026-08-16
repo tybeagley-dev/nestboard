@@ -140,7 +140,7 @@ export default function ParentPage() {
           {tab === 'children'  && <ParentChildrenTab children={children} onReload={reloadChildren} />}
           {tab === 'calendars' && <ParentCalendarTab children={children} />}
           {tab === 'family'    && <ParentFamilyTab onPinChanged={lock} />}
-          {tab === 'devices'   && <ParentDevicesTab children={children} />}
+          {tab === 'devices'   && <ParentDevicesTab />}
           {tab === 'settings'  && <ParentSettingsTab />}
         </div>
       </main>

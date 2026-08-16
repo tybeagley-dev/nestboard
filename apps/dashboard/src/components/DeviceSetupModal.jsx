@@ -1,23 +1,24 @@
 import { useEffect } from 'react'
-import { Smartphone, Bell, CheckCircle2, Share, Plus, Lock } from 'lucide-react'
+import { Smartphone, Bell, CheckCircle2, Share, Plus } from 'lucide-react'
 import { usePushSubscription } from '../hooks/usePushSubscription'
 import { usePwaInstall } from '../hooks/usePwaInstall'
-import { clearDeviceToken } from '../utils/deviceToken'
-import { apiDelete } from '../utils/api'
 
 // Reusable per-device setup guide: add-to-home-screen + enable notifications.
-// `childId`/`label` make the push step context-aware — parent device when null,
-// a specific child's device when opened from that child's view. When `familySlug`
-// is set (child view), a third "device access" beat reflects the PIN gate and
-// lets the parent re-lock the device.
-// `kiosk` drops the notifications step. The guide was offering PARENT push on the
-// fridge display: notifyParent sends url '/parent', so tapping one there would
-// navigate the family board to a portal it cannot authorize — a Clerk sign-in
-// screen where the week's meals used to be. Parent notifications belong on a
-// parent's phone, which is where approvals happen anyway.
-export default function DeviceSetupModal({ onClose, childId = null, label, familySlug = null, kiosk = false }) {
+// `label` names the device's owner in the copy.
+//
+// `showPush` false drops the notifications step, and both shared surfaces pass
+// it. The only push audience is parents (migration 032), and notifyParent sends
+// url '/parent' — so a notification tapped on the fridge display or a child's
+// tablet would navigate that board to a portal it cannot authorize, landing on a
+// Clerk sign-in screen where the week's meals used to be. Parent notifications
+// belong on a parent's phone, which is where approvals happen anyway.
+//
+// There is no "lock this device" step. It rendered only on the child view, so a
+// child could unpair their own tablet and strand themselves behind the PIN pad.
+// Parents revoke devices from the Devices tab instead — see PairedDevicesCard.
+export default function DeviceSetupModal({ onClose, label, showPush = true }) {
   const { canInstall, isInstalled, promptInstall, platform } = usePwaInstall()
-  const push = usePushSubscription(childId)
+  const push = usePushSubscription()
 
   useEffect(() => {
     function onKey(e) { if (e.key === 'Escape') onClose() }
@@ -27,16 +28,6 @@ export default function DeviceSetupModal({ onClose, childId = null, label, famil
 
   // iOS only exposes the Push API inside an installed PWA, so install must come first.
   const pushBlocked = platform === 'ios' && !isInstalled
-
-  // Hand the device's own token back before forgetting it locally, so the row in
-  // the family's Devices list goes away with it. Clearing regardless of the
-  // response: if the call fails the device still stops holding the credential,
-  // which is what the button promises. Worst case a dead row needs revoking.
-  async function unpair() {
-    await apiDelete('/auth/device/self')
-    clearDeviceToken(familySlug)
-    window.location.reload()
-  }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -68,7 +59,7 @@ export default function DeviceSetupModal({ onClose, childId = null, label, famil
             </div>
           </div>
 
-          {!kiosk && (
+          {showPush && (
             <div className="devsetup-step">
               <div className={`devsetup-step-icon ${push.subscribed ? 'done' : ''}`}>
                 {push.subscribed
@@ -77,32 +68,11 @@ export default function DeviceSetupModal({ onClose, childId = null, label, famil
               </div>
               <div className="devsetup-step-body">
                 <h3 className="howto-section-title">Turn on notifications</h3>
-                <PushStep push={push} childId={childId} label={label} blocked={pushBlocked} />
+                <PushStep push={push} blocked={pushBlocked} />
               </div>
             </div>
           )}
 
-          {familySlug && (
-            <div className="devsetup-step">
-              <div className="devsetup-step-icon done">
-                <CheckCircle2 size={20} strokeWidth={2} />
-              </div>
-              <div className="devsetup-step-body">
-                <h3 className="howto-section-title">Device access</h3>
-                <p className="onboarding-guide-text">
-                  This device is paired — it opens {label ? `${label}'s page` : 'this page'} without the family PIN.
-                  A parent can also remove it from the Devices tab.
-                </p>
-                <button
-                  className="devsetup-btn"
-                  onClick={unpair}
-                >
-                  <Lock size={14} strokeWidth={2} style={{ verticalAlign: '-2px', marginRight: 4 }} />
-                  Lock this device
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
@@ -138,12 +108,10 @@ function InstallStep({ isInstalled, canInstall, platform, promptInstall }) {
   )
 }
 
-function PushStep({ push, childId, label, blocked }) {
+function PushStep({ push, blocked }) {
   const { supported, permission, subscribed, loading, subscribe } = push
 
-  const desc = childId
-    ? `Get reminders and updates on ${label || 'this'}'s device.`
-    : 'Get a ping when a child submits a chore for approval or asks for screen time.'
+  const desc = 'Get a ping when a child submits a chore for approval or asks for screen time.'
 
   if (blocked) {
     return (

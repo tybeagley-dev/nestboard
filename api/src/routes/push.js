@@ -6,9 +6,15 @@ import { safeFetchUrl } from '../utils/safeUrl.js'
 const router = Router()
 router.use(requireFamily)
 
-// POST /push/subscribe  { endpoint, keys: { p256dh, auth }, childId? }
+// POST /push/subscribe  { endpoint, keys: { p256dh, auth } }
+//
+// Parent subscriptions only. A childId used to be accepted here and stored on
+// the row, making the endpoint a direct channel to a named child — see the note
+// in utils/push.js and migration 032. Any childId in the body is now ignored
+// rather than rejected, so an installed PWA running stale JS degrades to a
+// parent subscription instead of failing to subscribe at all.
 router.post('/subscribe', async (req, res) => {
-  const { endpoint, keys, childId } = req.body
+  const { endpoint, keys } = req.body
   if (!endpoint || !keys?.p256dh || !keys?.auth) {
     return res.status(400).json({ error: 'Missing subscription fields' })
   }
@@ -20,11 +26,11 @@ router.post('/subscribe', async (req, res) => {
   }
 
   await db.query(
-    `INSERT INTO push_subscriptions (family_id, child_id, endpoint, p256dh, auth)
-     VALUES ($1, $2, $3, $4, $5)
+    `INSERT INTO push_subscriptions (family_id, endpoint, p256dh, auth)
+     VALUES ($1, $2, $3, $4)
      ON CONFLICT (family_id, endpoint) DO UPDATE
-       SET p256dh = $4, auth = $5, child_id = $2`,
-    [req.familyId, childId ?? null, endpoint, keys.p256dh, keys.auth]
+       SET p256dh = $3, auth = $4`,
+    [req.familyId, endpoint, keys.p256dh, keys.auth]
   )
   res.json({ success: true })
 })

@@ -176,7 +176,7 @@ export default function FloatingControls({ kiosk = false }) {
 
       {showHowto && <HowItWorksModal onClose={() => setShowHowto(false)} />}
       {showNews && <WhatsNewModal onClose={() => setShowNews(false)} />}
-      {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} kiosk={kiosk} />}
+      {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} showPush={!kiosk} />}
       {showPin && (
         <PinModal
           prompt="Parent Panel"

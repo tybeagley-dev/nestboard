@@ -4,7 +4,7 @@ import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 import { broadcast } from './events.js'
 import { resolveChildId } from '../db/resolveChild.js'
-import { notifyParent, notifyChild } from '../utils/push.js'
+import { notifyParent } from '../utils/push.js'
 import { getScreenTimeConfig, calcFreeAvailable, abstinenceConfig } from '../utils/screenTime.js'
 import { familyToday, localDate, shiftDate, tzFromWeather } from '../utils/familyTime.js'
 
@@ -238,7 +238,6 @@ router.post('/purchase-requests/:id/approve', requireParent, async (req, res) =>
     const childName = childRows[0]?.name
     broadcast('tokens', { child: childName }, req.familyId)
     broadcast('screen_time', { child: childName }, req.familyId)
-    notifyChild(req.familyId, request.child_id, { title: 'Screen time approved!', body: `${request.minutes_amount} minutes added to your balance` })
     res.json({ success: true })
   } catch (err) {
     await client.query('ROLLBACK')

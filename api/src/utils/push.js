@@ -20,34 +20,32 @@ function ensureVapid() {
   }
 }
 
-// Send to all parent subscriptions for a family (child_id IS NULL)
+// Send to every subscription for a family. Parents are the only audience: a push
+// endpoint on a child's own device is a channel for contacting that child
+// directly, which is personal information under COPPA and outside the "support
+// for internal operations" exemption that covers our device tokens. The two
+// notifications children used to get ("Chore approved!", "Screen time
+// approved!") were confirmations of a parent action that SSE already pushes to
+// the open board, so the feature bought very little and carried the obligation.
+// See migration 032. Do not reintroduce a child-scoped audience without
+// verifiable parental consent for it.
 //
 // Parent notifications are always "something needs your attention", and the
 // parent portal opens on the approvals tab by default — so tapping one lands
 // where the work is instead of on the dashboard. The service worker reads
 // data.url; a caller can override it for a notification that isn't an approval.
 export async function notifyParent(familyId, payload) {
-  await notifySubscriptions(familyId, null, { url: '/parent', ...payload })
+  await notifySubscriptions(familyId, { url: '/parent', ...payload })
 }
 
-// Send to all subscriptions for a specific child
-export async function notifyChild(familyId, childId, payload) {
-  await notifySubscriptions(familyId, childId, payload)
-}
-
-async function notifySubscriptions(familyId, childId, payload) {
+async function notifySubscriptions(familyId, payload) {
   ensureVapid()
   if (!vapidConfigured) return
 
-  const { rows } = childId
-    ? await db.query(
-        `SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE family_id = $1 AND child_id = $2`,
-        [familyId, childId]
-      )
-    : await db.query(
-        `SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE family_id = $1 AND child_id IS NULL`,
-        [familyId]
-      )
+  const { rows } = await db.query(
+    `SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE family_id = $1`,
+    [familyId]
+  )
 
   await Promise.all(rows.map(async sub => {
     try {

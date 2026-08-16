@@ -9,9 +9,9 @@ import { useFamily } from '../FamilyContext'
 // display, the per-device install walkthrough, and push notifications. These
 // were split across the Family and Notifications tabs, so setting up a tablet
 // meant visiting both. Per-device tokens land here too.
-export default function ParentDevicesTab({ children }) {
+export default function ParentDevicesTab() {
   const family = useFamily()
-  const parent = usePushSubscription(null)
+  const parent = usePushSubscription()
   const [showSetup, setShowSetup] = useState(false)
 
   return (
@@ -32,29 +32,12 @@ export default function ParentDevicesTab({ children }) {
         <p className="notif-section-desc">
           Get notified when a child submits a chore for approval or requests screen time.
         </p>
-        <NotifToggle hook={parent} label="This device (parent)" />
+        <NotifToggle hook={parent} label="This device" />
       </div>
-
-      {children.length > 0 && (
-        <div className="notif-section">
-          <h3 className="notif-section-title">Child notifications</h3>
-          <p className="notif-section-desc">
-            Open this page on each child's device and enable notifications for them individually.
-          </p>
-          {children.map(child => (
-            <ChildNotifRow key={child.id} child={child} />
-          ))}
-        </div>
-      )}
 
       {showSetup && <DeviceSetupModal onClose={() => setShowSetup(false)} />}
     </div>
   )
-}
-
-function ChildNotifRow({ child }) {
-  const hook = usePushSubscription(child.id)
-  return <NotifToggle hook={hook} label={child.name} />
 }
 
 function NotifToggle({ hook, label }) {

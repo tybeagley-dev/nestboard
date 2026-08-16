@@ -113,24 +113,14 @@ router.post('/device/pair', async (req, res) => {
   }
 })
 
-// DELETE /auth/device/self → a device unpairing itself, for "Lock this device"
-// in the setup guide. Authorized by the token it is giving up, so it needs no
-// PIN and no parent session: handing back your own credential can't be used
-// against anyone. Without this the button could only forget the token locally,
-// leaving a live row in the family's Devices list for a device that no longer
-// holds it — a list that lies is worse than no list.
-router.delete('/device/self', async (req, res) => {
-  const token = req.headers['x-device-token']
-  if (!token) return res.status(401).json({ error: 'Unauthorized' })
-  try {
-    const device = await verifyDeviceToken(token)
-    if (!device) return res.status(401).json({ error: 'Unauthorized', code: 'DEVICE_REVOKED' })
-    await revokeDevice(device.family_id, device.id)
-    res.json({ success: true })
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' })
-  }
-})
+// There is deliberately no self-unpair route. It existed for a "Lock this
+// device" button in the setup guide, which only ever rendered on the child view
+// — so the one surface that could unpair a device was the one a child holds, and
+// tapping it stranded them behind the PIN pad until a parent walked over. The
+// capability is not lost: DELETE /auth/family/devices/:id below revokes any
+// paired device from the parent portal, behind requireParent, which is where the
+// decision belongs. Self-unpair was safe (handing back your own credential can't
+// be used against anyone); it was the placement that was wrong.
 
 // POST /auth/login  { slug, pin } → { familyId, name }
 router.post('/login', async (req, res) => {

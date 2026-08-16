@@ -339,9 +339,8 @@ function ChildViewInner() {
       {showSetup && (
         <DeviceSetupModal
           onClose={() => setShowSetup(false)}
-          childId={child.id}
           label={child.name}
-          familySlug={slug}
+          showPush={false}
         />
       )}
       {showChoreModal && (

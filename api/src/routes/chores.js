@@ -4,7 +4,7 @@ import { requireFamily } from '../middleware/requireFamily.js'
 import { requireParent } from '../middleware/requireParent.js'
 import { broadcast } from './events.js'
 import { resolveChildId } from '../db/resolveChild.js'
-import { notifyParent, notifyChild } from '../utils/push.js'
+import { notifyParent } from '../utils/push.js'
 
 const router = Router()
 
@@ -252,7 +252,6 @@ router.post('/:id/approve', requireParent, async (req, res) => {
   }
   broadcast('chore_state', { child }, req.familyId)
   broadcast('tokens', { child }, req.familyId)
-  notifyChild(req.familyId, childId, { title: 'Chore approved!', body: `You earned ${tokensEarned} token${tokensEarned !== 1 ? 's' : ''}` })
   res.json({ success: true, tokensEarned })
 })
 

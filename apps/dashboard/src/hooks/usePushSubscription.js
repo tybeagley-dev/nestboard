@@ -10,7 +10,10 @@ function urlBase64ToUint8Array(base64String) {
   return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
 }
 
-export function usePushSubscription(childId = null) {
+// Parent subscriptions only — see api/src/utils/push.js and migration 032 for why
+// there is no longer a child-scoped audience. `subscribed` reflects the browser's
+// single push subscription, so one device holds one subscription, full stop.
+export function usePushSubscription() {
   const [supported,  setSupported]  = useState(false)
   const [permission, setPermission] = useState('default')
   const [subscribed, setSubscribed] = useState(false)
@@ -39,7 +42,6 @@ export function usePushSubscription(childId = null) {
       await apiPost('/push/subscribe', {
         endpoint: json.endpoint,
         keys: json.keys,
-        childId,
       })
       setPermission(Notification.permission)
       setSubscribed(true)
