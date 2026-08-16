@@ -22,6 +22,19 @@
 // never rendered, it is the anchor /release-notes uses to find the next batch.
 export const RELEASES = [
   {
+    version: '2026.08.15',
+    date: 'August 15, 2026',
+    commit: '58dcc2e',
+    title: 'Setup you can finish later',
+    items: [
+      'Setup can wait — leave it any time and finish the rest from the parent panel.',
+      "Skip a step you're not ready for and it's kept as a to-do, not forgotten.",
+      'The parent panel lists whatever setup is left and takes you straight to it.',
+      'Come back to setup and it picks up where you left off.',
+      'New: start your chore list from a sample set of 12, then rename or delete to suit.',
+    ],
+  },
+  {
     version: '2026.08.14',
     date: 'August 14, 2026',
     commit: '1e8e313',
