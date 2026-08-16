@@ -9,6 +9,7 @@ import { getTodayKey } from '../utils/dateUtils'
 import { useScheduleConfig } from '../hooks/useRoutines'
 import { useLabels } from '../FamilyContext'
 import TokenBadge from './TokenBadge'
+import { STARTER_CHORES, PLAYFUL_EXAMPLES } from '../data/starterChores'
 
 const WEEKDAYS = [
   { n: 0, label: 'S' }, { n: 1, label: 'M' }, { n: 2, label: 'T' },
@@ -539,6 +540,7 @@ export default function ParentChoresTab({ children = [] }) {
   const [saving,        setSaving]        = useState(false)
   const [search,        setSearch]        = useState('')
   const [filters,       setFilters]       = useState(EMPTY_FILTERS)
+  const [seeding,       setSeeding]       = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -562,6 +564,20 @@ export default function ParentChoresTab({ children = [] }) {
     await adminDeleteChore(id)
     await load()
     setForm(null)
+  }
+
+  // Sequential rather than Promise.all: adminAddChore falls back to a
+  // Date.now() id, so a parallel burst would collide on the primary key. Passing
+  // an explicit id would fix that too, but sequential also keeps list order
+  // deterministic and leaves a partial set intact if one call fails.
+  async function loadStarterSet() {
+    setSeeding(true)
+    const stamp = Date.now().toString(36)
+    for (const [i, c] of STARTER_CHORES.entries()) {
+      await adminAddChore({ ...c, id: `starter_${stamp}_${i}`, active: true, required: false, days: [], frequency: 'daily', instructions: [] })
+    }
+    await load()
+    setSeeding(false)
   }
 
   // Retire / restore. Goes through the same edit endpoint as the form, so the
@@ -615,6 +631,20 @@ export default function ParentChoresTab({ children = [] }) {
           give a longer or nastier one more — one big chore can fill a whole day on its own.
         </p>
         <p className="onboarding-guide-text">
+          <strong>Nothing says a chore has to sound like a chore.</strong> One trick that works well:
+          make it a job title instead of a task. We've found that, most of the time, our kids fight
+          us way less when the title is fun and feels like they have an important role to play rather
+          than just a task to do. Some real ones from our list:
+        </p>
+        <div className="chore-example-list">
+          {PLAYFUL_EXAMPLES.map(ex => (
+            <span key={ex.label} className="chore-example-chip">
+              <span className="chore-example-icon">{ex.icon}</span>
+              {ex.label}
+            </span>
+          ))}
+        </div>
+        <p className="onboarding-guide-text">
           <strong>One spin is a day's work.</strong> A spin fills up to your family's daily target
           (set it under Settings → Family → Features), so a 2-{labels.tokenNameSingular} chore
           arrives on its own while a 1-{labels.tokenNameSingular} chore brings a second along. Both
@@ -645,7 +675,19 @@ export default function ParentChoresTab({ children = [] }) {
       )}
 
       {!loading && chores.length === 0 && (
-        <p className="parent-soon-msg">No chores yet. Add one above.</p>
+        <div className="chore-starter-offer">
+          <p className="parent-soon-msg">No chores yet.</p>
+          <div className="chore-starter-divider"><span>or</span></div>
+          <p className="chore-starter-title">Start from a sample set</p>
+          <p className="chore-starter-help">
+            {STARTER_CHORES.length} common chores, added straight to your list. Rename them, change
+            what they're worth, or delete the ones that don't apply — it's a starting point, not a
+            commitment.
+          </p>
+          <button className="parent-apply-btn" onClick={loadStarterSet} disabled={seeding}>
+            {seeding ? 'Adding…' : `Load ${STARTER_CHORES.length} sample chores`}
+          </button>
+        </div>
       )}
 
       {!loading && chores.length > 0 && visible.length === 0 && (

@@ -10,6 +10,7 @@ import WhatsNewModal from './WhatsNewModal'
 import PinModal from './PinModal'
 import { hasUnreadRelease } from '../utils/releases'
 import { isParentUnlocked, markParentUnlocked } from '../utils/parentSession'
+import useOutstandingSetup from '../hooks/useOutstandingSetup'
 import { useTidyTimer } from '../hooks/useTidyTimer'
 import { useToothbrushTimer } from '../hooks/useToothbrushTimer'
 import { useReadingTimer } from '../hooks/useReadingTimer'
@@ -41,6 +42,11 @@ export default function FloatingControls({ kiosk = false }) {
   const [showNews,  setShowNews]  = useState(false)
   const [showPin,   setShowPin]   = useState(false)
   const [unread,    setUnread]    = useState(() => hasUnreadRelease())
+  // Someone who bails out of the wizard lands here, not in the parent panel, so
+  // without this the to-do list they were promised is behind a gear and a PIN
+  // with nothing pointing at it. Same hook the card uses, so the dot clears when
+  // the work gets done — not only when a parent says "Not needed".
+  const { items: setupTodo } = useOutstandingSetup(!kiosk)
 
   // The PIN is taken here rather than on /parent so the modal mounts inside the
   // tap on the gear. react-router v7 wraps navigate() in startTransition, so a
@@ -156,8 +162,14 @@ export default function FloatingControls({ kiosk = false }) {
             session, so /parent would render a portal whose writes it can't
             authorize — better not to offer the door. */}
         {!kiosk && (
-          <button className="timer-icon-btn settings-btn" onClick={openParentPanel} title="Parent Panel" aria-label="Parent Panel">
+          <button
+            className="timer-icon-btn settings-btn"
+            onClick={openParentPanel}
+            title={setupTodo.length > 0 ? 'Parent Panel — setup unfinished' : 'Parent Panel'}
+            aria-label={setupTodo.length > 0 ? 'Parent Panel, setup unfinished' : 'Parent Panel'}
+          >
             <Settings size={18} strokeWidth={1.8} />
+            {setupTodo.length > 0 && <span className="unread-dot" aria-hidden />}
           </button>
         )}
       </div>

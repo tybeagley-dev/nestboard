@@ -15,6 +15,7 @@ import ParentCalendarTab from './components/ParentCalendarTab'
 import ParentFamilyTab from './components/ParentFamilyTab'
 import ParentDevicesTab from './components/ParentDevicesTab'
 import ParentSettingsTab from './components/ParentSettingsTab'
+import FinishSetupCard from './components/FinishSetupCard'
 import { useChildren } from './hooks/useChildren'
 import { useSettings } from './FamilyContext'
 import { isParentUnlocked, markParentUnlocked, lockParent } from './utils/parentSession'
@@ -125,6 +126,9 @@ export default function ParentPage() {
           {TABS.find(t => t.id === tab)?.label}
         </h2>
         <div className="parent-content-body">
+          {/* Landing tab only — a setup reminder that follows you between tabs
+              would be nagging rather than helpful. */}
+          {tab === 'approvals' && <FinishSetupCard onGoToTab={setTab} />}
           {tab === 'approvals' && <ParentApprovalsTab children={children} />}
           {tab === 'tokens'     && <ParentTokensTab children={children} />}
           {tab === 'chores'    && <ParentChoresTab children={children} />}

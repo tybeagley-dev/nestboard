@@ -14,6 +14,9 @@ const DEFAULT_SETTINGS = {
   modules:    { screenTime: true, tokens: true, zones: true, meals: true, grocery: true },
   screenTime: { dailyAllotmentMinutes: 0, tokensPerBlock: 5, blockMinutes: 10, abstinenceEnabled: true, abstinenceTokens: 15 },
   chores:     { dailyTokenTarget: 2 },
+  // `completed` tracks the wizard specifically; families.onboarded only means the
+  // dashboard is reachable, which "Finish setup later" also grants.
+  onboarding: { completed: false, stepKey: '', outstanding: [] },
 }
 
 const FamilyContext = createContext(null)
@@ -70,6 +73,7 @@ export function resolveSettings(raw) {
     modules:    { ...DEFAULT_SETTINGS.modules,    ...(s.modules ?? {}) },
     screenTime: { ...DEFAULT_SETTINGS.screenTime, ...(s.screenTime ?? {}) },
     chores:     { ...DEFAULT_SETTINGS.chores,     ...(s.chores ?? {}) },
+    onboarding: { ...DEFAULT_SETTINGS.onboarding, ...(s.onboarding ?? {}) },
   }
 }
 

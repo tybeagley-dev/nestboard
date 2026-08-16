@@ -20,7 +20,7 @@ const STEPS = [
   { key: 'features', title: 'Which features?',   optional: true,  blurb: 'Pick the parts of nestboard your family wants. Anything you turn off disappears from the dashboard — and we’ll skip its setup here.' },
   { key: 'routines', title: 'Daily routines',    optional: true,  blurb: 'The things that happen every day — brush hair, breakfast, pack lunch. Add each one once and choose which children it applies to.' },
   { key: 'zones',    title: 'Zones',             optional: true,  module: 'zones', blurb: 'Two levels: first add your zones — the areas of your home, like Kitchen or Bathroom — then add a few micro-zones inside each (small weekly jobs like “wipe the counter”). Each week every child is auto-assigned one micro-zone to notice and handle on their own. Start by adding a zone, then open it to add its micro-zones.' },
-  { key: 'chores',   title: 'Chores & tokens',   optional: true,  blurb: 'Set up the chore spinner, the token economy, and which days chores can be spun. Break a big chore into sub-tasks so nothing gets missed, and bump tougher ones to 2 tokens (default is 1).' },
+  { key: 'chores',   title: 'Chores & tokens',   optional: true,  blurb: 'Set up the chore spinner, the token economy, and which days chores can be spun. Break a big chore into sub-tasks so nothing gets missed, and give the tougher ones a higher value — everything starts at 1, and how high you go is up to you.' },
   { key: 'meals',     title: 'Meal plan',         optional: true, module: 'meals', blurb: 'Show a weekly meal plan on the dashboard.' },
   { key: 'calendars', title: 'Connect calendars', optional: true,  blurb: 'Pull in your calendars so family events show on the dashboard.' },
   { key: 'weather',   title: 'Local weather',     optional: true,  blurb: 'Show your city’s forecast on the dashboard.' },
@@ -32,13 +32,22 @@ const STEPS = [
 export default function OnboardingWizard({ onComplete }) {
   const family = useFamily()
   const { children, reload: reloadChildren } = useChildren()
-  const [i, setI] = useState(0)
   const [finishing, setFinishing] = useState(false)
 
   const initial = resolveSettings(family?.settings)
   const [modules, setModules]       = useState(initial.modules)
   const [screenTime, setScreenTime] = useState(initial.screenTime)
   const [choreCfg,   setChoreCfg]   = useState(initial.chores)
+
+  // Resume where they left off. The stored value is a step key rather than an
+  // index because the visible-step list depends on the feature flags.
+  const [i, setI] = useState(() => {
+    const visible = STEPS.filter(s => !s.module || initial.modules[s.module])
+    return Math.max(0, visible.findIndex(s => s.key === initial.onboarding.stepKey))
+  })
+  // Steps the family passed on. Survives a reload so the dashboard reminder and
+  // a resumed wizard agree about what's left.
+  const [deferred, setDeferred] = useState(initial.onboarding.outstanding ?? [])
 
   // Persist feature choices as they change so the dashboard reflects them immediately.
   function saveSettings(partial) {
@@ -58,14 +67,44 @@ export default function OnboardingWizard({ onComplete }) {
   // Required steps must be satisfied before advancing.
   const canAdvance = step.key !== 'children' || children.length > 0
 
-  async function finish() {
+  // `completed` records whether they walked the whole wizard; complete-onboarding
+  // only unlocks the dashboard. Keeping them apart is what lets the admin view
+  // still see who bailed and where.
+  async function finish(outstanding = deferred, completed = true) {
     setFinishing(true)
+    await apiPut('/auth/family/settings', { onboarding: { completed, outstanding, stepKey: '' } })
     await apiPost('/auth/family/complete-onboarding', {})
     onComplete()
   }
 
-  function next() { isLast ? finish() : setI(idx + 1) }
-  function back() { setI(Math.max(0, idx - 1)) }
+  // Leave now, keep the rest as a to-do. Everything from here on is outstanding —
+  // including the current step, since we can't tell a half-finished step from an
+  // untouched one. A false positive just means the reminder lists one extra.
+  function finishLater() {
+    const remaining = visibleSteps.slice(idx).map(s => s.key).filter(k => k !== 'done')
+    finish([...new Set([...deferred, ...remaining])], false)
+  }
+
+  function advance(defer) {
+    const nextDeferred = defer
+      ? [...new Set([...deferred, step.key])]
+      : deferred.filter(k => k !== step.key)
+    const nextIdx = idx + 1
+    setDeferred(nextDeferred)
+    setI(nextIdx)
+    apiPut('/auth/family/settings', {
+      onboarding: { outstanding: nextDeferred, stepKey: visibleSteps[nextIdx]?.key ?? '' },
+    })
+  }
+
+  function next() { isLast ? finish() : advance(false) }
+  function skip() { advance(true) }
+
+  function back() {
+    const prevIdx = Math.max(0, idx - 1)
+    setI(prevIdx)
+    apiPut('/auth/family/settings', { onboarding: { stepKey: visibleSteps[prevIdx].key } })
+  }
 
   function renderBody() {
     switch (step.key) {
@@ -103,16 +142,33 @@ export default function OnboardingWizard({ onComplete }) {
         </div>
 
         <div className="onboarding-nav">
-          <button className="onboarding-back" onClick={back} disabled={i === 0 || finishing}>Back</button>
+          <button className="onboarding-back" onClick={back} disabled={idx === 0 || finishing}>Back</button>
           <div className="onboarding-nav-right">
             {step.optional && !isLast && (
-              <button className="onboarding-skip" onClick={next} disabled={finishing}>Skip</button>
+              <button className="onboarding-skip" onClick={skip} disabled={finishing}>
+                Skip for now
+              </button>
             )}
             <button className="onboarding-next" onClick={next} disabled={finishing || !canAdvance}>
               {isLast ? (finishing ? 'Finishing…' : 'Finish') : 'Next'}
             </button>
           </div>
         </div>
+
+        {/* Not offered on the children step: it's the one hard gate, and bailing
+            with no children lands them on an empty dashboard. Kept to a single
+            line — the shell is overflow:hidden, so anything taller than the
+            viewport is unreachable rather than scrollable. */}
+        {!isLast && step.key !== 'children' && (
+          <button
+            className="onboarding-bail-btn"
+            onClick={finishLater}
+            disabled={finishing}
+            title="Takes you to your dashboard now. Anything you haven't set up waits for you in the Parent Panel — nothing you've already entered is lost."
+          >
+            {finishing ? 'Saving…' : 'Save and finish setup later'}
+          </button>
+        )}
       </div>
     </div>
   )

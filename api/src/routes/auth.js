@@ -416,6 +416,21 @@ function sanitizeSettings(body) {
       out.chores.dailyTokenTarget = Math.floor(ch.dailyTokenTarget)
     }
   }
+  // Wizard progress. `completed` is deliberately separate from families.onboarded:
+  // onboarded means "reached the dashboard" (bailing early sets it), completed means
+  // "walked the whole wizard". Collapsing them loses the drop-off signal.
+  const ob = body?.onboarding
+  if (ob && typeof ob === 'object') {
+    out.onboarding = {}
+    if (typeof ob.completed === 'boolean') out.onboarding.completed = ob.completed
+    // Resume position is a step *key*, not an index: which steps are visible
+    // depends on the feature flags, so an index goes stale the moment a module
+    // is toggled.
+    if (typeof ob.stepKey === 'string') out.onboarding.stepKey = ob.stepKey.slice(0, 32)
+    if (Array.isArray(ob.outstanding)) {
+      out.onboarding.outstanding = ob.outstanding.filter(s => typeof s === 'string').slice(0, 32)
+    }
+  }
   return out
 }
 
@@ -436,6 +451,7 @@ router.put('/family/settings', async (req, res) => {
       modules:    { ...(existing.modules ?? {}),    ...(clean.modules ?? {}) },
       screenTime: { ...(existing.screenTime ?? {}), ...(clean.screenTime ?? {}) },
       chores:     { ...(existing.chores ?? {}),     ...(clean.chores ?? {}) },
+      onboarding: { ...(existing.onboarding ?? {}), ...(clean.onboarding ?? {}) },
     }
     await db.query('UPDATE families SET settings = $1 WHERE id = $2', [JSON.stringify(merged), familyId])
     notifyFamilyChanged(familyId)
@@ -500,6 +516,41 @@ router.delete('/family/devices/:id', requireParent, async (req, res) => {
 router.delete('/family/devices', requireParent, async (req, res) => {
   try {
     res.json({ revoked: await revokeAllDevices(req.familyId) })
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' })
+  }
+})
+
+// GET /auth/family/setup-status → which onboarding steps are already satisfied by
+// real data. The "finish setting up" card uses this to drop entries the family has
+// since dealt with in the parent panel: a reminder that lists work you've already
+// done is one people learn to ignore.
+//
+// `features` is absent on purpose — picking feature flags leaves no trace that
+// distinguishes "chose the defaults" from "never looked", so it can only be
+// cleared by hand.
+router.get('/family/setup-status', async (req, res) => {
+  const { userId } = getAuth(req)
+  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
+  try {
+    const { rows } = await db.query('SELECT family_id FROM family_memberships WHERE user_id = $1', [userId])
+    if (!rows.length) return res.status(404).json({ error: 'No family' })
+    const id = rows[0].family_id
+    const { rows: [s] } = await db.query(
+      `SELECT
+         (SELECT count(*) > 0 FROM routine_defs WHERE family_id = $1) AS routines,
+         -- A zone with no micro-zones can't be assigned, so zones alone isn't setup.
+         (SELECT count(*) > 0 FROM micro_zones  WHERE family_id = $1) AS zones,
+         (SELECT count(*) > 0 FROM chores       WHERE family_id = $1) AS chores,
+         (SELECT count(*) > 0 FROM calendars    WHERE family_id = $1) AS calendars,
+         (SELECT count(*) > 0 FROM meals        WHERE family_id = $1
+            AND (main <> '' OR lunch <> '' OR note <> '')) AS meals,
+         (SELECT weather  IS NOT NULL FROM families WHERE id = $1) AS weather,
+         (SELECT labels   <> '{}'::jsonb FROM families WHERE id = $1) AS labels,
+         (SELECT greeting IS NOT NULL FROM families WHERE id = $1) AS identity`,
+      [id]
+    )
+    res.json(s ?? {})
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
   }
