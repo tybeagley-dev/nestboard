@@ -74,12 +74,12 @@ export default function AdminPage() {
         <tbody>
           {families.map(f => (
             <tr key={f.id}>
-              <td>{f.name}</td>
-              <td><code>{f.slug}</code></td>
-              <td>{f.member_count}</td>
-              <td>{f.child_count}</td>
-              <td>{f.onboarded ? '✓' : '—'}</td>
-              <td>{new Date(f.created_at).toLocaleDateString()}</td>
+              <td data-label="Family">{f.name}</td>
+              <td data-label="Slug"><code>{f.slug}</code></td>
+              <td data-label="Members">{f.member_count}</td>
+              <td data-label="Children">{f.child_count}</td>
+              <td data-label="Onboarded">{f.onboarded ? '✓' : '—'}</td>
+              <td data-label="Created">{new Date(f.created_at).toLocaleDateString()}</td>
               <td><button className="admin-btn admin-btn-sm" onClick={() => openFamily(f.id)}>View</button></td>
             </tr>
           ))}
@@ -99,12 +99,12 @@ export default function AdminPage() {
           <tbody>
             {feedback.map(fb => (
               <tr key={fb.id} className={fb.status === 'open' ? '' : 'admin-row-muted'}>
-                <td>{fb.type === 'deletion_request' ? '🗑 Deletion' : '💬 Feedback'}</td>
-                <td>{fb.family_name ?? '—'}{fb.family_slug ? <> · <code>{fb.family_slug}</code></> : null}</td>
-                <td>{fb.email ?? '—'}</td>
-                <td className="admin-feedback-msg">{fb.message ?? '—'}</td>
-                <td>{new Date(fb.created_at).toLocaleDateString()}</td>
-                <td>{fb.status}</td>
+                <td data-label="Type">{fb.type === 'deletion_request' ? '🗑 Deletion' : '💬 Feedback'}</td>
+                <td data-label="Family">{fb.family_name ?? '—'}{fb.family_slug ? <> · <code>{fb.family_slug}</code></> : null}</td>
+                <td data-label="From">{fb.email ?? '—'}</td>
+                <td data-label="Message" className="admin-feedback-msg">{fb.message ?? '—'}</td>
+                <td data-label="When">{new Date(fb.created_at).toLocaleDateString()}</td>
+                <td data-label="Status">{fb.status}</td>
                 <td className="admin-feedback-actions">
                   {fb.type === 'deletion_request' && fb.family_id && (
                     <button

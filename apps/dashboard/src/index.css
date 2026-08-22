@@ -5790,6 +5790,10 @@ button {
 
 /* ── Admin ──────────────────────────────────────────────────────────────────── */
 .admin-page {
+  /* #root is overflow:hidden for the kiosk, so this page owns its own scroll. */
+  height: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem 1.5rem;
@@ -5823,6 +5827,48 @@ button {
 .admin-row-muted { opacity: 0.5; }
 .admin-feedback-msg { max-width: 22rem; white-space: pre-wrap; word-break: break-word; }
 .admin-feedback-actions { display: flex; gap: 6px; white-space: nowrap; }
+
+/* Phones: the 7-column tables squeeze the message column to nothing, so each
+   row becomes a labeled card instead. Labels come from each cell's data-label. */
+@media (max-width: 700px) {
+  .admin-page { padding: 1.25rem 1rem; }
+  .admin-header { flex-wrap: wrap; gap: 0.5rem; }
+  .admin-title { font-size: 1.15rem; }
+
+  .admin-table, .admin-table tbody, .admin-table tr, .admin-table td {
+    display: block;
+    width: 100%;
+  }
+  .admin-table thead { display: none; }
+  .admin-table tr {
+    background: var(--surface-2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 0.7rem 0.85rem;
+    margin-bottom: 0.7rem;
+  }
+  .admin-table td {
+    border-bottom: none;
+    padding: 0.25rem 0;
+  }
+  .admin-table td[data-label]::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+  }
+  .admin-feedback-msg { max-width: none; }
+  .admin-feedback-actions {
+    flex-wrap: wrap;
+    white-space: normal;
+    padding-top: 0.6rem;
+  }
+  .admin-feedback-actions .admin-btn { flex: 1; }
+  .admin-delete-row { flex-wrap: wrap; }
+}
 
 /* Consent gate + legal doc pages */
 .consent-wrap { height: 100vh; overflow-y: auto; display: flex; align-items: center; justify-content: center; padding: 1.5rem; }
