@@ -6881,3 +6881,15 @@ button {
   white-space: nowrap;
 }
 .finish-setup-skip:disabled { opacity: 0.4; cursor: default; }
+
+/* ── iOS input zoom guard ───────────────────────────────────────────────────
+   Mobile Safari auto-zooms when a focused input's font-size is under 16px and
+   never zooms back out when the keyboard closes, leaving the page panned
+   sideways. Scoped to phones so the kiosk iPad keeps its compact 13/14px inputs. */
+@media (pointer: coarse) and (max-width: 820px) {
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
