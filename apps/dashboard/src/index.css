@@ -1611,6 +1611,88 @@ button {
 }
 .grocery-add-btn:active { filter: brightness(0.9); }
 
+/* Parent portal only — the board shows a flat list and never the store split. */
+.grocery-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.grocery-add-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.grocery-add-item .grocery-store-select { max-width: 9rem; }
+
+.grocery-stores-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.grocery-store-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.grocery-store-chip {
+  padding: 2px 8px;
+  border-radius: 50px;
+  background: var(--surface-2);
+  border: 1.5px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.grocery-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.grocery-group-title {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  margin-bottom: 3px;
+}
+
+.grocery-group-header .grocery-group-title { margin-bottom: 0; }
+
+.grocery-store-new {
+  flex-shrink: 0;
+  max-width: 45%;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--accent-warm);
+  background: var(--surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 12px;
+  outline: none;
+}
+
+.grocery-store-select {
+  flex-shrink: 0;
+  max-width: 40%;
+  padding: 3px 6px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 12px;
+}
+
 .grocery-list {
   list-style: none;
   display: flex;
@@ -1618,6 +1700,11 @@ button {
   gap: 3px;
   max-height: 120px;
   overflow-y: auto;
+}
+
+.grocery-groups .grocery-list {
+  max-height: none;
+  overflow-y: visible;
 }
 
 .grocery-item {

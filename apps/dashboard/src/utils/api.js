@@ -117,6 +117,14 @@ export function apiPut(path, body, parentToken) {
   })
 }
 
+export function apiPatch(path, body, parentToken) {
+  return apiFetch(path, {
+    method: 'PATCH',
+    body:   JSON.stringify(body),
+    headers: parentHeader(parentToken),
+  })
+}
+
 export function apiDelete(path, body, parentToken) {
   const hasBody = body && typeof body === 'object'
   return apiFetch(path, {

@@ -225,6 +225,7 @@ CREATE TABLE IF NOT EXISTS grocery (
   id       TEXT PRIMARY KEY,
   family_id TEXT REFERENCES families(id),
   item     TEXT NOT NULL,
+  store    TEXT,
   added_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

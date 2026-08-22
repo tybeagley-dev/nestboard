@@ -9,6 +9,8 @@ export default function NotesAndGrocery() {
 
   function handleAdd() {
     if (!draft.trim()) return
+    // Always unassigned: stores are a parent-portal concept and the board
+    // deliberately doesn't show them.
     addItem(draft)
     setDraft('')
     inputRef.current?.focus()
