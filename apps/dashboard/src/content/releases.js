@@ -22,6 +22,19 @@
 // never rendered, it is the anchor /release-notes uses to find the next batch.
 export const RELEASES = [
   {
+    version: '2026.08.22',
+    date: 'August 22, 2026',
+    commit: '816ffca',
+    title: 'Grocery lists, split by store',
+    items: [
+      'New: sort your grocery list by store — add your stores in the parent panel, then file each item.',
+      "Send one store's list as a text, so a quick trip doesn't come with everything else on it.",
+      'Add and remove grocery items from the parent panel, not just the family display.',
+      'Fixed: typing on a phone left the page zoomed in, so you had to scroll sideways to read it.',
+      'Fixed: texting the grocery list printed its heading twice.',
+    ],
+  },
+  {
     version: '2026.08.15',
     date: 'August 15, 2026',
     commit: '58dcc2e',
