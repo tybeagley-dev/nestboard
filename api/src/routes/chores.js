@@ -239,10 +239,14 @@ router.post('/:id/approve', requireParent, async (req, res) => {
   if (!rows.length) return res.status(404).json({ error: 'No pending approval found' })
 
   const tokensEarned = rows[0].tokens
+  // Upsert, not UPDATE: children created through onboarding had no token_balance
+  // row, so the credit hit zero rows and the approval silently paid nothing.
   await db.query(
-    `UPDATE token_balance SET balance = balance + $1, updated_at = NOW()
-     WHERE family_id = $2 AND child_id = $3`,
-    [tokensEarned, req.familyId, childId]
+    `INSERT INTO token_balance (family_id, child_id, balance, updated_at)
+     VALUES ($1, $2, GREATEST(0, $3), NOW())
+     ON CONFLICT (family_id, child_id) DO UPDATE
+       SET balance = token_balance.balance + $3, updated_at = NOW()`,
+    [req.familyId, childId, tokensEarned]
   )
   if (tokensEarned > 0) {
     await db.query(
