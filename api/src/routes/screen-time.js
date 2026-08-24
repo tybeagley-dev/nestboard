@@ -282,9 +282,11 @@ router.post('/abstinence-requests/:id/approve', requireParent, async (req, res) 
   const request = reqRows[0]
 
   await db.query(
-    `UPDATE token_balance SET balance = balance + $1, updated_at = NOW()
-     WHERE family_id = $2 AND child_id = $3`,
-    [request.tokens_awarded, req.familyId, request.child_id]
+    `INSERT INTO token_balance (family_id, child_id, balance, updated_at)
+     VALUES ($1, $2, GREATEST(0, $3), NOW())
+     ON CONFLICT (family_id, child_id) DO UPDATE
+       SET balance = token_balance.balance + $3, updated_at = NOW()`,
+    [req.familyId, request.child_id, request.tokens_awarded]
   )
   await db.query(
     `INSERT INTO spend_events (family_id, child_id, amount, type) VALUES ($1, $2, $3, 'abstinence_reward')`,

@@ -34,6 +34,22 @@ router.post('/', requireParent, async (req, res) => {
      RETURNING id, name, color, emoji, icon, sort_order`,
     [id, req.familyId, name.trim(), color ?? '#888888', emoji ?? '👤', icon ?? 'user', sortOrder]
   )
+
+  // Balance rows must exist up front: the credit paths (chore approval, screen-time
+  // abstinence) are plain UPDATEs, so a missing row silently drops the tokens.
+  await db.query(
+    `INSERT INTO token_balance (family_id, child_id, balance)
+     VALUES ($1, $2, 0)
+     ON CONFLICT (family_id, child_id) DO NOTHING`,
+    [req.familyId, id]
+  )
+  await db.query(
+    `INSERT INTO screen_time_balance (family_id, child_id, purchased_balance)
+     VALUES ($1, $2, 0)
+     ON CONFLICT (family_id, child_id) DO NOTHING`,
+    [req.familyId, id]
+  )
+
   res.json(rows[0])
 })
 
