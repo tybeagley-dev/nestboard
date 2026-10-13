@@ -8,15 +8,16 @@ function emptyCalendar() {
   return { name: '', url: '', color: COLOR_PRESETS[0], child: '', is_family: false }
 }
 
-function CalendarForm({ calendar, onSave, onCancel, saving }) {
+function CalendarForm({ calendar, kids, onSave, onCancel, saving }) {
   const [name,     setName]     = useState(calendar.name      || '')
   const [url,      setUrl]      = useState(calendar.url       || '')
   const [color,    setColor]    = useState(calendar.color     || COLOR_PRESETS[0])
   const [isFamily, setIsFamily] = useState(calendar.is_family ?? false)
+  const [child,    setChild]    = useState(calendar.child     || '')
 
   function handleSave() {
     if (!name.trim() || !url.trim()) return
-    onSave({ ...calendar, name: name.trim(), url: url.trim(), color, child: null, is_family: isFamily })
+    onSave({ ...calendar, name: name.trim(), url: url.trim(), color, child: child || null, is_family: child ? false : isFamily })
   }
 
   return (
@@ -60,16 +61,29 @@ function CalendarForm({ calendar, onSave, onCancel, saving }) {
       </div>
 
       <div className="chore-form-field">
-        <label className="chore-form-label chore-form-toggle-label">
-          <input
-            type="checkbox"
-            checked={isFamily}
-            onChange={e => setIsFamily(e.target.checked)}
-          />
-          Show on child cards
-        </label>
-        <p className="chore-form-hint">Events from this calendar will appear in every child's upcoming view.</p>
+        <label className="chore-form-label">Belongs to</label>
+        <select className="chore-form-input" value={child} onChange={e => setChild(e.target.value)}>
+          <option value="">No one</option>
+          {kids.map(k => (
+            <option key={k.name} value={k.name}>{k.name}</option>
+          ))}
+        </select>
+        <p className="chore-form-hint">Its events show on this child's upcoming view.</p>
       </div>
+
+      {!child && (
+        <div className="chore-form-field">
+          <label className="chore-form-label chore-form-toggle-label">
+            <input
+              type="checkbox"
+              checked={isFamily}
+              onChange={e => setIsFamily(e.target.checked)}
+            />
+            Show on child cards
+          </label>
+          <p className="chore-form-hint">Events from this calendar will appear in every child's upcoming view.</p>
+        </div>
+      )}
 
       <div className="chore-form-actions">
         <button className="parent-apply-btn" onClick={handleSave} disabled={saving || !name.trim() || !url.trim()}>
@@ -125,6 +139,7 @@ export default function ParentCalendarTab({ children, guideOpen = false }) {
       {editing ? (
         <CalendarForm
           calendar={editing === 'new' ? emptyCalendar() : editing}
+          kids={children ?? []}
           onSave={handleSave}
           onCancel={() => setEditing(null)}
           saving={saving}
@@ -155,7 +170,8 @@ export default function ParentCalendarTab({ children, guideOpen = false }) {
                 <span className="chore-admin-icon" style={{ color: cal.color }}>●</span>
                 <div className="chore-admin-info">
                   <span className="chore-admin-label">{cal.name}</span>
-                  {cal.is_family && <span className="chore-admin-meta">Shown on child cards</span>}
+                  {cal.child && <span className="chore-admin-meta">{cal.child}'s calendar</span>}
+                  {!cal.child && cal.is_family && <span className="chore-admin-meta">Shown on child cards</span>}
                 </div>
                 <button
                   className="chore-admin-del-btn"
