@@ -2,13 +2,12 @@ import { useState, useEffect, useCallback } from 'react'
 import { useUser } from '@clerk/react'
 import { apiGet, apiPost, apiDelete } from '../utils/api'
 
-export default function FamilyMembers({ familySlug }) {
+export default function FamilyMembers() {
   const { user } = useUser()
   const [members,     setMembers]     = useState([])
   const [invites,     setInvites]     = useState([])
   const [creating,    setCreating]    = useState(false)
   const [copiedToken, setCopiedToken] = useState(null)
-  const [copiedCode,  setCopiedCode]  = useState(false)
 
   const load = useCallback(() => {
     apiGet('/auth/family/members').then(d => setMembers(Array.isArray(d) ? d : []))
@@ -56,13 +55,6 @@ export default function FamilyMembers({ familySlug }) {
     navigator.clipboard.writeText(inviteLink(token))
     setCopiedToken(token)
     setTimeout(() => setCopiedToken(null), 2000)
-  }
-
-  function copyCode() {
-    if (!familySlug) return
-    navigator.clipboard.writeText(familySlug)
-    setCopiedCode(true)
-    setTimeout(() => setCopiedCode(false), 2000)
   }
 
   return (
@@ -117,21 +109,6 @@ export default function FamilyMembers({ familySlug }) {
                 </li>
               ))}
             </ul>
-          )}
-
-          {familySlug && (
-            <details className="family-code-fallback">
-              <summary>Can't use a link? Use your family code</summary>
-              <p className="family-code-hint">
-                Share this code plus your parent PIN, and they enter both on the sign-in screen.
-              </p>
-              <div className="family-code-row">
-                <code className="family-code-value">{familySlug}</code>
-                <button className="family-code-copy" onClick={copyCode}>
-                  {copiedCode ? 'Copied!' : 'Copy'}
-                </button>
-              </div>
-            </details>
           )}
         </div>
       </div>

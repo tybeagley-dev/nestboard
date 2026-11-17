@@ -24,7 +24,7 @@ export default function ParentFamilyTab({ onPinChanged }) {
 
       <FamilyNotesCard />
 
-      <FamilyMembers familySlug={family.slug} />
+      <FamilyMembers />
 
       <AccountCard />
 

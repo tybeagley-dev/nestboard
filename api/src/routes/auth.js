@@ -122,39 +122,6 @@ router.post('/device/pair', async (req, res) => {
 // decision belongs. Self-unpair was safe (handing back your own credential can't
 // be used against anyone); it was the placement that was wrong.
 
-// POST /auth/login  { slug, pin } → { familyId, name }
-router.post('/login', async (req, res) => {
-  const { slug, pin } = req.body
-  if (!slug || !pin) return res.status(400).json({ error: 'Missing slug or pin' })
-  try {
-    const { rows } = await db.query(
-      'SELECT id, name, parent_pin_hash FROM families WHERE slug = $1',
-      [slug]
-    )
-    if (!rows.length) return res.status(401).json({ error: 'Invalid credentials' })
-
-    const locked = checkPinLock(rows[0].id)
-    if (locked.locked) {
-      res.set('Retry-After', String(locked.retryAfterSec))
-      return res.status(429).json({ error: 'Too many attempts', retryAfterSec: locked.retryAfterSec })
-    }
-
-    const valid = await bcrypt.compare(pin, rows[0].parent_pin_hash)
-    if (!valid) {
-      const hit = recordPinFailure(rows[0].id)
-      if (hit.locked) {
-        res.set('Retry-After', String(hit.retryAfterSec))
-        return res.status(429).json({ error: 'Too many attempts', retryAfterSec: hit.retryAfterSec })
-      }
-      return res.status(401).json({ error: 'Invalid credentials' })
-    }
-    recordPinSuccess(rows[0].id)
-    res.json({ familyId: rows[0].id, name: rows[0].name })
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' })
-  }
-})
-
 // GET /auth/family  → { id, name } | { familyId: null } for new users (no membership yet)
 router.get('/family', async (req, res) => {
   const { userId } = getAuth(req)
@@ -236,59 +203,6 @@ router.post('/families', async (req, res) => {
     )
 
     res.status(201).json({ id: familyId, name: name.trim(), slug })
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' })
-  }
-})
-
-// POST /families/join  { slug, pin } → { id, name, slug }  — requires Clerk auth
-router.post('/families/join', async (req, res) => {
-  const { userId } = getAuth(req)
-  if (!userId) return res.status(401).json({ error: 'Unauthorized' })
-
-  const { slug, pin } = req.body
-  if (!slug?.trim() || !pin?.trim()) return res.status(400).json({ error: 'Missing slug or pin' })
-
-  try {
-    const existing = await db.query(
-      'SELECT family_id FROM family_memberships WHERE user_id = $1',
-      [userId]
-    )
-    if (existing.rows.length) return res.status(409).json({ error: 'Already in a family' })
-
-    const { rows } = await db.query(
-      'SELECT id, name, slug, parent_pin_hash FROM families WHERE slug = $1',
-      [slug.trim()]
-    )
-    if (!rows.length) return res.status(401).json({ error: 'Invalid family code or PIN' })
-
-    // Same lockout ladder as the other PIN routes. Without it this was an unrated
-    // door onto the 6-digit PIN for anyone with a Clerk account and a slug (which
-    // sits in every kiosk URL), and success grants a permanent parent membership.
-    const locked = checkPinLock(rows[0].id)
-    if (locked.locked) {
-      res.set('Retry-After', String(locked.retryAfterSec))
-      return res.status(429).json({ error: 'Too many attempts', retryAfterSec: locked.retryAfterSec })
-    }
-
-    const valid = await bcrypt.compare(pin.trim(), rows[0].parent_pin_hash)
-    if (!valid) {
-      const hit = recordPinFailure(rows[0].id)
-      if (hit.locked) {
-        res.set('Retry-After', String(hit.retryAfterSec))
-        return res.status(429).json({ error: 'Too many attempts', retryAfterSec: hit.retryAfterSec })
-      }
-      return res.status(401).json({ error: 'Invalid family code or PIN' })
-    }
-    recordPinSuccess(rows[0].id)
-
-    await db.query(
-      `INSERT INTO family_memberships (user_id, family_id, role) VALUES ($1, $2, 'parent')
-       ON CONFLICT DO NOTHING`,
-      [userId, rows[0].id]
-    )
-
-    res.json({ id: rows[0].id, name: rows[0].name, slug: rows[0].slug })
   } catch (err) {
     res.status(500).json({ error: 'Server error' })
   }
