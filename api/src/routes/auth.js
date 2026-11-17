@@ -262,8 +262,25 @@ router.post('/families/join', async (req, res) => {
     )
     if (!rows.length) return res.status(401).json({ error: 'Invalid family code or PIN' })
 
+    // Same lockout ladder as the other PIN routes. Without it this was an unrated
+    // door onto the 6-digit PIN for anyone with a Clerk account and a slug (which
+    // sits in every kiosk URL), and success grants a permanent parent membership.
+    const locked = checkPinLock(rows[0].id)
+    if (locked.locked) {
+      res.set('Retry-After', String(locked.retryAfterSec))
+      return res.status(429).json({ error: 'Too many attempts', retryAfterSec: locked.retryAfterSec })
+    }
+
     const valid = await bcrypt.compare(pin.trim(), rows[0].parent_pin_hash)
-    if (!valid) return res.status(401).json({ error: 'Invalid family code or PIN' })
+    if (!valid) {
+      const hit = recordPinFailure(rows[0].id)
+      if (hit.locked) {
+        res.set('Retry-After', String(hit.retryAfterSec))
+        return res.status(429).json({ error: 'Too many attempts', retryAfterSec: hit.retryAfterSec })
+      }
+      return res.status(401).json({ error: 'Invalid family code or PIN' })
+    }
+    recordPinSuccess(rows[0].id)
 
     await db.query(
       `INSERT INTO family_memberships (user_id, family_id, role) VALUES ($1, $2, 'parent')
